@@ -1,6 +1,11 @@
 """Market data and engine status endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import get_current_user
+from app.core.database import get_db
+from app.data.storage import CandleStorage
 
 router = APIRouter(tags=["market"])
 
@@ -26,14 +31,20 @@ async def list_symbols():
 
 
 @router.get("/market/candles/{symbol}/{timeframe}")
-async def get_candles(symbol: str, timeframe: str, limit: int = 200):
+async def get_candles(
+    symbol: str,
+    timeframe: str,
+    limit: int = Query(default=200, ge=1, le=5000),
+    _user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Return candle data for a symbol/timeframe pair.
 
-    For now returns empty candles -- real data comes from CCXT ingestion later.
     Symbol uses dash in URL path (BTC-USDT) and is normalised to slash (BTC/USDT).
     """
     symbol = symbol.replace("-", "/")
-    return {"symbol": symbol, "timeframe": timeframe, "candles": [], "count": 0}
+    candles = await CandleStorage.load_candles_db(db, symbol, timeframe, limit=limit)
+    return {"symbol": symbol, "timeframe": timeframe, "candles": candles, "count": len(candles)}
 
 
 @router.get("/engine/status")
