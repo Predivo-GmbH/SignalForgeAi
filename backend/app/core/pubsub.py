@@ -40,3 +40,28 @@ class PricePublisher:
         """Publish price data to the symbol-specific channel."""
         channel = PricePublisher.channel_for(symbol)
         await redis.publish(channel, json.dumps(price_data))
+
+
+class TradePublisher:
+    """Publishes trade execution events to a shared Redis channel."""
+
+    CHANNEL = "signalforge:trades"
+
+    @staticmethod
+    def format_message(
+        symbol: str, side: str, qty: float, price: float, **kwargs
+    ) -> dict:
+        """Format a trade message with standard fields plus optional extras."""
+        return {
+            "symbol": symbol,
+            "side": side,
+            "qty": qty,
+            "price": price,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **kwargs,
+        }
+
+    @staticmethod
+    async def publish(redis, trade_dict: dict) -> None:
+        """Publish a trade message to the trades channel."""
+        await redis.publish(TradePublisher.CHANNEL, json.dumps(trade_dict))

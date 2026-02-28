@@ -73,3 +73,23 @@ async def ws_prices(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket, "prices")
+
+
+async def ws_trades(websocket: WebSocket):
+    """WebSocket endpoint for real-time trade execution streaming.
+
+    Accepts an optional ?token= query parameter for JWT authentication.
+    Invalid tokens are rejected with close code 1008 (Policy Violation).
+    """
+    token = websocket.query_params.get("token")
+    if token:
+        payload = decode_token(token)
+        if not payload:
+            await websocket.close(code=1008)
+            return
+    await manager.connect(websocket, "trades")
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "trades")
