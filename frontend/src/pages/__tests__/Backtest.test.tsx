@@ -16,6 +16,12 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("BacktestPage", () => {
+  test("renders both tabs", () => {
+    render(<BacktestPage />, { wrapper });
+    expect(screen.getByText("Single Backtest")).toBeInTheDocument();
+    expect(screen.getByText("Walk-Forward")).toBeInTheDocument();
+  });
+
   test("renders configuration form", () => {
     render(<BacktestPage />, { wrapper });
     expect(screen.getByText("Backtest Lab")).toBeInTheDocument();

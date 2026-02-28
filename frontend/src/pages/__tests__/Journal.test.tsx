@@ -1,36 +1,40 @@
 import { render, screen } from "@testing-library/react";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { JournalPage } from "../Journal";
 
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <QueryClientProvider
+    client={
+      new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      })
+    }
+  >
+    <MemoryRouter>{children}</MemoryRouter>
+  </QueryClientProvider>
+);
+
 describe("JournalPage", () => {
   test("renders page heading", () => {
-    render(
-      <MemoryRouter>
-        <JournalPage />
-      </MemoryRouter>
-    );
+    render(<JournalPage />, { wrapper });
     expect(screen.getByText("Trade Journal")).toBeInTheDocument();
   });
 
-  test("renders coming soon message", () => {
-    render(
-      <MemoryRouter>
-        <JournalPage />
-      </MemoryRouter>
-    );
+  test("renders AI-powered subtitle text", () => {
+    render(<JournalPage />, { wrapper });
     expect(
-      screen.getByText("AI-assisted trade review coming in Phase 5")
+      screen.getByText("AI-powered trade analysis and review")
     ).toBeInTheDocument();
   });
 
-  test("renders planned features", () => {
-    render(
-      <MemoryRouter>
-        <JournalPage />
-      </MemoryRouter>
-    );
-    expect(screen.getByText("AI Pattern Recognition")).toBeInTheDocument();
-    expect(screen.getByText("Trade Annotations")).toBeInTheDocument();
-    expect(screen.getByText("Natural Language Queries")).toBeInTheDocument();
+  test("renders Pattern Summary section title", () => {
+    render(<JournalPage />, { wrapper });
+    expect(screen.getByText("Pattern Summary")).toBeInTheDocument();
+  });
+
+  test("renders Recent Trades section title", () => {
+    render(<JournalPage />, { wrapper });
+    expect(screen.getByText("Recent Trades")).toBeInTheDocument();
   });
 });
