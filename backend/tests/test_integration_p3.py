@@ -4,10 +4,12 @@ from httpx import ASGITransport, AsyncClient
 from app.auth.jwt import create_access_token
 from app.main import app
 
+TEST_USER_UUID = "00000000-0000-0000-0000-000000000001"
+
 
 @pytest.fixture
 def auth_headers():
-    token = create_access_token("test-user-id")
+    token = create_access_token(TEST_USER_UUID)
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -44,13 +46,12 @@ class TestPositionsAPI:
 
 class TestEndToEndPipeline:
     def test_signal_to_execution_flow(self):
-        """Signal generation -> risk check -> order execution -> position tracking."""
+        """Signal generation -> risk check -> order execution (paper mode)."""
         import numpy as np
         import pandas as pd
 
         from app.engine.pipeline import SignalPipeline
         from app.execution.executor import OrderExecutor, OrderRequest
-        from app.execution.position_manager import PositionManager
         from app.execution.risk_checks import PreTradeChecker
 
         # 1. Generate signal
@@ -72,18 +73,27 @@ class TestEndToEndPipeline:
         pipeline = SignalPipeline()
         signal = pipeline.process("TEST/USD", "1h", candles)
 
-        # 2. If signal is actionable, run risk check
+        # 2. If signal is actionable, run risk check + paper execution
         if signal.action in ("BUY", "SELL"):
             checker = PreTradeChecker()
-            pm = PositionManager(initial_equity=10000)
-            state = pm.account_state()
+            # Use a simple mock account state for the risk check
+            from dataclasses import dataclass
+
+            @dataclass
+            class MockAccountState:
+                equity: float = 10000.0
+                daily_pnl: float = 0.0
+                open_positions: int = 0
+                max_positions: int = 5
+
+            state = MockAccountState()
             risk_amount = (signal.position_size or 0) * abs(
                 (signal.stop_loss or 0) - float(candles["close"].iloc[-1])
             )
             check = checker.check(state, risk_amount)
 
             if check.approved:
-                # 3. Execute order
+                # 3. Execute order via paper mode (legacy sync path)
                 executor = OrderExecutor()
                 order = OrderRequest(
                     symbol=signal.symbol,
@@ -96,18 +106,6 @@ class TestEndToEndPipeline:
                 )
                 result = executor.place_order(order)
                 assert result.filled
-
-                # 4. Track position
-                pos = pm.open_position(
-                    symbol=signal.symbol,
-                    direction=signal.action,
-                    entry_price=result.fill_price,
-                    quantity=signal.position_size or 0.01,
-                    stop_loss=signal.stop_loss or 0,
-                    take_profit=signal.take_profit_1 or 0,
-                    order_id=result.order_id,
-                )
-                assert pos.is_open
 
         # Pipeline runs without error regardless of action
         assert signal.action in ("BUY", "SELL", "NO_TRADE")

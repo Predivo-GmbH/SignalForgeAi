@@ -3,7 +3,16 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.auth.jwt import create_access_token
 from app.main import app
+
+TEST_USER_UUID = "00000000-0000-0000-0000-000000000001"
+
+
+@pytest.fixture
+def auth_headers():
+    token = create_access_token(TEST_USER_UUID)
+    return {"Authorization": f"Bearer {token}"}
 
 
 class TestMarketAPI:
@@ -31,11 +40,11 @@ class TestMarketAPI:
         assert "SPY" in data
 
     @pytest.mark.asyncio
-    async def test_get_candles_returns_structure(self):
+    async def test_get_candles_returns_structure(self, auth_headers):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
-            resp = await ac.get("/api/market/candles/BTC-USDT/1h")
+            resp = await ac.get("/api/market/candles/BTC-USDT/1h", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["symbol"] == "BTC/USDT"
@@ -44,11 +53,11 @@ class TestMarketAPI:
         assert "count" in data
 
     @pytest.mark.asyncio
-    async def test_get_candles_default_limit(self):
+    async def test_get_candles_default_limit(self, auth_headers):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
-            resp = await ac.get("/api/market/candles/ETH-USDT/5m")
+            resp = await ac.get("/api/market/candles/ETH-USDT/5m", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["symbol"] == "ETH/USDT"
