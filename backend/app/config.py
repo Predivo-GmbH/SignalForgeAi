@@ -23,10 +23,6 @@ class Settings(BaseSettings):
     alpaca_api_secret: str = ""
     alpaca_paper: bool = True
 
-    # Celery
-    celery_broker_url: str = "redis://localhost:6379/1"
-    celery_result_backend: str = "redis://localhost:6379/2"
-
     # App
     app_name: str = "SignalForge"
     debug: bool = True
