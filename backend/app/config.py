@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     alpaca_api_secret: str = ""
     alpaca_paper: bool = True
 
+    # AI (Trade Journal)
+    anthropic_api_key: str = ""
+
+    # Email alerts
+    resend_api_key: str = ""
+    resend_domain: str = "signalforge.dev"
+
     # App
     app_name: str = "SignalForge"
     debug: bool = True

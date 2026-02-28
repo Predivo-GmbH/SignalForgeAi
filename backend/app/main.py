@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.alerts import router as alerts_router
+from app.api.analytics import router as analytics_router
 from app.api.backtests import router as backtests_router
+from app.api.journal import router as journal_router
 from app.api.market import router as market_router
 from app.api.positions import router as positions_router
 from app.api.signals import router as signals_router
@@ -20,6 +23,9 @@ app.include_router(strategies_router, prefix="/api")
 app.include_router(market_router, prefix="/api")
 app.include_router(backtests_router, prefix="/api")
 app.include_router(positions_router, prefix="/api")
+app.include_router(journal_router, prefix="/api")
+app.include_router(alerts_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
