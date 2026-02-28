@@ -4,14 +4,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-interface LoginResponse {
+interface RegisterResponse {
   access_token: string;
   refresh_token: string;
 }
 
-export function LoginPage() {
+export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,17 +20,28 @@ export function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const data = await api.post<LoginResponse>("/auth/login", {
+      const data = await api.post<RegisterResponse>("/auth/register", {
         email,
         password,
       });
       useAuth.getState().setTokens(data.access_token, data.refresh_token);
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -44,10 +56,10 @@ export function LoginPage() {
             SF
           </div>
           <h1 className="mt-4 text-2xl font-bold text-(--color-text-primary)">
-            Welcome back
+            Create account
           </h1>
           <p className="mt-1 text-sm text-(--color-text-secondary)">
-            Sign in to your SignalForge account
+            Get started with SignalForge
           </p>
         </div>
 
@@ -80,7 +92,7 @@ export function LoginPage() {
             />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label
               htmlFor="password"
               className="mb-1.5 block text-sm font-medium text-(--color-text-secondary)"
@@ -94,6 +106,25 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
+              minLength={8}
+              className="w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-4 py-3 text-sm text-(--color-text-primary) outline-none transition-colors placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent)"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label
+              htmlFor="confirmPassword"
+              className="mb-1.5 block text-sm font-medium text-(--color-text-secondary)"
+            >
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              required
               className="w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-4 py-3 text-sm text-(--color-text-primary) outline-none transition-colors placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent)"
             />
           </div>
@@ -103,16 +134,16 @@ export function LoginPage() {
             disabled={loading}
             className="w-full rounded-lg bg-(--color-accent) py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
 
           <p className="mt-6 text-center text-sm text-(--color-text-secondary)">
-            Don't have an account?{" "}
+            Already have an account?{" "}
             <Link
-              to="/register"
+              to="/login"
               className="font-medium text-(--color-accent) hover:underline"
             >
-              Create account
+              Sign in
             </Link>
           </p>
         </form>
