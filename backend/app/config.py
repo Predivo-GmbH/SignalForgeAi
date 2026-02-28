@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
+    # Celery
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/2"
+
     # JWT
     jwt_secret: str = "dev-secret-change-in-production"
     jwt_algorithm: str = "HS256"

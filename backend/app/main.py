@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.backtests import router as backtests_router
+from app.api.market import router as market_router
 from app.api.signals import router as signals_router
 from app.api.strategies import router as strategies_router
 from app.api.trades import router as trades_router
@@ -13,6 +15,8 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(signals_router, prefix="/api")
 app.include_router(trades_router, prefix="/api")
 app.include_router(strategies_router, prefix="/api")
+app.include_router(market_router, prefix="/api")
+app.include_router(backtests_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
