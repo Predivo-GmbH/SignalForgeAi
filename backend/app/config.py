@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 30
     jwt_refresh_expiry_days: int = 7
 
+    # Alpaca broker
+    alpaca_api_key: str = ""
+    alpaca_api_secret: str = ""
+    alpaca_paper: bool = True
+
+    # Celery
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/2"
+
     # App
     app_name: str = "SignalForge"
     debug: bool = True
