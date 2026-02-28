@@ -1,0 +1,66 @@
+"""Manage open positions — trail stops, check SL/TP."""
+
+import logging
+
+from app.worker import celery_app
+
+logger = logging.getLogger(__name__)
+
+
+@celery_app.task(name="manage_positions", bind=True, max_retries=3)
+def manage_positions(self):
+    """Trail stops, check SL/TP, close positions as needed."""
+    import asyncio
+
+    asyncio.run(_manage_async())
+
+
+async def _manage_async():
+    from sqlalchemy import select
+
+    from app.core.database import async_session
+    from app.execution.position_manager import PositionManagerDB
+    from app.models.position import Position
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(Position).where(Position.is_open == True)  # noqa: E712
+        )
+        positions = result.scalars().all()
+
+        for pos in positions:
+            try:
+                # Check stop-loss hit
+                if pos.stop_loss and pos.current_price:
+                    if pos.direction == "BUY" and pos.current_price <= pos.stop_loss:
+                        await PositionManagerDB.close_position(
+                            db, str(pos.id), pos.current_price, "stop_loss"
+                        )
+                        logger.info("Stop-loss hit for position %s", pos.id)
+                        continue
+                    if pos.direction == "SELL" and pos.current_price >= pos.stop_loss:
+                        await PositionManagerDB.close_position(
+                            db, str(pos.id), pos.current_price, "stop_loss"
+                        )
+                        logger.info("Stop-loss hit for position %s", pos.id)
+                        continue
+
+                # Check take-profit hit
+                if pos.take_profit and pos.current_price:
+                    if pos.direction == "BUY" and pos.current_price >= pos.take_profit:
+                        await PositionManagerDB.close_position(
+                            db, str(pos.id), pos.current_price, "take_profit"
+                        )
+                        logger.info("Take-profit hit for position %s", pos.id)
+                        continue
+                    if pos.direction == "SELL" and pos.current_price <= pos.take_profit:
+                        await PositionManagerDB.close_position(
+                            db, str(pos.id), pos.current_price, "take_profit"
+                        )
+                        logger.info("Take-profit hit for position %s", pos.id)
+                        continue
+
+            except Exception as e:
+                logger.error("Position management failed for %s: %s", pos.id, e)
+
+        await db.commit()
