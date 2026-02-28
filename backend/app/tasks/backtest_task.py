@@ -33,10 +33,21 @@ def run_backtest_task(symbol: str, timeframe: str, days: int, params: dict | Non
 
     engine = BacktestEngine(**(params or {}))
     result = engine.run(candles, symbol, timeframe)
+
+    # Sanitise metrics: replace inf/-inf/NaN with JSON-safe values
+    import math
+
+    sanitised_metrics = {}
+    for k, v in result.metrics.items():
+        if isinstance(v, float) and (math.isinf(v) or math.isnan(v)):
+            sanitised_metrics[k] = None
+        else:
+            sanitised_metrics[k] = v
+
     return {
         "symbol": symbol,
         "timeframe": timeframe,
         "days": days,
-        "metrics": result.metrics,
+        "metrics": sanitised_metrics,
         "trade_count": len(result.trades),
     }
