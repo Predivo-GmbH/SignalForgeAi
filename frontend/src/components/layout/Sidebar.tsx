@@ -5,6 +5,7 @@ import {
   ArrowUpDown,
   FlaskConical,
   BookOpen,
+  BarChart2,
   Settings,
   Key,
   PanelLeftClose,
@@ -19,6 +20,7 @@ const navItems = [
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },
   { to: "/backtest", icon: FlaskConical, label: "Backtest Lab" },
   { to: "/journal", icon: BookOpen, label: "Journal" },
+  { to: "/analytics", icon: BarChart2, label: "Analytics" },
   { to: "/config", icon: Settings, label: "Strategy" },
   { to: "/keys", icon: Key, label: "API Keys" },
 ] as const;
