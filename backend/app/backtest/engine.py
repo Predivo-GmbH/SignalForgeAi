@@ -190,6 +190,8 @@ class BacktestEngine:
                 "total_return_pct": 0,
                 "max_drawdown_pct": 0,
                 "sharpe_ratio": 0,
+                "sortino_ratio": 0.0,
+                "calmar_ratio": 0.0,
                 "avg_risk_reward": 0,
             }
 
@@ -218,6 +220,8 @@ class BacktestEngine:
             ),
             "max_drawdown_pct": max_dd,
             "sharpe_ratio": self._sharpe(equity_curve),
+            "sortino_ratio": self._sortino(equity_curve),
+            "calmar_ratio": self._calmar(equity_curve, initial_capital),
             "avg_risk_reward": (
                 float(np.mean([t.risk_reward for t in wins])) if wins else 0
             ),
@@ -229,3 +233,26 @@ class BacktestEngine:
         if len(returns) == 0 or np.std(returns) == 0:
             return 0.0
         return float(np.mean(returns) / np.std(returns) * np.sqrt(252))
+
+    def _sortino(self, equity_curve: list[float]) -> float:
+        eq = np.array(equity_curve)
+        returns = np.diff(eq) / eq[:-1]
+        if len(returns) == 0:
+            return 0.0
+        downside = returns[returns < 0]
+        if len(downside) == 0 or np.std(downside) == 0:
+            return 0.0
+        return float(np.mean(returns) / np.std(downside) * np.sqrt(252))
+
+    def _calmar(self, equity_curve: list[float], initial_capital: float) -> float:
+        if not equity_curve or equity_curve[-1] == initial_capital:
+            return 0.0
+        total_return = (equity_curve[-1] - initial_capital) / initial_capital * 100
+        peak = equity_curve[0]
+        max_dd = 0.0
+        for val in equity_curve:
+            if val > peak:
+                peak = val
+            dd = (peak - val) / peak * 100 if peak > 0 else 0
+            max_dd = max(max_dd, dd)
+        return total_return / max_dd if max_dd > 0 else 0.0
