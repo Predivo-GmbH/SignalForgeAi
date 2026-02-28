@@ -1,11 +1,10 @@
-# SignalForge — Project Status (Phases 1–5 Complete)
+# SignalForge — Project Status (Phases 1–6 Complete)
 
-> **For Claude:** Use this document as the single source of truth when starting Phase 6.
-> Read this BEFORE writing any code. It tells you everything that exists.
+> **For Claude:** Use this document as the single source of truth for the project.
 
 **Last updated:** 2026-02-28
-**Current commit:** `f144c59` on `main` (48 commits total)
-**Quality gates:** 197 backend tests, 37 frontend tests, 0 lint errors (ruff + eslint), TypeScript clean, build succeeds (554KB JS, 30KB CSS)
+**Current commit:** `79baeb3` on `main` (88 commits total)
+**Quality gates:** 296 backend tests, 41 frontend tests, 0 lint errors (ruff + eslint), TypeScript clean, build succeeds (558KB JS, 30KB CSS)
 
 ---
 
@@ -29,6 +28,10 @@
 | AI | Anthropic SDK (Claude Haiku 4.5) | 0.52+ |
 | Email | Resend | 2.0+ |
 | Market Data | CCXT 4.4 | exchange connectors |
+| Broker (Stocks) | alpaca-py 0.30+ | Alpaca Markets SDK |
+| Encryption | cryptography 43+ | Fernet symmetric |
+| Rate Limiting | slowapi 0.1.9+ | FastAPI middleware |
+| Logging | structlog 24+ | JSON structured logging |
 | Testing | pytest 8.3 (backend) / Vitest 4.0 (frontend) | |
 | Linting | ruff (backend) / eslint 9 (frontend) | |
 | CI | GitHub Actions | on push/PR to main |
@@ -41,25 +44,27 @@
 day-trading/
 ├── .github/workflows/ci.yml     # Backend lint+test, frontend build
 ├── backend/
-│   ├── app/                     # FastAPI application (62 .py files)
-│   │   ├── api/                 # REST endpoints (10 routers)
+│   ├── app/                     # FastAPI application (83 .py files)
+│   │   ├── api/                 # REST endpoints (11 routers)
 │   │   ├── auth/                # JWT auth (register, login, refresh)
 │   │   ├── backtest/            # Engine + optimizer
-│   │   ├── core/                # Database, Redis, pub/sub, email
-│   │   ├── data/                # CCXT ingestion, candle storage
+│   │   ├── core/                # Database, Redis, pub/sub, email, circuit breaker, logging, encryption
+│   │   ├── data/                # CCXT ingestion, DB-backed candle storage
 │   │   ├── engine/              # 6-layer signal pipeline
 │   │   │   └── layers/          # regime, trend, zones, confluence, triggers, risk, hmm_regime
-│   │   ├── execution/           # Order executor, position manager, risk checks
-│   │   ├── models/              # SQLAlchemy models (user, signal, trade, candle, strategy)
-│   │   ├── tasks/               # Celery tasks (backtest, HMM training)
-│   │   ├── ws/                  # WebSocket hub (signals + prices)
+│   │   ├── execution/           # DB-backed executor, position manager, risk checks
+│   │   │   └── adapters/        # BrokerAdapter ABC, Paper, Alpaca, CCXT, BrokerRouter
+│   │   ├── models/              # SQLAlchemy models (user, signal, trade, candle, strategy, order, position, backtest_result)
+│   │   ├── tasks/               # Celery tasks + Beat schedule (8 periodic tasks)
+│   │   ├── ws/                  # WebSocket hub (signals + prices + trades)
 │   │   ├── config.py            # Settings with SF_ env prefix
-│   │   ├── main.py              # FastAPI app with all routers
-│   │   └── worker.py            # Celery worker entry
-│   ├── tests/                   # 33 test files, 197 tests
+│   │   ├── main.py              # FastAPI app with middleware + all routers
+│   │   └── worker.py            # Celery worker + Beat schedule
+│   ├── tests/                   # 45 test files, 296 tests
 │   ├── scripts/                 # run_backtests.py
-│   ├── docker-compose.yml       # TimescaleDB + Redis
-│   ├── Dockerfile
+│   ├── docker-compose.yml       # TimescaleDB + Redis (dev)
+│   ├── Dockerfile               # Dev Dockerfile
+│   ├── Dockerfile.prod          # Multi-stage production Dockerfile
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
@@ -69,7 +74,7 @@ day-trading/
 │   │   │   ├── dashboard/       # PriceChart, StatsCards, SignalFeed, PositionsTable, RegimeWidget
 │   │   │   ├── layout/          # AppLayout, Sidebar, Topbar
 │   │   │   └── ui/              # Badge, DataTable, Pagination
-│   │   ├── hooks/               # 12 data hooks
+│   │   ├── hooks/               # 14 data hooks (+ useBrokerConnections, useTradeStream)
 │   │   ├── lib/                 # api, auth, cn, colors, query, sidebar, theme, ws
 │   │   ├── pages/               # 9 pages + tests
 │   │   ├── App.tsx              # Router configuration
@@ -78,6 +83,7 @@ day-trading/
 │   ├── package.json
 │   └── tsconfig.app.json
 ├── docs/plans/                  # 6 plan documents
+├── docker-compose.prod.yml      # Production Docker Compose (5 services)
 ├── CLAUDE.md                    # Project rules
 ├── SignalForge-Technical-Plan.md # Original design spec
 └── kraken-reference/            # UI inspiration screenshots
@@ -234,6 +240,87 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
    - Hook: `useEquityHistory()`, `useCorrelation()`
    - Added to Sidebar (BarChart2 icon) and App.tsx router
 
+### Phase 6: Live Trading & Hardening (Commits `2bd97d6` → `79baeb3`)
+
+**What was built:**
+
+#### Wave 1: Foundation (3 agents)
+1. **DB Models** (`models/order.py`, `models/position.py`, `models/backtest_result.py`):
+   - **Order model**: 17 columns, FKs to users/signals, tracks broker_order_id, filled_price, status lifecycle
+   - **Position model**: 14 columns, FKs to users/orders, tracks entry/current price, SL/TP, unrealized PnL
+   - **BacktestResult model**: 13 columns, FKs to users/strategies, stores metrics JSON + trade_count
+   - User model extended with `alert_config: JSON` column
+2. **Broker Adapter Layer** (`execution/adapters/`):
+   - `BrokerAdapter` ABC with submit_order, cancel_order, get_order, list_positions, get_balance
+   - `PaperAdapter` — in-memory simulation with configurable slippage
+   - `AlpacaAdapter` — Alpaca Markets SDK integration for stocks
+   - `CCXTAdapter` — CCXT exchange adapter for crypto (Binance default)
+   - `BrokerRouter` — dispatches to correct adapter by symbol class (is_crypto_symbol helper)
+   - Shared types: OrderSide, OrderType, OrderStatus enums + BrokerOrder, BrokerPosition, AccountBalance dataclasses
+3. **Encryption + Broker API** (`core/encryption.py`, `api/broker.py`):
+   - Fernet symmetric encryption for broker API credentials
+   - `POST /api/broker` — store encrypted broker connection
+   - `GET /api/broker` — list connections (credentials masked)
+   - `DELETE /api/broker/{id}` — remove connection
+
+#### Wave 2: Core Wiring (3 agents)
+4. **DB-Backed PositionManager** (`execution/position_manager.py`):
+   - Complete rewrite from in-memory to async SQLAlchemy
+   - Static methods: open_position, close_position, trail_stop, update_price, list_open, get_position
+   - Automatically creates Trade rows on position close (journal stays in sync)
+   - Positions API (`api/positions.py`) rewritten for DB queries
+5. **DB-Backed OrderExecutor** (`execution/executor.py`):
+   - Dual-mode: async `execute_signal()` (uses BrokerRouter + DB Order persistence) + legacy sync `place_order()`
+   - Creates Order row → submits via adapter → updates with broker response
+6. **DB-Backed CandleStorage** (`data/storage.py`):
+   - `save_candles_db()`, `load_candles_db()`, `load_close_prices()` — async TimescaleDB methods
+   - Market API candles endpoint wired to real DB data
+   - Analytics correlation endpoint tries real data, falls back to synthetic
+
+#### Wave 3: Celery Tasks (3 agents)
+7. **Ingestion Tasks** (`tasks/ingest_candles.py`, `tasks/run_pipeline.py`):
+   - `ingest_candles`: Fetches OHLCV for 3 symbols × 2 timeframes via CCXT, stores in DB
+   - `run_signal_pipeline`: Runs SignalPipeline per symbol, persists actionable signals
+   - Celery Beat schedule: ingest every 5 min, pipeline every 5 min (offset)
+8. **Execution Tasks** (`tasks/execute_signals.py`, `tasks/poll_orders.py`, `tasks/manage_positions.py`, `tasks/reconcile.py`):
+   - `execute_pending_signals`: Picks up pending signals, executes via BrokerRouter
+   - `poll_open_orders`: Checks order status, opens positions on fill
+   - `manage_open_positions`: Checks SL/TP, closes positions when hit
+   - `reconcile_broker`: Placeholder for broker state reconciliation
+   - Beat schedule: every 30s (execute), every 1min (poll/manage), daily (reconcile)
+9. **Alert Tasks** (`tasks/send_alerts.py`, modified `api/alerts.py`):
+   - Alert config persisted to User.alert_config JSON column
+   - `send_daily_summary`: Aggregates daily trades, sends email via Resend
+   - Backtest results persisted to BacktestResult model
+   - HMM training tries real candle data before synthetic fallback
+
+#### Wave 4: Real-Time + Hardening (2 agents)
+10. **Redis Subscriber + WebSocket Broadcasting** (`core/redis_subscriber.py`, `ws/hub.py`):
+    - `RedisSubscriber`: Subscribes to `signalforge:*` channels, routes to ConnectionManager.broadcast()
+    - `TradePublisher`: Publishes to `signalforge:trades` channel
+    - New `/ws/trades` WebSocket endpoint
+    - Startup/shutdown lifecycle wired in main.py
+11. **Hardening** (`core/circuit_breaker.py`, `core/logging_config.py`, modified `main.py`):
+    - `CircuitBreaker`: Per-broker CLOSED→OPEN→HALF_OPEN state machine (configurable failure threshold, recovery timeout)
+    - `structlog` configuration: JSON renderer for production, console for development
+    - `slowapi` rate limiting with `get_remote_address` key function
+    - `RequestIDMiddleware`: UUID per request in X-Request-ID header
+    - Enhanced `/health` endpoint: checks DB connectivity + Redis ping
+    - JWT safety check: blocks startup if default secret used in production
+
+#### Wave 5: Production + Frontend (2 agents)
+12. **Production Docker** (`Dockerfile.prod`, `docker-compose.prod.yml`, `.env.prod.example`):
+    - Multi-stage Dockerfile: builder stage compiles TA-Lib C library, slim runtime image
+    - 5-service docker-compose.prod.yml: timescaledb, redis, api (uvicorn workers), worker, beat
+    - Environment template with all SF_ variables
+13. **Frontend Wiring** (`hooks/useBrokerConnections.ts`, `hooks/useTradeStream.ts`, `pages/ApiKeys.tsx`):
+    - `useBrokerConnections`: TanStack Query hooks for broker CRUD (list, create, delete)
+    - `useTradeStream`: WebSocket hook for real-time trade stream via /ws/trades
+    - ApiKeys page rewritten: connection cards with status badges, connect form, real API integration
+
+**Test count progression:** 197 → 232 (Wave 1) → 262 (Wave 2) → 278 (Wave 3) → 296 (Wave 4+5)
+**Frontend tests:** 37 → 41 (Wave 5)
+
 ---
 
 ## All API Endpoints
@@ -255,13 +342,18 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
 | PUT | `/api/strategies/{id}` | Yes | Update strategy |
 | DELETE | `/api/strategies/{id}` | Yes | Delete strategy |
 | PUT | `/api/strategies/{id}/activate` | Yes | Toggle strategy active state |
-| GET | `/api/market/symbols` | Yes | Available trading symbols |
-| GET | `/api/engine/status` | Yes | Engine running status |
-| POST | `/api/backtests` | Yes | Run single backtest |
-| GET | `/api/backtests` | Yes | List past backtests (stub) |
+| GET | `/api/market/symbols` | No | Available trading symbols |
+| GET | `/api/market/candles/{symbol}/{tf}` | Yes | Candle data from DB |
+| GET | `/api/engine/status` | No | Engine running status |
+| POST | `/api/backtests` | Yes | Run single backtest (persisted) |
+| GET | `/api/backtests` | Yes | List past backtests from DB |
 | POST | `/api/backtests/optimize` | Yes | Run walk-forward optimization |
-| GET | `/api/positions` | Yes | List open positions |
-| POST | `/api/positions/{id}/close` | Yes | Close a position |
+| GET | `/api/positions` | Yes | List open positions (DB-backed) |
+| GET | `/api/positions/account` | Yes | Account state (equity, PnL, open count) |
+| POST | `/api/positions/{id}/close` | Yes | Close a position (creates Trade row) |
+| POST | `/api/broker` | Yes | Store encrypted broker connection |
+| GET | `/api/broker` | Yes | List broker connections (masked) |
+| DELETE | `/api/broker/{id}` | Yes | Remove broker connection |
 | POST | `/api/journal/analyze` | Yes | AI-analyze a trade (Claude Haiku) |
 | GET | `/api/journal/patterns` | Yes | Aggregate pattern summary |
 | GET | `/api/alerts/config` | Yes | Get alert configuration |
@@ -270,6 +362,7 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
 | GET | `/api/analytics/correlation` | Yes | Symbol pair correlation |
 | WS | `/ws/signals` | No | Real-time signal stream |
 | WS | `/ws/prices` | No | Real-time price stream |
+| WS | `/ws/trades` | No | Real-time trade stream |
 
 ---
 
@@ -312,6 +405,7 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | `SF_RESEND_DOMAIN` | `signalforge.dev` | Email sender domain |
 | `SF_APP_NAME` | `SignalForge` | App display name |
 | `SF_DEBUG` | `True` | Debug mode |
+| `SF_ENCRYPTION_KEY` | `` | Fernet key for broker credential encryption |
 | `SF_CORS_ORIGINS` | `["http://localhost:5173"]` | CORS allowed origins |
 | `VITE_API_URL` | `http://localhost:8000/api` | Frontend API base URL |
 
@@ -323,18 +417,25 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 # Backend
 cd backend
 docker compose up -d                        # Start TimescaleDB + Redis
-.venv/Scripts/python.exe -m pytest -q        # Run 197 tests
+.venv/Scripts/python.exe -m pytest -q        # Run 296 tests
 .venv/Scripts/python.exe -m ruff check .     # Lint (0 errors)
 .venv/Scripts/python.exe -m uvicorn app.main:app --reload  # Dev server :8000
 python -m app.cli backtest --symbol BTC/USDT --timeframe 1h --days 30  # CLI
 
+# Celery Worker + Beat (Phase 6)
+celery -A app.worker worker --loglevel=info     # Worker
+celery -A app.worker beat --loglevel=info        # Beat scheduler
+
+# Production Docker (Phase 6)
+docker compose -f docker-compose.prod.yml up -d  # All 5 services
+
 # Frontend
 cd frontend
 npm run dev          # Dev server :5173 (password gate: "signalforge")
-npx vitest run       # Run 37 tests
+npx vitest run       # Run 41 tests
 npm run lint         # ESLint (0 errors)
 npx tsc -b --noEmit  # TypeScript check
-npm run build        # Production build (554KB JS, 30KB CSS)
+npm run build        # Production build (558KB JS, 30KB CSS)
 
 # Full CI check
 cd backend && .venv/Scripts/python.exe -m pytest -q && .venv/Scripts/python.exe -m ruff check .
@@ -343,7 +444,7 @@ cd ../frontend && npx vitest run && npm run lint && npx tsc -b --noEmit && npm r
 
 ---
 
-## Commit History (48 commits)
+## Commit History (88 commits)
 
 ### Phase 1: Foundation
 | Hash | Message |
@@ -427,52 +528,38 @@ cd ../frontend && npx vitest run && npm run lint && npx tsc -b --noEmit && npm r
 
 ---
 
-## Phase 6: Live Trading & Hardening — PLANNED (Ready for Implementation)
+### Phase 6: Commit History
 
-**Design doc**: `docs/plans/2026-02-28-phase6-live-trading-design.md` (approved)
-**Implementation plan**: `docs/plans/2026-02-28-phase6-implementation.md` (13 tasks, 5 waves)
-**Commits**: `561e4d1` (design doc), `525b8c7` (implementation plan)
-
-### Key Decisions Made
-- **Approach**: Monolithic scheduler (Celery Beat within existing FastAPI + Celery backend)
-- **Brokers**: Alpaca (stocks) + CCXT/Binance (crypto) behind unified BrokerAdapter ABC
-- **Encryption**: Fernet symmetric via `SF_ENCRYPTION_KEY` for broker API credentials
-- **Deployment**: Production Docker Compose (`docker-compose.prod.yml`) with 5 services
-
-### What Phase 6 Builds
-1. **Broker Adapter Layer**: ABC + AlpacaAdapter + CCXTAdapter + PaperAdapter + BrokerRouter
-2. **DB-Backed Execution**: Order model, Position model (replace in-memory), BacktestResult model
-3. **Celery Beat Tasks**: 8 scheduled tasks (ingest candles, run pipeline, execute signals, poll orders, manage positions, daily summary, HMM retrain, broker reconciliation)
-4. **WebSocket Broadcasting**: Redis subscriber → ConnectionManager.broadcast() for signals/prices/trades
-5. **Hardening**: Circuit breakers per broker, slowapi rate limiting, structlog JSON logging, enhanced health checks
-6. **Production Docker**: Multi-stage Dockerfile, docker-compose.prod.yml (timescaledb + redis + api + worker + beat)
-7. **Frontend Wiring**: API Keys page to /api/broker CRUD, useTradeStream hook, real correlation data
-
-### Agent Team Waves (5 waves, 13 agents)
-
-| Wave | Agents | Deps |
-|------|--------|------|
-| 1 | `@db-models`, `@broker-adapters`, `@crypto-api` | None |
-| 2 | `@position-manager`, `@order-executor`, `@candle-storage` | Wave 1 |
-| 3 | `@ingestion-tasks`, `@execution-tasks`, `@alert-tasks` | Wave 2 |
-| 4 | `@realtime`, `@hardening` | Wave 3 |
-| 5 | `@docker-prod`, `@frontend-wiring` | Wave 4 |
-
-### New Dependencies (to install)
-- `alpaca-py>=0.30.0` — Alpaca broker SDK
-- `structlog>=24.0.0` — Structured logging
-- `slowapi>=0.1.9` — FastAPI rate limiting
-- `cryptography>=43.0.0` — Fernet encryption
-
-### New Env Vars
-- `SF_ENCRYPTION_KEY` — Fernet key for broker credential encryption (generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`)
-
-### Implementation Status
-- [ ] Wave 1: Foundation (models, adapters, encryption)
-- [ ] Wave 2: Core Wiring (positions, executor, candle storage)
-- [ ] Wave 3: Celery Tasks (ingestion, execution, alerts)
-- [ ] Wave 4: Real-Time + Hardening (WebSocket, circuit breakers)
-- [ ] Wave 5: Production + Frontend (Docker, API Keys page)
+| Hash | Message |
+|------|---------|
+| `a37c55c` | docs: comprehensive project status for Phases 1-5 |
+| `561e4d1` | docs: Phase 6 live trading & hardening design document |
+| `525b8c7` | docs: Phase 6 implementation plan — 13 tasks across 5 waves |
+| `31ea041` | docs: update CLAUDE.md and PROJECT-STATUS.md for Phase 6 planning complete |
+| `f1ec2f2` | docs: add Phase 6 handoff prompt for new session |
+| `7196ac9` | chore: remove PHASE6-HANDOFF.md — prompt moved inline |
+| `2bd97d6` | feat(backend): Fernet encryption + broker connection CRUD API |
+| `83a6d98` | feat(backend): broker adapter layer — ABC + Paper + Alpaca + CCXT + Router |
+| `a014ac6` | feat(backend): add Order, Position, BacktestResult models + user alert_config |
+| `b492c0e` | Merge branch 'worktree-agent-add0ef19' |
+| `c6918ef` | Merge branch 'worktree-agent-a31125f7' |
+| `29a4a13` | feat(backend): rewrite OrderExecutor with BrokerRouter + DB Order persistence |
+| `49f570c` | feat(backend): DB-backed CandleStorage + real candle/correlation endpoints |
+| `db43d62` | feat(backend): DB-backed PositionManager replacing in-memory |
+| `67b5074` | Merge branch 'worktree-agent-a23468bc' |
+| `9b54a2f` | fix(tests): update tests for DB-backed position manager + auth-required candles |
+| `6459e9d` | feat(backend): Celery Beat schedule + candle ingestion + signal pipeline tasks |
+| `3440464` | feat(backend): execution tasks — signal execution, order polling, position management |
+| `28c7ed6` | feat(backend): alert persistence, email wiring, backtest DB storage, HMM real data |
+| `843fac6` | Merge branch 'worktree-agent-a6d9edf7' |
+| `7ea1241` | Merge branch 'worktree-agent-a70d34de' |
+| `b0bef20` | fix(tests): add auth headers to backtest API tests |
+| `99f6c49` | feat(backend): Redis subscriber + WebSocket broadcasting for signals/prices/trades |
+| `e4f42f0` | feat(backend): circuit breaker, rate limiting, structured logging, health checks |
+| `8f52658` | merge: resolve main.py conflict — combine Redis subscriber + hardening features |
+| `c1e8992` | infra: production Docker Compose + multi-stage Dockerfile |
+| `bb67ba1` | feat(frontend): wire API Keys page to broker API + useTradeStream hook |
+| `79baeb3` | Merge branch 'worktree-agent-a08648ab' |
 
 ---
 
@@ -485,6 +572,38 @@ Each phase was built using **Cloud Agent Teams** — named agents dispatched via
 - **Phase 3**: 3 agents (auth+execution, APIs, integration) in 3 waves
 - **Phase 4**: 4 agents (@frontend-scaffold, @page-builder-a, @page-builder-b, @ws-integrator) in 3 waves
 - **Phase 5**: 4 agents (@ml-engineer, @api-builder, @frontend-journal, @frontend-analytics) in 2 waves
-- **Phase 6**: 13 agents in 5 waves (PLANNED, not started)
+- **Phase 6**: 13 agents in 5 waves — @db-models, @broker-adapters, @crypto-api, @position-manager, @order-executor, @candle-storage, @ingestion-tasks, @execution-tasks, @alert-tasks, @realtime, @hardening, @docker-prod, @frontend-wiring
 
 Each wave was merged to main after verification. All worktree branches have been cleaned up.
+
+---
+
+## Celery Beat Schedule (Phase 6)
+
+| Task | Schedule | Description |
+|------|----------|-------------|
+| `ingest_candles` | Every 5 min | Fetch OHLCV for BTC/USDT, ETH/USDT, SOL/USDT × 1h, 4h |
+| `run_signal_pipeline` | Every 5 min | Run 6-layer pipeline per symbol, persist signals |
+| `execute_pending_signals` | Every 30 sec | Execute pending signals via BrokerRouter |
+| `poll_open_orders` | Every 1 min | Check order status, open positions on fill |
+| `manage_open_positions` | Every 1 min | Check SL/TP, close positions when hit |
+| `send_daily_summary` | Daily 20:00 UTC | Aggregate daily trades, send email summary |
+| `retrain_hmm_models` | Daily 03:00 UTC | Retrain HMM regime models per symbol |
+| `reconcile_broker` | Daily 04:00 UTC | Reconcile broker state (placeholder) |
+
+---
+
+## Production Docker (Phase 6)
+
+```bash
+# Generate encryption key
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# Copy and configure environment
+cp backend/.env.prod.example backend/.env.prod
+
+# Start all services
+docker compose -f docker-compose.prod.yml up -d
+
+# Services: timescaledb (5432), redis (6379), api (8000), worker, beat
+```
