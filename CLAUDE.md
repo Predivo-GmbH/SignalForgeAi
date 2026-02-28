@@ -4,11 +4,13 @@ Multi-layer automated trading platform with confluence scoring.
 
 ## Status
 
-**Phases 1–5 complete.** See `docs/PROJECT-STATUS.md` for comprehensive documentation of everything built, all endpoints, all files, commit history, and Phase 6 scope.
+**Phases 1–5 complete. Phase 6 PLANNED — ready for implementation.**
 
-- 48 commits on `main`, 197 backend tests, 37 frontend tests, 0 lint errors
+- 50 commits on `main`, 197 backend tests, 37 frontend tests, 0 lint errors
 - Backend: 10 API routers, 30 endpoints, 6-layer signal pipeline, HMM regime, AI journal, WFO
 - Frontend: 9 pages, 12 hooks, 14 components, WebSocket integration, dark/light theme
+- **Phase 6 design**: `docs/plans/2026-02-28-phase6-live-trading-design.md` (APPROVED)
+- **Phase 6 plan**: `docs/plans/2026-02-28-phase6-implementation.md` (13 tasks, 5 waves)
 
 ## Project Structure
 - `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0 (62 source files, 33 test files)

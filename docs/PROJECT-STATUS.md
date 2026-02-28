@@ -427,20 +427,52 @@ cd ../frontend && npx vitest run && npm run lint && npx tsc -b --noEmit && npm r
 
 ---
 
-## What's NOT Built Yet (Phase 6 Scope)
+## Phase 6: Live Trading & Hardening — PLANNED (Ready for Implementation)
 
-Based on `SignalForge-Technical-Plan.md`, Phase 6 covers **Live Trading & Hardening**:
+**Design doc**: `docs/plans/2026-02-28-phase6-live-trading-design.md` (approved)
+**Implementation plan**: `docs/plans/2026-02-28-phase6-implementation.md` (13 tasks, 5 waves)
+**Commits**: `561e4d1` (design doc), `525b8c7` (implementation plan)
 
-1. **Real market data ingestion** — CCXT pipeline is built but uses synthetic data everywhere. Need to wire up real exchange feeds.
-2. **Live order execution** — Executor exists with Alpaca paper mode. Need to add real broker integration + order lifecycle management.
-3. **Position tracking persistence** — PositionManager is in-memory. Need DB-backed positions with state recovery.
-4. **Celery periodic tasks** — HMM retraining, daily email summaries, position monitoring. Infrastructure exists, schedules need configuration.
-5. **Error handling / circuit breakers** — API endpoints need rate limiting, exchange connection resilience, order retry logic.
-6. **Deployment** — Docker Compose exists for dev. Need production Docker config, env management, monitoring.
-7. **Real correlation data** — Analytics correlation endpoint uses synthetic data. Need real price history.
-8. **Backtest persistence** — `GET /api/backtests` returns empty array. Need to store results in DB.
-9. **Alert delivery** — Email functions exist but aren't triggered by the signal pipeline yet.
-10. **Frontend polish** — API Keys page is local-state only (not persisted). Some pages use demo/mock data.
+### Key Decisions Made
+- **Approach**: Monolithic scheduler (Celery Beat within existing FastAPI + Celery backend)
+- **Brokers**: Alpaca (stocks) + CCXT/Binance (crypto) behind unified BrokerAdapter ABC
+- **Encryption**: Fernet symmetric via `SF_ENCRYPTION_KEY` for broker API credentials
+- **Deployment**: Production Docker Compose (`docker-compose.prod.yml`) with 5 services
+
+### What Phase 6 Builds
+1. **Broker Adapter Layer**: ABC + AlpacaAdapter + CCXTAdapter + PaperAdapter + BrokerRouter
+2. **DB-Backed Execution**: Order model, Position model (replace in-memory), BacktestResult model
+3. **Celery Beat Tasks**: 8 scheduled tasks (ingest candles, run pipeline, execute signals, poll orders, manage positions, daily summary, HMM retrain, broker reconciliation)
+4. **WebSocket Broadcasting**: Redis subscriber → ConnectionManager.broadcast() for signals/prices/trades
+5. **Hardening**: Circuit breakers per broker, slowapi rate limiting, structlog JSON logging, enhanced health checks
+6. **Production Docker**: Multi-stage Dockerfile, docker-compose.prod.yml (timescaledb + redis + api + worker + beat)
+7. **Frontend Wiring**: API Keys page to /api/broker CRUD, useTradeStream hook, real correlation data
+
+### Agent Team Waves (5 waves, 13 agents)
+
+| Wave | Agents | Deps |
+|------|--------|------|
+| 1 | `@db-models`, `@broker-adapters`, `@crypto-api` | None |
+| 2 | `@position-manager`, `@order-executor`, `@candle-storage` | Wave 1 |
+| 3 | `@ingestion-tasks`, `@execution-tasks`, `@alert-tasks` | Wave 2 |
+| 4 | `@realtime`, `@hardening` | Wave 3 |
+| 5 | `@docker-prod`, `@frontend-wiring` | Wave 4 |
+
+### New Dependencies (to install)
+- `alpaca-py>=0.30.0` — Alpaca broker SDK
+- `structlog>=24.0.0` — Structured logging
+- `slowapi>=0.1.9` — FastAPI rate limiting
+- `cryptography>=43.0.0` — Fernet encryption
+
+### New Env Vars
+- `SF_ENCRYPTION_KEY` — Fernet key for broker credential encryption (generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`)
+
+### Implementation Status
+- [ ] Wave 1: Foundation (models, adapters, encryption)
+- [ ] Wave 2: Core Wiring (positions, executor, candle storage)
+- [ ] Wave 3: Celery Tasks (ingestion, execution, alerts)
+- [ ] Wave 4: Real-Time + Hardening (WebSocket, circuit breakers)
+- [ ] Wave 5: Production + Frontend (Docker, API Keys page)
 
 ---
 
@@ -453,5 +485,6 @@ Each phase was built using **Cloud Agent Teams** — named agents dispatched via
 - **Phase 3**: 3 agents (auth+execution, APIs, integration) in 3 waves
 - **Phase 4**: 4 agents (@frontend-scaffold, @page-builder-a, @page-builder-b, @ws-integrator) in 3 waves
 - **Phase 5**: 4 agents (@ml-engineer, @api-builder, @frontend-journal, @frontend-analytics) in 2 waves
+- **Phase 6**: 13 agents in 5 waves (PLANNED, not started)
 
 Each wave was merged to main after verification. All worktree branches have been cleaned up.
