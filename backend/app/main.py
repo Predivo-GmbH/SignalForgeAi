@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.market import router as market_router
 from app.auth.router import router as auth_router
 from app.config import settings
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 
 app.include_router(auth_router, prefix="/api")
+app.include_router(market_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
