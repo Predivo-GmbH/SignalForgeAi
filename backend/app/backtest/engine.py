@@ -1,6 +1,6 @@
 """
-Basic backtest engine. Runs the signal pipeline (Layers 1-2 for Phase 1)
-on historical data and simulates trades.
+Backtest engine. Runs the full SignalPipeline (Layers 0-5) on historical
+data and simulates trades with proper position sizing and risk management.
 """
 
 from dataclasses import dataclass
@@ -8,9 +8,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from app.engine.indicators import compute_atr
-from app.engine.layers.trend import Trend, TrendFilter
-from app.engine.layers.zones import ZoneIdentifier
+from app.engine.layers.risk import RiskConfig
+from app.engine.pipeline import SignalPipeline
 
 
 @dataclass
@@ -41,19 +40,34 @@ class BacktestResult:
 
 
 class BacktestEngine:
-    """Walk-forward backtest using Layers 1-2 (TrendFilter + ZoneIdentifier)."""
+    """Walk-forward backtest using the full SignalPipeline (Layers 0-5)."""
 
     def __init__(
         self,
         lookback: int = 200,
         risk_pct: float = 0.02,
         atr_sl_mult: float = 2.0,
+        min_confluence: int = 50,
+        risk_config: RiskConfig | None = None,
     ):
         self.lookback = lookback
         self.risk_pct = risk_pct
         self.atr_sl_mult = atr_sl_mult
-        self.trend_filter = TrendFilter()
-        self.zone_identifier = ZoneIdentifier()
+        self.min_confluence = min_confluence
+
+        # Build RiskConfig: use provided config, or create one from legacy params
+        if risk_config is not None:
+            self._risk_config = risk_config
+        else:
+            self._risk_config = RiskConfig(
+                max_risk_per_trade=risk_pct,
+                atr_sl_multiplier=atr_sl_mult,
+            )
+
+        self._pipeline = SignalPipeline(
+            risk_config=self._risk_config,
+            min_confluence=min_confluence,
+        )
 
     def run(
         self,
@@ -121,44 +135,22 @@ class BacktestEngine:
                 equity_curve.append(capital)
                 continue
 
-            # Run signal pipeline (Layers 1-2 only for Phase 1)
-            trend = self.trend_filter.evaluate(window)
-            if trend.direction == Trend.UNDETERMINED:
-                equity_curve.append(capital)
-                continue
+            # Run the full 6-layer SignalPipeline
+            signal = self._pipeline.process(
+                symbol=symbol,
+                timeframe=timeframe,
+                candles=window,
+                account_equity=capital,
+            )
 
-            zones = self.zone_identifier.find_zones(window, trend)
-            if not zones:
-                equity_curve.append(capital)
-                continue
-
-            # Check if price is in any zone
-            for zone in zones:
-                if zone.lower <= current["close"] <= zone.upper:
-                    atr = compute_atr(window, 14)
-                    atr_val = atr.iloc[-1]
-                    if np.isnan(atr_val) or atr_val <= 0:
-                        continue
-
-                    entry_price = float(current["close"])
-                    atr_val = float(atr_val)
-                    if trend.direction == Trend.BULLISH:
-                        stop_loss = entry_price - atr_val * self.atr_sl_mult
-                        take_profit = entry_price + atr_val * self.atr_sl_mult * 1.5
-                        direction = "BUY"
-                    else:
-                        stop_loss = entry_price + atr_val * self.atr_sl_mult
-                        take_profit = entry_price - atr_val * self.atr_sl_mult * 1.5
-                        direction = "SELL"
-
-                    open_trade = Trade(
-                        entry_idx=i,
-                        entry_price=entry_price,
-                        direction=direction,
-                        stop_loss=stop_loss,
-                        take_profit=take_profit,
-                    )
-                    break
+            if signal.action in ("BUY", "SELL") and signal.stop_loss and signal.take_profit_1:
+                open_trade = Trade(
+                    entry_idx=i,
+                    entry_price=float(current["close"]),
+                    direction=signal.action,
+                    stop_loss=signal.stop_loss,
+                    take_profit=signal.take_profit_1,
+                )
 
             equity_curve.append(capital)
 

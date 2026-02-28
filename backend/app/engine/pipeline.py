@@ -52,13 +52,18 @@ class SignalPipeline:
     a Signal with action BUY, SELL, or NO_TRADE.
     """
 
-    def __init__(self, risk_config: RiskConfig | None = None):
+    def __init__(
+        self,
+        risk_config: RiskConfig | None = None,
+        min_confluence: int = 50,
+    ):
         self.regime_detector = RegimeDetector()
         self.trend_filter = TrendFilter()
         self.zone_identifier = ZoneIdentifier()
         self.confluence_scorer = ConfluenceScorer()
         self.trigger_detector = TriggerDetector()
         self.risk_manager = RiskManager(config=risk_config)
+        self.min_confluence = min_confluence
 
     def process(
         self,
@@ -114,7 +119,7 @@ class SignalPipeline:
         for zone in zones:
             # Layer 3: Confluence scoring
             confluence_score = self.confluence_scorer.score(zone, candles, trend)
-            if confluence_score < 50:
+            if confluence_score < self.min_confluence:
                 last_block_reason = "low_confluence"
                 continue
 
