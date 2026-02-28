@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Background */
+  --color-bg-base: #F7F5F2;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #F0EDE8;
+
+  /* Border */
+  --color-border: #E5E2DC;
+
+  /* Text */
+  --color-text-primary: #1A1A2E;
+  --color-text-secondary: #6B6B80;
+
+  /* Accent */
+  --color-accent: #7B61FF;
+  --color-accent-soft: rgba(123, 97, 255, 0.08);
+
+  /* Semantic */
+  --color-positive: #00A870;
+  --color-negative: #E03E52;
+  --color-warning: #E09A00;
+}
+
+.dark {
+  --color-bg-base: #0B0B14;
+  --color-bg-surface: #141420;
+  --color-bg-elevated: #1C1C2E;
+
+  --color-border: #2A2A3C;
+
+  --color-text-primary: #F0F0F5;
+  --color-text-secondary: #8B8BA0;
+
+  --color-accent: #7B61FF;
+  --color-accent-soft: rgba(123, 97, 255, 0.13);
+
+  --color-positive: #00D68F;
+  --color-negative: #FF4D6A;
+  --color-warning: #FFB020;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* Monospace for prices/numbers */
+.font-mono {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* Custom scrollbar (dark mode) */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
