@@ -8,6 +8,7 @@ from app.api.strategies import router as strategies_router
 from app.api.trades import router as trades_router
 from app.auth.router import router as auth_router
 from app.config import settings
+from app.ws.hub import ws_prices, ws_signals
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 
@@ -25,6 +26,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# WebSocket routes for real-time streaming
+app.websocket("/ws/signals")(ws_signals)
+app.websocket("/ws/prices")(ws_prices)
 
 
 @app.get("/health")
