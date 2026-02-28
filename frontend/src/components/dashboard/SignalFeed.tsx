@@ -1,0 +1,115 @@
+import { ArrowUpRight, ArrowDownRight, Radio } from "lucide-react";
+import type { Signal } from "@/hooks/useSignals";
+
+interface SignalFeedProps {
+  signals: Signal[] | undefined;
+  loading?: boolean;
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  return `${diffDays}d ago`;
+}
+
+function ConfluenceBar({ score }: { score: number }) {
+  const pct = Math.min(100, Math.max(0, score));
+  let color = "bg-[var(--color-negative)]";
+  if (pct >= 60) color = "bg-[var(--color-positive)]";
+  else if (pct >= 30) color = "bg-[var(--color-warning)]";
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-12 h-1.5 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs font-mono text-[var(--color-text-secondary)]">
+        {score}
+      </span>
+    </div>
+  );
+}
+
+function SkeletonFeedItem() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="h-7 w-7 rounded-full bg-[var(--color-bg-elevated)] animate-pulse" />
+      <div className="flex-1 space-y-1.5">
+        <div className="h-3 w-16 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
+        <div className="h-2.5 w-24 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
+      </div>
+      <div className="h-3 w-10 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
+    </div>
+  );
+}
+
+export function SignalFeed({ signals, loading }: SignalFeedProps) {
+  return (
+    <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] flex flex-col">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)]">
+        <Radio className="h-4 w-4 text-[var(--color-accent)]" />
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+          Signal Feed
+        </h3>
+      </div>
+
+      <div className="divide-y divide-[var(--color-border)] overflow-y-auto max-h-[400px]">
+        {loading ? (
+          Array.from({ length: 5 }, (_, i) => <SkeletonFeedItem key={i} />)
+        ) : !signals || signals.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+            No signals yet
+          </div>
+        ) : (
+          signals.map((sig) => {
+            const isLong = sig.direction.toUpperCase() === "LONG";
+            const DirIcon = isLong ? ArrowUpRight : ArrowDownRight;
+            const dirColor = isLong
+              ? "text-[var(--color-positive)]"
+              : "text-[var(--color-negative)]";
+            const dirBg = isLong
+              ? "bg-[var(--color-positive)]/10"
+              : "bg-[var(--color-negative)]/10";
+
+            return (
+              <div
+                key={sig.id}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-bg-elevated)]/30 transition-colors"
+              >
+                <div
+                  className={`flex h-7 w-7 items-center justify-center rounded-full ${dirBg}`}
+                >
+                  <DirIcon className={`h-4 w-4 ${dirColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      {sig.symbol}
+                    </span>
+                    <span
+                      className={`text-xs font-medium ${dirColor}`}
+                    >
+                      {sig.direction.toUpperCase()}
+                    </span>
+                  </div>
+                  <ConfluenceBar score={sig.confluence_score} />
+                </div>
+                <span className="text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
+                  {formatRelativeTime(sig.created_at)}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
