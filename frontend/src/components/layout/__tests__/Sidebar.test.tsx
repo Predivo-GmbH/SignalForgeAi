@@ -31,6 +31,7 @@ describe("Sidebar", () => {
     );
     expect(screen.getByText("Backtest Lab")).toBeInTheDocument();
     expect(screen.getByText("Journal")).toBeInTheDocument();
+    expect(screen.getByText("Analytics")).toBeInTheDocument();
     expect(screen.getByText("Strategy")).toBeInTheDocument();
     expect(screen.getByText("API Keys")).toBeInTheDocument();
   });

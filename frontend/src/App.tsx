@@ -13,6 +13,7 @@ import { BacktestPage } from "./pages/Backtest";
 import { JournalPage } from "./pages/Journal";
 import { StrategyConfigPage } from "./pages/StrategyConfig";
 import { ApiKeysPage } from "./pages/ApiKeys";
+import { AnalyticsPage } from "./pages/Analytics";
 import { useTheme } from "./lib/theme";
 import { queryClient } from "./lib/query";
 
@@ -36,6 +37,7 @@ function App() {
               <Route path="trades" element={<TradesPage />} />
               <Route path="backtest" element={<BacktestPage />} />
               <Route path="journal" element={<JournalPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="config" element={<StrategyConfigPage />} />
               <Route path="keys" element={<ApiKeysPage />} />
             </Route>
