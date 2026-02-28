@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 
 def make_trending_candles(n=200):

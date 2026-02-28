@@ -1,7 +1,6 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.auth.jwt import create_access_token
 from app.main import app
 
 

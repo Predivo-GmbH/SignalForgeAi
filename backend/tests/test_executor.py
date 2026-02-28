@@ -1,9 +1,8 @@
-import pytest
 
 
 class TestPreTradeRiskChecks:
     def test_passes_within_limits(self):
-        from app.execution.risk_checks import PreTradeChecker, AccountState
+        from app.execution.risk_checks import AccountState, PreTradeChecker
 
         checker = PreTradeChecker()
         state = AccountState(equity=10000, daily_pnl=0, open_positions=0, max_positions=5)
@@ -11,7 +10,7 @@ class TestPreTradeRiskChecks:
         assert result.approved is True
 
     def test_rejects_daily_loss_exceeded(self):
-        from app.execution.risk_checks import PreTradeChecker, AccountState
+        from app.execution.risk_checks import AccountState, PreTradeChecker
 
         checker = PreTradeChecker(max_daily_loss_pct=0.06)
         state = AccountState(equity=10000, daily_pnl=-700, open_positions=0, max_positions=5)
@@ -20,7 +19,7 @@ class TestPreTradeRiskChecks:
         assert "daily_loss" in result.reason
 
     def test_rejects_max_positions(self):
-        from app.execution.risk_checks import PreTradeChecker, AccountState
+        from app.execution.risk_checks import AccountState, PreTradeChecker
 
         checker = PreTradeChecker()
         state = AccountState(equity=10000, daily_pnl=0, open_positions=5, max_positions=5)
@@ -29,7 +28,7 @@ class TestPreTradeRiskChecks:
         assert "max_positions" in result.reason
 
     def test_rejects_risk_too_large(self):
-        from app.execution.risk_checks import PreTradeChecker, AccountState
+        from app.execution.risk_checks import AccountState, PreTradeChecker
 
         checker = PreTradeChecker(max_risk_per_trade_pct=0.02)
         state = AccountState(equity=10000, daily_pnl=0, open_positions=0, max_positions=5)

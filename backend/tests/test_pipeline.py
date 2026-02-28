@@ -1,9 +1,9 @@
 """Tests for SignalPipeline orchestrator and SessionFilter."""
 
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
-import pytest
-from datetime import datetime, timezone
 
 
 def make_trending_candles(n=300):
@@ -31,7 +31,7 @@ class TestSignalPipeline:
         assert isinstance(result, Signal)
 
     def test_signal_has_required_fields(self):
-        from app.engine.pipeline import Signal, SignalPipeline
+        from app.engine.pipeline import SignalPipeline
 
         pipeline = SignalPipeline()
         result = pipeline.process("TEST/USD", "1h", make_trending_candles())

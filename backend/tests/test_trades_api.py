@@ -7,8 +7,6 @@ import pytest
 
 from app.auth.jwt import create_access_token
 from app.models.trade import Trade
-from app.models.user import User
-from app.core.security import hash_password
 
 
 @pytest.fixture

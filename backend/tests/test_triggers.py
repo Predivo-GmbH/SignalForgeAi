@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pytest
 
 
 def make_macd_cross_up_candles(n=200):
@@ -13,14 +12,17 @@ def make_macd_cross_up_candles(n=200):
     ])
     high = close + rng.uniform(0.5, 1.5, n)
     low = close - rng.uniform(0.5, 1.5, n)
-    return pd.DataFrame({"open": close, "high": high, "low": low, "close": close, "volume": rng.uniform(1000, 5000, n)})
+    return pd.DataFrame({
+        "open": close, "high": high, "low": low,
+        "close": close, "volume": rng.uniform(1000, 5000, n),
+    })
 
 
 class TestTriggerDetector:
     def test_returns_trigger_result(self):
+        from app.engine.layers.trend import Trend, TrendResult
         from app.engine.layers.triggers import TriggerDetector, TriggerResult
         from app.engine.layers.zones import EntryZone
-        from app.engine.layers.trend import TrendResult, Trend
         td = TriggerDetector()
         zone = EntryZone(zone_type="fibonacci_golden", upper=110, lower=90, strength=0.7)
         trend = TrendResult(direction=Trend.BULLISH, strength=0.01)
@@ -30,9 +32,9 @@ class TestTriggerDetector:
         assert isinstance(result.confirmations, list)
 
     def test_requires_two_confirmations(self):
+        from app.engine.layers.trend import Trend, TrendResult
         from app.engine.layers.triggers import TriggerDetector
         from app.engine.layers.zones import EntryZone
-        from app.engine.layers.trend import TrendResult, Trend
         td = TriggerDetector()
         zone = EntryZone(zone_type="fibonacci_golden", upper=200, lower=0, strength=0.7)
         trend = TrendResult(direction=Trend.BULLISH, strength=0.01)
@@ -41,9 +43,9 @@ class TestTriggerDetector:
             assert len(result.confirmations) >= 2
 
     def test_confirmations_are_strings(self):
+        from app.engine.layers.trend import Trend, TrendResult
         from app.engine.layers.triggers import TriggerDetector
         from app.engine.layers.zones import EntryZone
-        from app.engine.layers.trend import TrendResult, Trend
         td = TriggerDetector()
         zone = EntryZone(zone_type="fibonacci_golden", upper=200, lower=0, strength=0.7)
         trend = TrendResult(direction=Trend.BULLISH, strength=0.01)

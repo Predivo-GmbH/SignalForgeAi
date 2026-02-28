@@ -17,7 +17,6 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.backtest.engine import BacktestEngine
-from app.backtest.optimizer import WalkForwardOptimizer
 
 
 def generate_forex_like(n=2000, seed=42):
@@ -120,7 +119,9 @@ def write_report(results: dict, report_path: str):
     lines.append("\n## Notes\n")
     lines.append("- Data is synthetic (2000 bars each) to demonstrate pipeline functionality")
     lines.append("- Real market data will be used once CCXT ingestion is live (Phase 3)")
-    lines.append("- All 6 layers active: Regime -> Trend -> Zones -> Confluence -> Triggers -> Risk")
+    lines.append(
+        "- All 6 layers active: Regime -> Trend -> Zones -> Confluence -> Triggers -> Risk"
+    )
 
     with open(report_path, "w") as f:
         f.write("\n".join(lines))
