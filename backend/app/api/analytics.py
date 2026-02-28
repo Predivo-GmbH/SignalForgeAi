@@ -132,15 +132,38 @@ async def get_correlation(
     symbol_a: str = Query(..., description="First symbol"),
     symbol_b: str = Query(..., description="Second symbol"),
     _user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Return correlation between two symbols (synthetic data for now)."""
-    # Generate synthetic price data seeded by symbol names for consistency
+    """Return correlation between two symbols.
+
+    Uses real candle close prices from the database when sufficient data
+    exists (>= 30 data points). Falls back to synthetic data otherwise.
+    """
+    from app.data.storage import CandleStorage
+
+    min_data_points = 30
+
+    prices_a = await CandleStorage.load_close_prices(db, symbol_a, timeframe="1h", limit=500)
+    prices_b = await CandleStorage.load_close_prices(db, symbol_b, timeframe="1h", limit=500)
+
+    if len(prices_a) >= min_data_points and len(prices_b) >= min_data_points:
+        # Use real data
+        n = min(len(prices_a), len(prices_b))
+        corr = compute_correlation(prices_a[-n:], prices_b[-n:])
+        return CorrelationResponse(
+            symbol_a=symbol_a,
+            symbol_b=symbol_b,
+            correlation=round(corr, 4),
+            data_points=n,
+        )
+
+    # Fall back to synthetic data seeded by symbol names for consistency
     seed = hash(symbol_a + symbol_b) % (2**31)
     rng = np.random.default_rng(seed)
     n = 100
-    prices_a = list(np.cumsum(rng.standard_normal(n) * 0.5) + 100)
-    prices_b = list(np.cumsum(rng.standard_normal(n) * 0.5) + 100)
-    corr = compute_correlation(prices_a, prices_b)
+    synth_a = list(np.cumsum(rng.standard_normal(n) * 0.5) + 100)
+    synth_b = list(np.cumsum(rng.standard_normal(n) * 0.5) + 100)
+    corr = compute_correlation(synth_a, synth_b)
 
     return CorrelationResponse(
         symbol_a=symbol_a,
