@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 30
     jwt_refresh_expiry_days: int = 7
 
+    # Encryption
+    encryption_key: str = ""  # Fernet key for broker credential encryption
+
     # Alpaca broker
     alpaca_api_key: str = ""
     alpaca_api_secret: str = ""
