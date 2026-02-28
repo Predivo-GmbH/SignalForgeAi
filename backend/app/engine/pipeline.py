@@ -18,7 +18,7 @@ import pandas as pd
 
 from app.engine.layers.confluence import ConfluenceScorer
 from app.engine.layers.regime import Regime, RegimeDetector
-from app.engine.layers.risk import RiskCalc, RiskConfig, RiskManager
+from app.engine.layers.risk import RiskConfig, RiskManager
 from app.engine.layers.trend import Trend, TrendFilter
 from app.engine.layers.triggers import TriggerDetector
 from app.engine.layers.zones import ZoneIdentifier

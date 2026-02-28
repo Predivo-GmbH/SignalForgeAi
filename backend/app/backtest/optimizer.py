@@ -9,8 +9,8 @@ This avoids overfitting by ensuring the chosen parameters generalize
 to unseen data across multiple time periods.
 """
 
-from dataclasses import dataclass
 import itertools
+from dataclasses import dataclass
 
 import pandas as pd
 

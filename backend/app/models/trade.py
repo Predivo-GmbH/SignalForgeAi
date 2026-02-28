@@ -3,10 +3,10 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, Integer, String, ForeignKey, Uuid
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, UUIDMixin, TimestampMixin
+from app.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class Trade(Base, UUIDMixin, TimestampMixin):
