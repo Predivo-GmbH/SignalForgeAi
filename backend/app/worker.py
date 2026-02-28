@@ -1,6 +1,7 @@
 """Celery application for SignalForge async tasks."""
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.config import settings
 
@@ -17,3 +18,44 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
 )
+
+# Auto-discover tasks in the app.tasks package
+celery_app.autodiscover_tasks(["app.tasks"])
+
+# ---------------------------------------------------------------------------
+# Celery Beat schedule — periodic tasks
+# ---------------------------------------------------------------------------
+celery_app.conf.beat_schedule = {
+    "ingest-candles-1m": {
+        "task": "ingest_candles",
+        "schedule": 60.0,
+    },
+    "run-signal-pipeline-5m": {
+        "task": "run_signal_pipeline",
+        "schedule": 300.0,
+    },
+    "execute-pending-signals-30s": {
+        "task": "execute_pending_signals",
+        "schedule": 30.0,
+    },
+    "poll-order-status-15s": {
+        "task": "poll_order_status",
+        "schedule": 15.0,
+    },
+    "manage-positions-1m": {
+        "task": "manage_positions",
+        "schedule": 60.0,
+    },
+    "reconcile-broker-state-5m": {
+        "task": "reconcile_broker_state",
+        "schedule": 300.0,
+    },
+    "send-daily-summary": {
+        "task": "send_daily_summary",
+        "schedule": crontab(hour=17, minute=0),
+    },
+    "retrain-hmm-weekly": {
+        "task": "train_hmm_regime",
+        "schedule": crontab(hour=2, minute=0, day_of_week="sunday"),
+    },
+}
