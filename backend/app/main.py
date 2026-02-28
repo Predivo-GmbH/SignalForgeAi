@@ -99,8 +99,11 @@ app.websocket("/ws/trades")(ws_trades)
 _subscriber = RedisSubscriber(redis_url=settings.redis_url)
 
 
+# ---------------------------------------------------------------------------
+# Startup / shutdown
+# ---------------------------------------------------------------------------
 @app.on_event("startup")
-async def _start_redis_subscriber() -> None:
+async def _startup() -> None:
     # JWT safety check for production
     if not settings.debug and settings.jwt_secret == "dev-secret-change-in-production":
         raise RuntimeError("JWT secret must be changed for production!")
@@ -112,7 +115,7 @@ async def _start_redis_subscriber() -> None:
 
 
 @app.on_event("shutdown")
-async def _stop_redis_subscriber() -> None:
+async def _shutdown() -> None:
     await _subscriber.stop()
 
 
