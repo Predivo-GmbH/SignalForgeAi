@@ -1,7 +1,11 @@
 """Backtest API endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import get_current_user
+from app.core.database import get_db
 
 router = APIRouter(tags=["backtests"])
 
@@ -28,20 +32,56 @@ class WFORequest(BaseModel):
 
 
 @router.post("/backtests")
-async def run_backtest(body: BacktestRequest):
+async def run_backtest(
+    body: BacktestRequest,
+    user_id: str = Depends(get_current_user),
+):
     """Run a backtest synchronously (Celery async dispatch when broker is available)."""
     from app.tasks.backtest_task import run_backtest_task
 
     # Run synchronously for now -- when Celery broker is running,
     # switch to: task = run_backtest_task.delay(...)
-    result = run_backtest_task(body.symbol, body.timeframe, body.days, body.params)
+    result = run_backtest_task(
+        body.symbol, body.timeframe, body.days, body.params, user_id=user_id,
+    )
     return result
 
 
 @router.get("/backtests")
-async def list_backtests():
-    """List past backtest results (stored in DB in future)."""
-    return []
+async def list_backtests(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List past backtest results from the database."""
+    import uuid
+
+    from sqlalchemy import select
+
+    from app.models.backtest_result import BacktestResult
+
+    result = await db.execute(
+        select(BacktestResult)
+        .where(BacktestResult.user_id == uuid.UUID(user_id))
+        .order_by(BacktestResult.created_at.desc())
+        .limit(50)
+    )
+    rows = result.scalars().all()
+    return [
+        {
+            "id": str(row.id),
+            "symbol": row.symbol,
+            "timeframe": row.timeframe,
+            "days": row.days,
+            "metrics": row.metrics,
+            "trade_count": row.trade_count,
+            "win_rate": row.win_rate,
+            "sharpe_ratio": row.sharpe_ratio,
+            "max_drawdown": row.max_drawdown,
+            "total_pnl": row.total_pnl,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in rows
+    ]
 
 
 @router.post("/backtests/optimize")
