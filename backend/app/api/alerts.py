@@ -1,18 +1,16 @@
-"""Alert configuration API — manage email notification preferences."""
+"""Alert configuration API — manage email notification preferences (DB-backed)."""
 
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.core.database import get_db
 
 router = APIRouter(tags=["alerts"])
-
-
-# ---------------------------------------------------------------------------
-# In-memory config store (single-user for now)
-# ---------------------------------------------------------------------------
-
-_alert_configs: dict[str, dict] = {}
 
 _DEFAULT_CONFIG = {
     "email_on_signal": False,
@@ -33,19 +31,35 @@ class AlertConfig(BaseModel):
 # Routes
 # ---------------------------------------------------------------------------
 
+
 @router.get("/alerts/config", response_model=AlertConfig)
-async def get_alert_config(user_id: str = Depends(get_current_user)):
-    """Get current alert configuration for the authenticated user."""
-    cfg = _alert_configs.get(user_id, _DEFAULT_CONFIG.copy())
-    return AlertConfig(**cfg)
+async def get_alert_config(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get alert configuration from user's DB record."""
+    from app.models.user import User
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user.alert_config or _DEFAULT_CONFIG
 
 
 @router.put("/alerts/config", response_model=AlertConfig)
 async def update_alert_config(
     body: AlertConfig,
     user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Update alert settings for the authenticated user."""
-    cfg = body.model_dump()
-    _alert_configs[user_id] = cfg
-    return AlertConfig(**cfg)
+    """Update alert configuration in user's DB record."""
+    from app.models.user import User
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.alert_config = body.model_dump()
+    await db.commit()
+    return user.alert_config
