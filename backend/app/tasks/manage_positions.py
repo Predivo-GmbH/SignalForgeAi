@@ -1,4 +1,4 @@
-"""Manage open positions — trail stops, check SL/TP."""
+"""Manage open positions — update prices, trail stops, check SL/TP."""
 
 import logging
 
@@ -20,6 +20,7 @@ async def _manage_async():
 
     from app.core.database import async_session
     from app.execution.position_manager import PositionManagerDB
+    from app.models.candle import Candle
     from app.models.position import Position
 
     async with async_session() as db:
@@ -30,6 +31,22 @@ async def _manage_async():
 
         for pos in positions:
             try:
+                # Update current_price from latest candle
+                candle_result = await db.execute(
+                    select(Candle)
+                    .where(Candle.symbol == pos.symbol)
+                    .order_by(Candle.time.desc())
+                    .limit(1)
+                )
+                latest_candle = candle_result.scalar_one_or_none()
+                if latest_candle:
+                    pos.current_price = latest_candle.close
+                    # Update unrealized PnL
+                    if pos.direction == "BUY":
+                        pos.unrealized_pnl = (latest_candle.close - pos.entry_price) * pos.quantity
+                    else:
+                        pos.unrealized_pnl = (pos.entry_price - latest_candle.close) * pos.quantity
+
                 # Check stop-loss hit
                 if pos.stop_loss and pos.current_price:
                     if pos.direction == "BUY" and pos.current_price <= pos.stop_loss:
