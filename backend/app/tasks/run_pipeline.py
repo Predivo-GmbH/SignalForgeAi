@@ -22,7 +22,7 @@ async def _run_pipeline_async():
     import pandas as pd
     from sqlalchemy import select
 
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.data.storage import CandleStorage
     from app.engine.pipeline import SignalPipeline
     from app.models.signal import Signal as SignalModel
@@ -30,7 +30,7 @@ async def _run_pipeline_async():
 
     pipeline = SignalPipeline()
 
-    async with async_session() as db:
+    async with task_session() as db:
         # Find the first active strategy to link signals to
         result = await db.execute(
             select(Strategy).where(Strategy.is_active == True).limit(1)  # noqa: E712

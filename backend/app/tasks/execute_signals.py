@@ -18,7 +18,7 @@ def execute_pending_signals(self):
 async def _execute_async():
     from sqlalchemy import select
 
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.execution.adapters.paper import PaperAdapter
     from app.execution.broker_router import BrokerRouter
     from app.execution.executor import OrderExecutor
@@ -30,7 +30,7 @@ async def _execute_async():
     router = BrokerRouter(paper_adapter=paper)
     executor = OrderExecutor(broker_router=router)
 
-    async with async_session() as db:
+    async with task_session() as db:
         # Query actionable signals with status "pending" that have a strategy
         # (we need strategy.user_id to create the order)
         result = await db.execute(

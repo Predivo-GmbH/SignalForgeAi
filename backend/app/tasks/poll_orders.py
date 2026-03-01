@@ -18,11 +18,11 @@ def poll_order_status(self):
 async def _poll_async():
     from sqlalchemy import select
 
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.execution.position_manager import PositionManagerDB
     from app.models.order import Order
 
-    async with async_session() as db:
+    async with task_session() as db:
         # Find orders in non-terminal states
         result = await db.execute(
             select(Order).where(Order.status.in_(["pending", "submitted", "partial"]))

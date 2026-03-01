@@ -22,6 +22,19 @@ celery_app.conf.update(
 # Auto-discover tasks in the app.tasks package
 celery_app.autodiscover_tasks(["app.tasks"])
 
+# Explicit includes as fallback for autodiscovery
+celery_app.conf.include = [
+    "app.tasks.ingest_candles",
+    "app.tasks.run_pipeline",
+    "app.tasks.execute_signals",
+    "app.tasks.poll_orders",
+    "app.tasks.manage_positions",
+    "app.tasks.reconcile",
+    "app.tasks.send_alerts",
+    "app.tasks.hmm_train",
+    "app.tasks.backtest_task",
+]
+
 # ---------------------------------------------------------------------------
 # Celery Beat schedule — periodic tasks
 # ---------------------------------------------------------------------------

@@ -18,12 +18,12 @@ def manage_positions(self):
 async def _manage_async():
     from sqlalchemy import select
 
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.execution.position_manager import PositionManagerDB
     from app.models.candle import Candle
     from app.models.position import Position
 
-    async with async_session() as db:
+    async with task_session() as db:
         result = await db.execute(
             select(Position).where(Position.is_open == True)  # noqa: E712
         )

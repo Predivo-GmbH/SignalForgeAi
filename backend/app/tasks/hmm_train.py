@@ -28,7 +28,7 @@ async def _train_async(symbol: str, timeframe: str) -> dict:
     import redis
 
     from app.config import settings
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.data.storage import CandleStorage
     from app.engine.layers.hmm_regime import HMMRegimeModel
 
@@ -37,7 +37,7 @@ async def _train_async(symbol: str, timeframe: str) -> dict:
     data_source = "synthetic"
 
     try:
-        async with async_session() as db:
+        async with task_session() as db:
             candles_data = await CandleStorage.load_candles_db(
                 db, symbol, timeframe, limit=2000,
             )

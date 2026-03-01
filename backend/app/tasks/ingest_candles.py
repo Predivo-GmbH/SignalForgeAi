@@ -23,13 +23,13 @@ def ingest_candles(self):
 
 
 async def _ingest_async():
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.data.ingestion import CCXTIngestion
     from app.data.storage import CandleStorage
 
     ingestion = CCXTIngestion("binance")
 
-    async with async_session() as db:
+    async with task_session() as db:
         for symbol in DEFAULT_SYMBOLS:
             for timeframe in DEFAULT_TIMEFRAMES:
                 try:
