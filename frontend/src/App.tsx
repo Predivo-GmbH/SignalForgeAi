@@ -14,6 +14,7 @@ import { JournalPage } from "./pages/Journal";
 import { StrategyConfigPage } from "./pages/StrategyConfig";
 import { ApiKeysPage } from "./pages/ApiKeys";
 import { AnalyticsPage } from "./pages/Analytics";
+import { AdvisorPage } from "./pages/Advisor";
 import { useTheme } from "./lib/theme";
 import { queryClient } from "./lib/query";
 
@@ -40,6 +41,7 @@ function App() {
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="config" element={<StrategyConfigPage />} />
               <Route path="keys" element={<ApiKeysPage />} />
+              <Route path="advisor" element={<AdvisorPage />} />
             </Route>
           </Route>
         </Routes>

@@ -60,7 +60,7 @@ async def _execute_async():
                     "signal_id": str(sig.id),
                     "symbol": sig.symbol,
                     "direction": sig.direction,
-                    "quantity": 0.01,  # Default quantity; no position_size on Signal
+                    "quantity": sig.position_size if sig.position_size and sig.position_size > 0 else 0.01,
                     "price": sig.entry_price,
                     "order_type": "market",
                     "stop_loss": sig.stop_loss,

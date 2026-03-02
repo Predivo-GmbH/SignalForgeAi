@@ -19,6 +19,7 @@ from app.api.positions import router as positions_router
 from app.api.signals import router as signals_router
 from app.api.strategies import router as strategies_router
 from app.api.trades import router as trades_router
+from app.api.advisor import router as advisor_router
 from app.auth.router import router as auth_router
 from app.config import settings
 from app.core.database import async_session
@@ -85,6 +86,7 @@ app.include_router(journal_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
+app.include_router(advisor_router, prefix="/api")
 
 # ---------------------------------------------------------------------------
 # WebSocket routes for real-time streaming

@@ -13,6 +13,7 @@ export interface Signal {
   confluence_score: number;
   regime: string;
   triggers: Record<string, unknown> | null;
+  position_size: number | null;
   status: string;
   created_at: string;
 }

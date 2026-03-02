@@ -21,6 +21,7 @@ class Signal(Base, UUIDMixin, TimestampMixin):
     stop_loss: Mapped[float] = mapped_column(Float)
     take_profit_1: Mapped[float] = mapped_column(Float)
     take_profit_2: Mapped[float | None] = mapped_column(Float, nullable=True)
+    position_size: Mapped[float | None] = mapped_column(Float, nullable=True)
     confluence_score: Mapped[int] = mapped_column(Integer)
     regime: Mapped[str] = mapped_column(String(20))
     triggers: Mapped[dict | None] = mapped_column(JSON, nullable=True)

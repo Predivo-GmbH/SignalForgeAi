@@ -35,6 +35,7 @@ class SignalResponse(BaseModel):
     stop_loss: float
     take_profit_1: float
     take_profit_2: float | None
+    position_size: float | None = None
     confluence_score: int
     regime: str
     triggers: dict | None
@@ -144,6 +145,7 @@ async def get_signal(
         stop_loss=signal.stop_loss,
         take_profit_1=signal.take_profit_1,
         take_profit_2=signal.take_profit_2,
+        position_size=signal.position_size,
         confluence_score=signal.confluence_score,
         regime=signal.regime,
         triggers=signal.triggers,
@@ -179,6 +181,7 @@ async def list_signals(
                 stop_loss=s.stop_loss,
                 take_profit_1=s.take_profit_1,
                 take_profit_2=s.take_profit_2,
+                position_size=s.position_size,
                 confluence_score=s.confluence_score,
                 regime=s.regime,
                 triggers=s.triggers,

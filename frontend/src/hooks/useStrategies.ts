@@ -11,6 +11,16 @@ export interface Strategy {
   updated_at: string;
 }
 
+export interface StrategyPreset {
+  name: string;
+  description: string;
+  config: Record<string, unknown>;
+}
+
+export interface PresetsResponse {
+  presets: Record<string, StrategyPreset>;
+}
+
 export function useStrategies() {
   return useQuery({
     queryKey: ["strategies"],
@@ -19,10 +29,18 @@ export function useStrategies() {
   });
 }
 
+export function useStrategyPresets() {
+  return useQuery({
+    queryKey: ["strategy-presets"],
+    queryFn: () => api.get<PresetsResponse>("/strategies/presets"),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCreateStrategy() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; config?: Record<string, unknown> }) =>
+    mutationFn: (data: { name: string; config?: Record<string, unknown>; preset?: string }) =>
       api.post<Strategy>("/strategies", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });

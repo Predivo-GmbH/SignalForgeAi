@@ -8,47 +8,28 @@ import {
   ColorType,
 } from "lightweight-charts";
 import { cn } from "@/lib/cn";
+import { api } from "@/lib/api";
 
-const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D"] as const;
+const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 
 const SYMBOLS = [
-  "AAPL",
-  "MSFT",
-  "NVDA",
-  "TSLA",
-  "AMZN",
-  "META",
-  "SPY",
-  "QQQ",
-  "BTC-USD",
+  "BTC/USDT",
+  "ETH/USDT",
+  "SOL/USDT",
 ];
 
-/** Generate demo candlestick data for visual preview. */
-function generateDemoCandles(count: number): CandlestickData<Time>[] {
-  const candles: CandlestickData<Time>[] = [];
-  let date = new Date("2026-02-01");
-  let price = 150 + Math.random() * 50;
-
-  for (let i = 0; i < count; i++) {
-    const open = price;
-    const volatility = price * 0.015;
-    const close = open + (Math.random() - 0.48) * volatility;
-    const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-
-    candles.push({
-      time: (date.getTime() / 1000) as Time,
-      open: +open.toFixed(2),
-      high: +high.toFixed(2),
-      low: +low.toFixed(2),
-      close: +close.toFixed(2),
-    });
-
-    price = close;
-    date = new Date(date.getTime() + 86400000);
-  }
-
-  return candles;
+interface CandleResponse {
+  symbol: string;
+  timeframe: string;
+  candles: Array<{
+    time: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
+  count: number;
 }
 
 export function PriceChart() {
@@ -56,6 +37,8 @@ export function PriceChart() {
   const chartRef = useRef<IChartApi | null>(null);
   const [symbol, setSymbol] = useState(SYMBOLS[0]);
   const [timeframe, setTimeframe] = useState<(typeof TIMEFRAMES)[number]>("1h");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -94,8 +77,34 @@ export function PriceChart() {
       wickDownColor: "#FF4D6A",
     });
 
-    series.setData(generateDemoCandles(60));
-    chart.timeScale().fitContent();
+    // Fetch real candle data from the API
+    const urlSymbol = symbol.replace("/", "-");
+    setLoading(true);
+    setError(null);
+
+    api
+      .get<CandleResponse>(`/market/candles/${urlSymbol}/${timeframe}?limit=500`)
+      .then((data) => {
+        if (data.candles.length === 0) {
+          setError("No candle data available");
+          return;
+        }
+        const mapped: CandlestickData<Time>[] = data.candles.map((c) => ({
+          time: (new Date(c.time).getTime() / 1000) as Time,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        }));
+        series.setData(mapped);
+        chart.timeScale().fitContent();
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to load candles");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -147,7 +156,19 @@ export function PriceChart() {
         </div>
       </div>
       {/* Chart Area */}
-      <div ref={containerRef} className="flex-1 min-h-[300px]" />
+      <div className="relative flex-1 min-h-[300px]">
+        <div ref={containerRef} className="absolute inset-0" />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
+            <span className="text-sm text-[var(--color-text-secondary)]">Loading candles...</span>
+          </div>
+        )}
+        {error && !loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
+            <span className="text-sm text-[var(--color-text-secondary)]">{error}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

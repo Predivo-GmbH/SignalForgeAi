@@ -3,7 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,65 @@ from app.models.strategy import Strategy
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 
+# ---------- Strategy Config Validation ----------
+
+
+class StrategyConfig(BaseModel):
+    """Schema for strategy configuration JSON."""
+    symbols: list[str] = Field(default=["BTC/USDT", "ETH/USDT", "SOL/USDT"])
+    timeframes: list[str] = Field(default=["1h"])
+    account_equity: float = Field(default=10000.0, ge=100, le=10_000_000)
+    min_confluence: int = Field(default=50, ge=10, le=100)
+    max_risk_per_trade: float = Field(default=0.02, ge=0.001, le=0.10)
+    max_daily_loss: float = Field(default=0.06, ge=0.01, le=0.20)
+    atr_sl_multiplier: float = Field(default=2.0, ge=0.5, le=5.0)
+    min_risk_reward: float = Field(default=1.5, ge=0.5, le=5.0)
+
+
+STRATEGY_PRESETS: dict[str, dict] = {
+    "conservative_swing": {
+        "name": "Conservative Swing",
+        "description": "Low risk, high confluence required. Fewer trades, larger moves. Best for patient traders who want high-probability setups only.",
+        "config": {
+            "symbols": ["BTC/USDT", "ETH/USDT"],
+            "timeframes": ["4h"],
+            "account_equity": 10000,
+            "min_confluence": 70,
+            "max_risk_per_trade": 0.01,
+            "max_daily_loss": 0.04,
+            "atr_sl_multiplier": 2.5,
+            "min_risk_reward": 2.0,
+        },
+    },
+    "balanced_momentum": {
+        "name": "Balanced Momentum",
+        "description": "Default balanced approach with moderate risk. Good starting point for most traders. Trades the top 3 cryptos on 1-hour timeframe.",
+        "config": {
+            "symbols": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
+            "timeframes": ["1h"],
+            "account_equity": 10000,
+            "min_confluence": 50,
+            "max_risk_per_trade": 0.02,
+            "max_daily_loss": 0.06,
+            "atr_sl_multiplier": 2.0,
+            "min_risk_reward": 1.5,
+        },
+    },
+    "aggressive_scalper": {
+        "name": "Aggressive Scalper",
+        "description": "More trades, higher risk per trade. Scans multiple timeframes for opportunities. For experienced traders comfortable with higher drawdowns.",
+        "config": {
+            "symbols": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
+            "timeframes": ["1h", "4h"],
+            "account_equity": 10000,
+            "min_confluence": 35,
+            "max_risk_per_trade": 0.03,
+            "max_daily_loss": 0.08,
+            "atr_sl_multiplier": 1.5,
+            "min_risk_reward": 1.2,
+        },
+    },
+}
 
 # ---------- Schemas ----------
 
@@ -20,6 +79,7 @@ router = APIRouter(prefix="/strategies", tags=["strategies"])
 class CreateStrategyRequest(BaseModel):
     name: str
     config: dict = {}
+    preset: str | None = None
 
 
 class UpdateStrategyRequest(BaseModel):
@@ -85,10 +145,16 @@ async def create_strategy(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new strategy."""
+    config = body.config
+    if body.preset and body.preset in STRATEGY_PRESETS:
+        config = STRATEGY_PRESETS[body.preset]["config"].copy()
+    # Validate config shape (raises ValidationError -> 422 if invalid)
+    if config:
+        StrategyConfig(**config)
     strategy = Strategy(
         user_id=uuid.UUID(user_id),
         name=body.name,
-        config=body.config,
+        config=config,
         is_active=False,
     )
     db.add(strategy)
@@ -127,6 +193,12 @@ async def list_strategies(
     )
 
 
+@router.get("/presets")
+async def list_presets():
+    """Return available strategy presets."""
+    return {"presets": STRATEGY_PRESETS}
+
+
 @router.get("/{strategy_id}", response_model=StrategyResponse)
 async def get_strategy(
     strategy_id: uuid.UUID,
@@ -151,6 +223,8 @@ async def update_strategy(
     if body.name is not None:
         strategy.name = body.name
     if body.config is not None:
+        if body.config:
+            StrategyConfig(**body.config)
         strategy.config = body.config
 
     await db.commit()

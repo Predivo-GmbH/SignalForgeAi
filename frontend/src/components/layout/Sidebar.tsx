@@ -8,6 +8,7 @@ import {
   BarChart2,
   Settings,
   Key,
+  Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const navItems = [
   { to: "/backtest", icon: FlaskConical, label: "Backtest Lab" },
   { to: "/journal", icon: BookOpen, label: "Journal" },
   { to: "/analytics", icon: BarChart2, label: "Analytics" },
+  { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
   { to: "/config", icon: Settings, label: "Strategy" },
   { to: "/keys", icon: Key, label: "API Keys" },
 ] as const;

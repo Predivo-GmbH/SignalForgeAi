@@ -29,9 +29,26 @@ async def _ingest_async():
 
     ingestion = CCXTIngestion("binance")
 
+    # Collect symbols from active strategies
+    from sqlalchemy import select
+    from app.models.strategy import Strategy
+
+    symbols = set(DEFAULT_SYMBOLS)
+    timeframes = set(DEFAULT_TIMEFRAMES)
+
     async with task_session() as db:
-        for symbol in DEFAULT_SYMBOLS:
-            for timeframe in DEFAULT_TIMEFRAMES:
+        result = await db.execute(
+            select(Strategy).where(Strategy.is_active == True)  # noqa: E712
+        )
+        for strategy in result.scalars().all():
+            cfg = strategy.config or {}
+            for s in cfg.get("symbols", []):
+                symbols.add(s)
+            for t in cfg.get("timeframes", []):
+                timeframes.add(t)
+
+        for symbol in symbols:
+            for timeframe in timeframes:
                 try:
                     # Check how many candles we already have
                     existing = await CandleStorage.load_candles_db(
@@ -57,4 +74,36 @@ async def _ingest_async():
                         )
                 except Exception as e:
                     logger.error("Ingestion failed for %s %s: %s", symbol, timeframe, e)
+        await db.commit()
+
+
+@celery_app.task(name="backfill_symbols")
+def backfill_symbols(symbols: list[str], timeframes: list[str] | None = None):
+    """One-time backfill for a list of symbols (triggered by advisor deploy)."""
+    import asyncio
+
+    asyncio.run(_backfill_async(symbols, timeframes or ["1h", "4h"]))
+
+
+async def _backfill_async(symbols: list[str], timeframes: list[str]):
+    from app.core.database import task_session
+    from app.data.ingestion import CCXTIngestion
+    from app.data.storage import CandleStorage
+
+    ingestion = CCXTIngestion("binance")
+
+    async with task_session() as db:
+        for symbol in symbols:
+            for timeframe in timeframes:
+                try:
+                    candles = ingestion.fetch_candles(symbol, timeframe, limit=BACKFILL_LIMIT)
+                    if not candles.empty:
+                        count = await CandleStorage.save_candles_db(
+                            db, symbol, timeframe, candles,
+                        )
+                        logger.info(
+                            "Backfilled %d candles for %s %s", count, symbol, timeframe,
+                        )
+                except Exception as e:
+                    logger.error("Backfill failed for %s %s: %s", symbol, timeframe, e)
         await db.commit()

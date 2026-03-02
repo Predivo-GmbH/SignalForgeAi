@@ -133,6 +133,16 @@ const columns: Column<SignalRow>[] = [
     ),
   },
   {
+    key: "position_size",
+    header: "Size",
+    align: "right" as const,
+    render: (row: SignalRow) => (
+      <span className="font-mono text-[var(--color-text-secondary)]">
+        {row.position_size != null ? row.position_size.toFixed(4) : "--"}
+      </span>
+    ),
+  },
+  {
     key: "confluence_score",
     header: "Confluence",
     render: (row) => <ConfluenceBar score={row.confluence_score} />,

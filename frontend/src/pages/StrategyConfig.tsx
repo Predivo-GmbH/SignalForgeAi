@@ -8,6 +8,9 @@ import {
   Loader2,
   Zap,
   Settings2,
+  Shield,
+  TrendingUp,
+  Flame,
 } from "lucide-react";
 import {
   useStrategies,
@@ -15,8 +18,9 @@ import {
   useUpdateStrategy,
   useToggleStrategy,
   useDeleteStrategy,
+  useStrategyPresets,
 } from "@/hooks/useStrategies";
-import type { Strategy } from "@/hooks/useStrategies";
+import type { Strategy, StrategyPreset } from "@/hooks/useStrategies";
 import { cn } from "@/lib/cn";
 
 function formatDate(iso: string): string {
@@ -27,6 +31,51 @@ function formatDate(iso: string): string {
   });
 }
 
+/* ----- Preset Card ----- */
+function PresetCard({
+  presetKey,
+  preset,
+  onSelect,
+}: {
+  presetKey: string;
+  preset: StrategyPreset;
+  onSelect: (key: string, preset: StrategyPreset) => void;
+}) {
+  const icons: Record<string, React.ReactNode> = {
+    conservative_swing: <Shield className="w-5 h-5 text-blue-400" />,
+    balanced_momentum: <TrendingUp className="w-5 h-5 text-(--color-accent)" />,
+    aggressive_scalper: <Flame className="w-5 h-5 text-orange-400" />,
+  };
+
+  const config = preset.config as Record<string, unknown>;
+
+  return (
+    <button
+      onClick={() => onSelect(presetKey, preset)}
+      className="bg-(--color-bg-elevated) border border-(--color-border) rounded-xl p-4 text-left hover:border-(--color-accent)/50 hover:shadow-[0_0_12px_rgba(123,97,255,0.08)] transition-all group"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        {icons[presetKey] || <Settings2 className="w-5 h-5" />}
+        <h4 className="text-sm font-semibold text-(--color-text-primary) group-hover:text-(--color-accent) transition-colors">
+          {preset.name}
+        </h4>
+      </div>
+      <p className="text-xs text-(--color-text-secondary) mb-3 line-clamp-2">{preset.description}</p>
+      <div className="flex flex-wrap gap-1.5">
+        <span className="text-[10px] bg-(--color-bg-surface) rounded px-1.5 py-0.5 text-(--color-text-secondary)">
+          Risk: {((config.max_risk_per_trade as number) * 100).toFixed(0)}%
+        </span>
+        <span className="text-[10px] bg-(--color-bg-surface) rounded px-1.5 py-0.5 text-(--color-text-secondary)">
+          Confluence: {String(config.min_confluence)}+
+        </span>
+        <span className="text-[10px] bg-(--color-bg-surface) rounded px-1.5 py-0.5 text-(--color-text-secondary)">
+          {(config.symbols as string[])?.length || 0} symbols
+        </span>
+      </div>
+    </button>
+  );
+}
+
 /* ----- Strategy Form ----- */
 function StrategyForm({
   initial,
@@ -35,95 +84,128 @@ function StrategyForm({
   isLoading,
 }: {
   initial?: { name: string; config: string };
-  onSubmit: (name: string, config: Record<string, unknown>) => void;
+  onSubmit: (name: string, config: Record<string, unknown>, preset?: string) => void;
   onCancel: () => void;
   isLoading: boolean;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [configStr, setConfigStr] = useState(
-    initial?.config ?? '{\n  "rsi_period": 14,\n  "rsi_overbought": 70,\n  "rsi_oversold": 30\n}'
-  );
+  const [configStr, setConfigStr] = useState(initial?.config ?? "{}");
   const [configError, setConfigError] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const { data: presetsData } = useStrategyPresets();
+
+  const presets = presetsData?.presets ?? {};
+  const isNew = !initial;
+
+  function handlePresetSelect(key: string, preset: StrategyPreset) {
+    setSelectedPreset(key);
+    setName(preset.name);
+    setConfigStr(JSON.stringify(preset.config, null, 2));
+    setConfigError(null);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       const parsed = JSON.parse(configStr);
       setConfigError(null);
-      onSubmit(name.trim(), parsed);
+      onSubmit(name.trim(), parsed, selectedPreset || undefined);
     } catch {
       setConfigError("Invalid JSON");
     }
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-(--color-bg-surface) border border-(--color-accent)/30 rounded-xl p-5 space-y-4"
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-(--color-text-primary)">
-          {initial ? "Edit Strategy" : "New Strategy"}
-        </h3>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="p-1 rounded hover:bg-(--color-bg-elevated) transition-colors"
-        >
-          <X className="w-4 h-4 text-(--color-text-secondary)" />
-        </button>
-      </div>
+    <div className="space-y-4">
+      {/* Preset Cards (only for new strategies) */}
+      {isNew && Object.keys(presets).length > 0 && (
+        <div>
+          <h3 className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider mb-2">
+            Quick Start — Choose a Preset
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {Object.entries(presets).map(([key, preset]) => (
+              <PresetCard
+                key={key}
+                presetKey={key}
+                preset={preset}
+                onSelect={handlePresetSelect}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Strategy Name
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g., RSI Reversal"
-          required
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-        />
-      </div>
+      {/* Form */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-(--color-bg-surface) border border-(--color-accent)/30 rounded-xl p-5 space-y-4"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-(--color-text-primary)">
+            {initial ? "Edit Strategy" : selectedPreset ? `New Strategy — ${presets[selectedPreset]?.name}` : "New Custom Strategy"}
+          </h3>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-1 rounded hover:bg-(--color-bg-elevated) transition-colors"
+          >
+            <X className="w-4 h-4 text-(--color-text-secondary)" />
+          </button>
+        </div>
 
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Config (JSON)
-        </label>
-        <textarea
-          value={configStr}
-          onChange={(e) => {
-            setConfigStr(e.target.value);
-            setConfigError(null);
-          }}
-          rows={6}
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 resize-y"
-        />
-        {configError && (
-          <p className="text-xs text-(--color-negative)">{configError}</p>
-        )}
-      </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Strategy Name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., My BTC Strategy"
+            required
+            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+          />
+        </div>
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={isLoading || !name.trim()}
-          className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
-        >
-          {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-          {initial ? "Save Changes" : "Create Strategy"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="py-2 px-4 rounded-lg text-sm text-(--color-text-secondary) hover:bg-(--color-bg-elevated) transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Configuration (JSON)
+          </label>
+          <textarea
+            value={configStr}
+            onChange={(e) => {
+              setConfigStr(e.target.value);
+              setConfigError(null);
+              setSelectedPreset(null);
+            }}
+            rows={8}
+            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 resize-y"
+          />
+          {configError && (
+            <p className="text-xs text-(--color-negative)">{configError}</p>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={isLoading || !name.trim()}
+            className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {initial ? "Save Changes" : "Create Strategy"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="py-2 px-4 rounded-lg text-sm text-(--color-text-secondary) hover:bg-(--color-bg-elevated) transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -278,9 +360,9 @@ export function StrategyConfigPage() {
 
   const strategies = data?.strategies ?? [];
 
-  function handleCreate(name: string, config: Record<string, unknown>) {
+  function handleCreate(name: string, config: Record<string, unknown>, preset?: string) {
     createMutation.mutate(
-      { name, config },
+      { name, config, preset },
       { onSuccess: () => setShowForm(false) }
     );
   }
