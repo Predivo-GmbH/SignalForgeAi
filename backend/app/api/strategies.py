@@ -252,8 +252,27 @@ async def delete_strategy(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a strategy."""
+    """Delete a strategy. Active strategies are deactivated first.
+
+    Any signals referencing this strategy have their strategy_id set to NULL
+    so they are preserved as historical records.
+    """
+    from app.models.signal import Signal as SignalModel
+
     strategy = await _get_user_strategy(strategy_id, user_id, db)
+    if strategy.is_active:
+        strategy.is_active = False
+        await db.flush()
+
+    # Detach signals so FK constraint doesn't block deletion
+    from sqlalchemy import update
+    await db.execute(
+        update(SignalModel)
+        .where(SignalModel.strategy_id == strategy_id)
+        .values(strategy_id=None)
+    )
+    await db.flush()
+
     await db.delete(strategy)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

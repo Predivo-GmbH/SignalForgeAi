@@ -9,6 +9,7 @@ import {
   Settings,
   Key,
   Sparkles,
+  HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const navItems = [
   { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
   { to: "/config", icon: Settings, label: "Strategy" },
   { to: "/keys", icon: Key, label: "API Keys" },
+  { to: "/guide", icon: HelpCircle, label: "User Guide" },
 ] as const;
 
 export function Sidebar() {

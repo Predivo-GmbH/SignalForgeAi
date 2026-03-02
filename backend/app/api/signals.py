@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.data.storage import CandleStorage
 from app.engine.pipeline import SignalPipeline
 from app.models.signal import Signal
 
@@ -95,11 +96,26 @@ def _generate_synthetic_candles(n: int = 200) -> pd.DataFrame:
 async def generate_signal(
     body: GenerateRequest | None = None,
     _user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Run the SignalPipeline on synthetic candle data and return the result."""
+    """Run the SignalPipeline on real candle data and return the result.
+
+    Uses candles from the database if available, falls back to synthetic data.
+    """
     req = body or GenerateRequest()
+
+    # Try real candles from DB first
+    candle_rows = await CandleStorage.load_candles_db(
+        db, req.symbol, req.timeframe, limit=300,
+    )
+    if len(candle_rows) >= 100:
+        candles = pd.DataFrame(candle_rows)
+        candles["time"] = pd.to_datetime(candles["time"])
+        candles = candles.set_index("time")
+    else:
+        candles = _generate_synthetic_candles()
+
     pipeline = SignalPipeline()
-    candles = _generate_synthetic_candles()
     result = pipeline.process(
         symbol=req.symbol,
         timeframe=req.timeframe,

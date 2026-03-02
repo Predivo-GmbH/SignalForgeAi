@@ -105,12 +105,22 @@ def run_backtest_task(
         except Exception:
             logger.exception("Failed to persist backtest result for user %s", user_id)
 
+    # Return flat structure matching frontend BacktestResult interface
     return {
         "symbol": symbol,
         "timeframe": timeframe,
         "days": days,
-        "metrics": sanitised_metrics,
-        "trade_count": trade_count,
+        "total_return": sanitised_metrics.get("total_return_pct", 0),
+        "win_rate": sanitised_metrics.get("win_rate", 0),
+        "profit_factor": sanitised_metrics.get("profit_factor", 0),
+        "max_drawdown": sanitised_metrics.get("max_drawdown_pct", 0),
+        "total_trades": trade_count,
+        "sharpe_ratio": sanitised_metrics.get("sharpe_ratio"),
+        "sortino_ratio": sanitised_metrics.get("sortino_ratio"),
+        "equity_curve": [
+            {"time": str(i), "value": v}
+            for i, v in enumerate(result.equity_curve)
+        ] if result.equity_curve else [],
     }
 
 

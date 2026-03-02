@@ -301,19 +301,29 @@ export function AdvisorPage() {
             <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
               Risk Tolerance
             </label>
-            <div className="flex gap-1">
-              {["conservative", "balanced", "aggressive"].map((r) => (
+            <div className="flex gap-2">
+              {([
+                { key: "conservative", label: "Conservative", desc: "1% risk per trade, confluence 70+, 4h timeframe. Fewer but higher-quality trades." },
+                { key: "balanced", label: "Balanced", desc: "2% risk per trade, confluence 50+, 1h timeframe. Good starting point for most users." },
+                { key: "aggressive", label: "Aggressive", desc: "3% risk per trade, confluence 35+, multi-timeframe. More trades, higher drawdowns." },
+              ] as const).map((r) => (
                 <button
-                  key={r}
-                  onClick={() => setRiskTolerance(r)}
+                  key={r.key}
+                  onClick={() => setRiskTolerance(r.key)}
                   className={cn(
-                    "px-3 py-2 text-sm font-medium rounded-lg transition-colors capitalize",
-                    riskTolerance === r
+                    "flex flex-col items-start px-3 py-2 rounded-lg transition-colors text-left",
+                    riskTolerance === r.key
                       ? "bg-(--color-accent) text-white"
                       : "bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary)"
                   )}
                 >
-                  {r}
+                  <span className="text-sm font-medium">{r.label}</span>
+                  <span className={cn(
+                    "text-[10px] leading-tight mt-0.5",
+                    riskTolerance === r.key ? "text-white/70" : "text-(--color-text-secondary)/70"
+                  )}>
+                    {r.desc}
+                  </span>
                 </button>
               ))}
             </div>

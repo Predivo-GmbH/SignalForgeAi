@@ -88,6 +88,21 @@ app.include_router(analytics_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
 app.include_router(advisor_router, prefix="/api")
 
+
+# ---------------------------------------------------------------------------
+# Static content endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/guide")
+async def get_user_guide():
+    """Return the user guide markdown content."""
+    from pathlib import Path
+
+    guide_path = Path(__file__).resolve().parent.parent.parent / "docs" / "USER-GUIDE.md"
+    if not guide_path.exists():
+        return {"content": "# User Guide\n\nGuide not found."}
+    return {"content": guide_path.read_text(encoding="utf-8")}
+
+
 # ---------------------------------------------------------------------------
 # WebSocket routes for real-time streaming
 # ---------------------------------------------------------------------------

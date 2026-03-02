@@ -9,8 +9,11 @@ const pageTitles: Record<string, string> = {
   "/trades": "Trades",
   "/backtest": "Backtest Lab",
   "/journal": "Trade Journal",
+  "/analytics": "Analytics",
+  "/advisor": "AI Advisor",
   "/config": "Strategy Config",
   "/keys": "API Keys",
+  "/guide": "User Guide",
 };
 
 export function Topbar() {
