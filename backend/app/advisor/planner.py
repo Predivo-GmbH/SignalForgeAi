@@ -2,6 +2,9 @@
 
 The AI advisor analyzes market conditions and determines ALL optimal
 strategy parameters. No presets. No human risk selection.
+
+When Claude is unavailable, plan generation fails — the system does not
+trade without AI analysis.
 """
 
 import logging
@@ -53,12 +56,12 @@ RISK FEATURES (enable/disable based on conditions):
 - correlation_monitor_enabled (bool) + correlation_threshold (0.3-0.95)
 
 CRITICAL RULES:
-- Your parameters MUST be achievable. Overly strict settings = zero trades.
-- In low-trending markets (trending% < 30), use lower ema_slope_threshold
-  and higher trigger_lookback_candles.
+- Choose parameters that match current market conditions. If the market is
+  not suitable for trading, strict parameters that produce zero trades is
+  the correct outcome — do NOT artificially loosen settings to force trades.
+- In low-trending markets (trending% < 30), adjust ema_slope_threshold and
+  trigger_lookback_candles to match actual market behavior — not to force signals.
 - min_risk_reward MUST be <= 1.6 (pipeline R:R is ~1.618 from Fibonacci).
-- For initial deployments with no trade history, prefer moderate settings
-  that WILL generate signals so the system can learn and adapt.
 - Select 3-15 cryptos with the best technical setups.
 
 Respond ONLY with valid JSON."""
@@ -132,12 +135,15 @@ class InvestmentPlanner:
         scored_cryptos: list[dict],
         investment_amount: float,
         market_profile: dict | None = None,
-    ) -> dict:
+    ) -> dict | None:
         """Generate an autonomous investment plan.
 
         The AI determines ALL strategy parameters — no presets, no human
         risk selection. Uses Claude Sonnet for deep reasoning about
         parameter interactions.
+
+        Returns None if Claude is unavailable — the system does not
+        generate strategies without AI analysis.
         """
         if market_profile is None:
             market_profile = _compute_basic_profile(scored_cryptos)
@@ -161,119 +167,8 @@ class InvestmentPlanner:
             plan["strategy_config"]["account_equity"] = investment_amount
             return plan
 
-        logger.info("Claude unavailable, using algorithmic fallback for plan generation")
-        return self._generate_algorithmic(scored_cryptos, investment_amount, market_profile)
-
-    def _generate_algorithmic(
-        self,
-        scored_cryptos: list[dict],
-        investment_amount: float,
-        market_profile: dict,
-    ) -> dict:
-        """Algorithmic fallback — derives parameters from market metrics."""
-        trending_pct = market_profile.get("trending_pct", 30)
-        avg_adx = market_profile.get("avg_adx", 20)
-        avg_volatility = market_profile.get("avg_volatility", 3)
-
-        # Select top cryptos with score >= 30, max 15
-        selected = [
-            {
-                "symbol": c["symbol"],
-                "reason": (
-                    f"Score {c['score']}/100 — "
-                    f"{c['regime']} regime, "
-                    f"{c['trend_direction']} trend, "
-                    f"ADX {c['adx']}"
-                ),
-            }
-            for c in scored_cryptos
-            if c["score"] >= 30 and c["recommendation"] != "avoid"
-        ][:15]
-
-        if not selected:
-            selected = [
-                {
-                    "symbol": c["symbol"],
-                    "reason": f"Top by volume (score {c['score']}/100)",
-                }
-                for c in scored_cryptos[:8]
-            ]
-
-        # Derive parameters from market conditions
-        if trending_pct > 50 and avg_adx > 30:
-            # Strong trending market — moderate sensitivity
-            min_confluence = 45
-            min_trigger_count = 2
-            trigger_lookback = 3
-            ema_slope = 0.0005
-            risk_per_trade = 0.02
-            sl_multiplier = 2.0
-            timeframes = ["1h"]
-        elif trending_pct > 30:
-            # Moderate market — more forgiving
-            min_confluence = 40
-            min_trigger_count = 1
-            trigger_lookback = 5
-            ema_slope = 0.0003
-            risk_per_trade = 0.015
-            sl_multiplier = 2.5
-            timeframes = ["1h", "4h"]
-        else:
-            # Weak/choppy market — very forgiving to get signals
-            min_confluence = 35
-            min_trigger_count = 1
-            trigger_lookback = 5
-            ema_slope = 0.0002
-            risk_per_trade = 0.01
-            sl_multiplier = 3.0
-            timeframes = ["1h", "4h"]
-
-        # Wider stops in high volatility
-        if avg_volatility > 5:
-            sl_multiplier = min(5.0, sl_multiplier * 1.3)
-
-        return {
-            "summary": (
-                f"Algorithmic optimal strategy: {len(selected)} cryptos selected "
-                f"based on technical scoring. Market is {trending_pct:.0f}% trending "
-                f"with avg ADX {avg_adx:.0f} and {avg_volatility:.1f}% volatility."
-            ),
-            "selected_cryptos": selected,
-            "strategy_config": {
-                "account_equity": investment_amount,
-                "min_confluence": min_confluence,
-                "min_trigger_count": min_trigger_count,
-                "trigger_lookback_candles": trigger_lookback,
-                "ema_slope_threshold": ema_slope,
-                "max_risk_per_trade": risk_per_trade,
-                "max_daily_loss": 0.06,
-                "atr_sl_multiplier": sl_multiplier,
-                "min_risk_reward": 1.5,
-                "timeframes": timeframes,
-                "drawdown_breaker_enabled": True,
-                "max_drawdown_pct": 0.15,
-                "break_even_enabled": True,
-                "break_even_r_multiple": 1.0,
-                "max_hold_hours": 24,
-                "correlation_monitor_enabled": len(selected) > 3,
-                "correlation_threshold": 0.7,
-            },
-            "reasoning": (
-                f"Market is {trending_pct:.0f}% trending (ADX avg {avg_adx:.0f}). "
-                f"Parameters set for {'moderate' if trending_pct > 40 else 'forgiving'} "
-                f"signal generation to ensure the pipeline can produce actionable trades."
-            ),
-            "expected_behavior": (
-                "The system will monitor selected cryptos and generate signals "
-                "when the pipeline confirms a setup. Parameters are tuned for "
-                "current market conditions and will be adapted automatically."
-            ),
-            "warnings": [
-                "This is paper trading only — no real money is at risk.",
-                "Past technical scores do not guarantee future performance.",
-                "The system blocks trading in chaotic market conditions for safety.",
-            ],
-        }
+        logger.warning("Claude unavailable — cannot generate investment plan without AI analysis")
+        return None
 
 
 def _compute_basic_profile(scored_cryptos: list[dict]) -> dict:

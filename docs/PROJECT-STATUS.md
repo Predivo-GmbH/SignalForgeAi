@@ -45,8 +45,8 @@ day-trading/
 ├── .github/workflows/ci.yml     # Backend lint+test, frontend build
 ├── backend/
 │   ├── app/                     # FastAPI application (~100 .py files)
-│   │   ├── advisor/             # AI Advisor: Claude client, planner, signal quality, risk tuner, feedback
-│   │   ├── api/                 # REST endpoints (13 routers)
+│   │   ├── advisor/             # AI Advisor: Claude client, planner, signal quality, risk tuner, feedback, pattern analyzer
+│   │   ├── api/                 # REST endpoints (12 routers)
 │   │   ├── auth/                # JWT auth (register, login, refresh)
 │   │   ├── backtest/            # Engine + optimizer + portfolio runner
 │   │   ├── core/                # Database, Redis, pub/sub, email, circuit breaker, logging, encryption
@@ -56,11 +56,11 @@ day-trading/
 │   │   ├── execution/           # DB-backed executor, position manager, risk checks
 │   │   │   └── adapters/        # BrokerAdapter ABC, Paper, Alpaca, CCXT, BrokerRouter
 │   │   ├── models/              # SQLAlchemy models (11 models)
-│   │   ├── tasks/               # Celery tasks + Beat schedule (12 periodic tasks)
+│   │   ├── tasks/               # Celery tasks + Beat schedule (13 periodic tasks)
 │   │   ├── ws/                  # WebSocket hub (signals + prices + trades)
 │   │   ├── config.py            # Settings with SF_ env prefix + AI feature flags
-│   │   ├── main.py              # FastAPI app with middleware + 13 routers
-│   │   └── worker.py            # Celery worker + Beat schedule (12 tasks)
+│   │   ├── main.py              # FastAPI app with middleware + 12 routers (journal removed)
+│   │   └── worker.py            # Celery worker + Beat schedule (13 tasks)
 │   ├── tests/                   # ~50 test files
 │   ├── scripts/                 # run_backtests.py, init-db.sql
 │   ├── alembic/                 # 5 migration files
@@ -77,7 +77,7 @@ day-trading/
 │   │   │   ├── layout/          # AppLayout, Sidebar, Topbar, HelpDrawer
 │   │   │   ├── settings/        # AiUsageTab
 │   │   │   └── ui/              # Badge, DataTable, Pagination
-│   │   ├── hooks/               # 17 data hooks
+│   │   ├── hooks/               # 16 data hooks (useJournal removed)
 │   │   ├── lib/                 # api, auth, cn, colors, query, sidebar, theme, ws
 │   │   ├── pages/               # 8 pages (+ Login/Register)
 │   │   ├── App.tsx              # Router configuration
@@ -212,9 +212,10 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
    - Sync and async paths
 
 2. **AI Planner** (`advisor/planner.py`):
-   - Generates investment allocation plans matching user risk tolerance to strategy presets
-   - Selects 5–15 crypto pairs from scored candidates via Claude
-   - Configures risk parameters per preset (Conservative/Balanced/Aggressive)
+   - Fully autonomous — analyzes market conditions and determines ALL optimal strategy parameters
+   - No presets, no human risk selection — AI decides everything from market profile
+   - Selects 3–15 crypto pairs from scored candidates via Claude
+   - Controls pipeline sensitivity + risk management + timeframes + risk features
    - Algorithmic fallback when Claude unavailable
 
 3. **Signal Quality Evaluator** (`advisor/signal_quality.py`):
@@ -228,10 +229,12 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
    - Returns confidence score + alignment classification (aligned/mixed/conflicting)
 
 5. **Risk Tuner** (`advisor/risk_tuner.py`):
-   - Analyzes recent trades, recommends parameter adjustments
+   - Analyzes recent trades (5+ closed), recommends risk parameter adjustments
    - Conservative: max 20% change per parameter per cycle
-   - Tunes: min_confluence, max_risk_per_trade, max_daily_loss, atr_sl_multiplier, min_risk_reward
-   - Algorithmic fallback rules
+   - **Only tunes risk management params**: min_confluence, max_risk_per_trade, max_daily_loss, atr_sl_multiplier, min_risk_reward
+   - **Never touches pipeline sensitivity params** (min_trigger_count, trigger_lookback_candles, ema_slope_threshold) — those are strategy identity set by the AI Advisor
+   - If there aren't enough trades, does nothing — zero trades is correct behavior when market doesn't match
+   - Algorithmic fallback rules (risk params only) when Claude unavailable
 
 6. **Feedback Synthesizer** (`advisor/feedback_synthesizer.py`):
    - Analyzes last 50 trades for recurring patterns (symbol losses, low-confluence failures)
@@ -263,17 +266,36 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
 | 6 | CPPI | `cppi_enabled`, `cppi_multiplier`, `cppi_max_drawdown_pct` | Portfolio insurance — scales exposure based on drawdown cushion |
 | 7 | Correlation Monitor | `correlation_monitor_enabled`, `correlation_threshold`, `correlation_auto_reduce` | Reduces correlated positions automatically |
 
-**Three built-in strategy presets:**
+**Strategy presets** (legacy, still in code but AI Planner now determines all parameters autonomously):
 - **Conservative Swing** — min_confluence: 70, max_risk: 1%, CPPI enabled, break-even at 1.5R
 - **Balanced Momentum** — min_confluence: 55, max_risk: 2%, Kelly enabled, trailing stops
 - **Aggressive Scalper** — min_confluence: 40, max_risk: 3%, all features enabled
 
-#### 7c. Feedback Filter Layer (`engine/layers/feedback_filter.py`)
+#### 7c. Feedback Filter Layer (`engine/layers/feedback_filter.py`) — NOW ACTIVE
 
-New pipeline layer that applies learned FeedbackRule objects as pre/post-filter:
-- Checks rules for symbol/regime match
-- Applies skip actions (`avoid_pattern`) or confluence overrides (`adjust_param`)
-- Creates a learning loop: Trade analysis → Rule synthesis → Filter → Better signals
+Pipeline layer that applies learned FeedbackRule objects as pre-signal filter:
+- **Wired into pipeline** (`tasks/run_pipeline.py`): called after BUY/SELL signal, before persistence
+- `should_skip(symbol, regime, db, strategy_id)` → blocks signals matching `avoid_pattern` rules
+- `get_confluence_override(symbol, regime, db, strategy_id)` → raises confluence threshold from `adjust_param` rules
+- Empty rules table → all signals pass through (safe default)
+
+#### 7c-ii. AI Autonomous Self-Learning Loop — ACTIVE
+
+The system now has a fully autonomous self-learning loop:
+
+1. **Pipeline** (every 5min): Generates signals → FeedbackFilter applies learned rules → AI enrichment → reject low-quality signals
+2. **Pattern Analysis** (02:30 UTC daily): Deep analysis via Claude → stores patterns/recommendations in Redis
+3. **Risk Tuner** (03:00 UTC daily): Reads pattern context from Redis + trade metrics → adjusts strategy.config parameters (max 20%/cycle)
+4. **Feedback Synthesis** (04:00 UTC daily): Analyzes trade history → generates FeedbackRule objects (30-day expiry) → rules applied by FeedbackFilter
+
+**Key behaviors:**
+- AI `reject` signals are now honored in live mode (not just backtests) — signal saved as `status="rejected"`
+- FeedbackFilter runs before signal persistence — bad patterns are blocked before execution
+- Pattern Analyzer feeds directly into Risk Tuner via Redis (no user-facing display)
+- Trade Journal API removed — pattern analysis is now system-internal only
+
+**Core principle — strategy parameter integrity:**
+The AI Advisor chose the strategy parameters for a reason. If the market doesn't match, zero trades is the correct outcome — not a problem to "fix." The Risk Tuner only adjusts risk management params based on actual trade results. Pipeline sensitivity params are strategy identity and are never auto-loosened or overridden.
 
 #### 7d. AI Enrichment in Pipeline (`tasks/run_pipeline.py`)
 
@@ -315,7 +337,7 @@ Two new SQLAlchemy models:
 | `/strategies` | Strategies | List deployed strategies with performance metrics (P&L, win rate, Sharpe). Activate/deactivate/delete |
 | `/strategies/:id` | Strategy Detail | Signals tab (paginated signal table) + Validation tab (integrated backtest) |
 | `/backtest` | Backtest | Standalone strategy validation — test deployed strategies or AI plans |
-| `/trades` | Trades | Trade history with P&L, stats summary |
+| `/trades` | Trades | Trade history, execution log, performance metrics |
 | `/analytics` | Analytics | Equity curve, metrics grid, correlation matrix |
 | `/settings` | Settings | 3 tabs: Connections (broker API keys), Alerts (email config), AI Usage (cost tracking) |
 
@@ -388,8 +410,6 @@ See `docs/SESSION-CHANGELOG-2026-03-02.md` for full details:
 | POST | `/api/broker` | Yes | Store encrypted broker connection |
 | GET | `/api/broker` | Yes | List broker connections (masked) |
 | DELETE | `/api/broker/{id}` | Yes | Remove broker connection |
-| POST | `/api/journal/analyze` | Yes | AI-analyze a trade (Claude Haiku) |
-| GET | `/api/journal/patterns` | Yes | Aggregate pattern summary |
 | GET | `/api/alerts/config` | Yes | Get alert configuration |
 | PUT | `/api/alerts/config` | Yes | Update alert configuration |
 | GET | `/api/analytics/equity` | Yes | Equity curve + risk metrics |
@@ -474,10 +494,10 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ai_signal_quality_enabled` | `True` | Enable AI signal quality evaluation |
-| `ai_risk_tuning_enabled` | `False` | Enable adaptive risk parameter tuning |
-| `ai_feedback_loop_enabled` | `False` | Enable feedback rule synthesis |
+| `ai_risk_tuning_enabled` | `True` | Enable adaptive risk parameter tuning |
+| `ai_feedback_loop_enabled` | `True` | Enable feedback rule synthesis |
 | `ai_multi_timeframe_enabled` | `True` | Enable multi-timeframe analysis |
-| `ai_pattern_analysis_enabled` | `True` | Enable pattern analysis in journal |
+| `ai_pattern_analysis_enabled` | `True` | Enable pattern analysis |
 | `ai_signal_quality_cache_ttl` | `300` | Signal quality cache TTL (seconds) |
 | `ai_risk_tuning_interval_hours` | `24` | Hours between risk tuning runs |
 | `ai_max_daily_api_calls` | `500` | Max Claude API calls per day |
@@ -485,12 +505,12 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 
 ---
 
-## Celery Beat Schedule (12 tasks)
+## Celery Beat Schedule (13 tasks)
 
 | Task | Schedule | Description |
 |------|----------|-------------|
 | `ingest_candles` | Every 60s | Fetch OHLCV for all symbols × 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d) |
-| `run_signal_pipeline` | Every 5 min | Run 6-layer pipeline + AI enrichment per symbol |
+| `run_signal_pipeline` | Every 5 min | Run 6-layer pipeline + FeedbackFilter + AI enrichment per symbol |
 | `execute_pending_signals` | Every 30s | Execute pending signals with risk checks via PaperAdapter |
 | `poll_order_status` | Every 15s | Check order status, open positions on fill |
 | `manage_positions` | Every 60s | Monitor SL/TP/trailing/time-stop, close positions |
@@ -499,8 +519,11 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | `flush_ai_usage` | Every 60s | Flush AI usage metrics from Redis to DB |
 | `send_daily_summary` | Daily 17:00 UTC | Aggregate trades, send email summary |
 | `train_hmm_regime` | Sundays 02:00 UTC | Retrain HMM regime models |
-| `adaptive_risk_tuning` | Daily 03:00 UTC | AI-driven risk parameter adjustment |
-| `synthesize_feedback_rules` | Wednesdays 04:00 UTC | Generate feedback rules from trade patterns |
+| `periodic_pattern_analysis` | Daily 02:30 UTC | Deep pattern analysis → Redis cache for Risk Tuner |
+| `adaptive_risk_tuning` | Daily 03:00 UTC | AI-driven risk parameter adjustment (reads pattern context) |
+| `synthesize_feedback_rules` | Daily 04:00 UTC | Generate feedback rules from trade patterns |
+
+**Self-learning loop schedule:** Pattern Analysis (02:30) → Risk Tuner (03:00) → Feedback Synthesis (04:00) → FeedbackFilter (every 5min pipeline run)
 
 ---
 
@@ -583,14 +606,17 @@ docker.exe compose exec db psql -U signalforge -c \
 - AI Usage & Cost Tracking: dual-source API (`GET /api/ai-usage`, `PUT /api/ai-usage/credit`), frontend dashboard with daily cost chart, model/feature breakdown, credit management
 - `flush_ai_usage` Celery task: flushes sync-path usage records from Redis queue to DB every 60s
 - Advanced risk management (8 configurable features)
-- Feedback filter pipeline layer
+- Feedback filter pipeline layer — **now wired into pipeline** (was dormant)
 - Portfolio backtester
 - AIInsight + FeedbackRule models + 3 Alembic migrations
 - Frontend restructure (5 pages removed, 4 new pages, 3 new components, 3 new hooks)
-- Strategy presets (Conservative/Balanced/Aggressive)
+- AI Planner redesigned — fully autonomous, no presets, AI picks all parameters from market conditions
 - Docker Compose worker + beat services
 - Candle ingestion expanded to 6 timeframes
 - Bulk upsert storage optimization
 - Pipeline block_reason logging
 - Broker connect form cleanup (paper mode removed)
+- **Self-learning loop activated:** FeedbackFilter wired, AI reject honored in live mode, pattern analysis → Risk Tuner, feedback synthesis daily
+- **Trade Journal deprecated:** Router removed from main.py, frontend cleaned, useJournal.ts deleted
+- `periodic_pattern_analysis` Celery task: stores pattern insights in Redis for Risk Tuner consumption
 - 4 new test files (test_backtest_strategy, test_claude_client, test_risk_tuner, test_signal_quality)

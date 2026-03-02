@@ -3,7 +3,7 @@
 > **Purpose:** Complete record of all changes made during the March 2 development session.
 > All changes are uncommitted and live in the working directory.
 
-**Session scope:** Celery infrastructure, pipeline debugging, broker UI cleanup, chart timeframe fix, storage optimization, AI enrichment pipeline (5 waves), AI Usage & Cost Tracking dashboard.
+**Session scope:** Celery infrastructure, pipeline debugging, broker UI cleanup, chart timeframe fix, storage optimization, AI enrichment pipeline (5 waves), AI Usage & Cost Tracking dashboard, AI autonomous self-learning loop redesign.
 
 ---
 
@@ -20,6 +20,7 @@
 9. [Files Changed](#9-files-changed)
 10. [AI Enrichment Pipeline (5 Waves)](#10-ai-enrichment-pipeline-5-waves)
 11. [AI Usage & Cost Tracking Dashboard](#11-ai-usage--cost-tracking-dashboard)
+12. [AI Autonomous Self-Learning Loop — Redesign](#12-ai-autonomous-self-learning-loop--redesign)
 
 ---
 
@@ -467,6 +468,131 @@ Complete AI enrichment system across the signal pipeline:
 - Credit grant: $5.00 USD (+ $0.41 CHF VAT = $5.41 invoice total; only $5.00 is usable API credit)
 - Remaining balance: $0.95 (as of session end)
 - Admin API not available on individual plans — prepaid credit must be entered manually
+
+---
+
+## 12. AI Autonomous Self-Learning Loop — Redesign
+
+### Context
+
+The user's vision: **fully autonomous trading**. The user inputs money, the AI does everything else. Several AI functions were displaying results to the user instead of feeding back into the system. Two key self-learning components (Risk Tuner, Feedback Filter) existed in code but were disabled/unwired.
+
+**Prior session work:** Investment Planner was already redesigned — no `risk_tolerance`, AI picks all parameters from market conditions. Frontend already cleaned.
+
+### What Was Done
+
+Three phases were implemented to activate the self-learning loop:
+
+#### Phase 1: Wire the Self-Learning Loop (zero extra API cost)
+
+**1A. Wire FeedbackFilter into pipeline** — `backend/app/tasks/run_pipeline.py`
+
+The `FeedbackFilter` class existed (`engine/layers/feedback_filter.py`) but was never called. Now wired into the signal pipeline:
+
+```python
+from app.engine.layers.feedback_filter import FeedbackFilter
+feedback_filter = FeedbackFilter()
+
+# After pipeline returns BUY/SELL, before persisting:
+skip, skip_reason = await feedback_filter.should_skip(symbol, regime, db, strategy_id)
+# If skip → log and continue
+
+confluence_override = await feedback_filter.get_confluence_override(symbol, regime, db, strategy_id)
+# If confluence < override → log and continue
+```
+
+- `should_skip()` checks FeedbackRule objects for `avoid_pattern` actions matching symbol/regime
+- `get_confluence_override()` checks for `adjust_param` rules that raise the confluence threshold
+- Empty rules table → all signals pass through (safe default)
+
+**1B. Honor AI reject in live mode** — `backend/app/tasks/run_pipeline.py`
+
+The Signal Quality Evaluator's `reject` recommendation was only honored in backtests, not live. Now after `_ai_enrich_signal()`:
+
+```python
+if signal_row.ai_recommendation == "reject":
+    signal_row.status = "rejected"
+    logger.info("AI REJECT (live): %s %s %s ...")
+    continue
+```
+
+Signal stays in DB as `status="rejected"`. `execute_pending_signals` only processes `status="pending"` — rejected signals never execute.
+
+**1C. Update config defaults** — `backend/app/config.py`
+
+```python
+ai_risk_tuning_enabled: bool = True   # was False
+ai_feedback_loop_enabled: bool = True  # was False
+```
+
+Documentary only — these flags were never actually checked in code (tasks ran on Beat schedule regardless). Aligned defaults with actual behavior.
+
+**1D. Feedback synthesis: weekly → daily** — `backend/app/worker.py`
+
+Changed from `"feedback-synthesis-weekly"` (Wednesdays 04:00 UTC) to `"feedback-synthesis-daily"` (04:00 UTC every day). Faster rule learning from trade performance.
+
+#### Phase 2: Pattern Analyzer → System Feedback (+$0.008/day)
+
+**2A. Create periodic pattern analysis task** — `backend/app/tasks/pattern_analysis.py` (NEW)
+
+New Celery task following the same pattern as `risk_tuning.py` and `feedback_synthesis.py`:
+- For each active strategy: runs `PatternAnalyzer.analyze_deep(user_id, db)`
+- Stores results in Redis: `pattern_analysis:{strategy_id}` (48h TTL)
+- Registered in `worker.py` at `crontab(hour=2, minute=30)` — 30min before Risk Tuner
+
+**2B. Enrich Risk Tuner with pattern context** — `backend/app/advisor/risk_tuner.py`
+
+Added `_load_pattern_context(strategy_id)` that reads from Redis. In `tune()`, loads pattern context after computing metrics. In `_build_user_message()`, appends patterns and recommendations section so the Risk Tuner has pattern insights when deciding parameter adjustments.
+
+Self-learning data flow:
+```
+Pattern Analysis (02:30 UTC) → Redis cache
+  → Risk Tuner (03:00 UTC, reads pattern context) → strategy.config updates
+  → Feedback Synthesis (04:00 UTC, creates rules) → feedback_rules table
+  → FeedbackFilter (every 5min pipeline run, applies rules) → better signal filtering
+```
+
+#### Phase 3: Deprecate Trade Journal (saves API costs)
+
+**3A. Remove journal router** — `backend/app/main.py`
+
+Removed `journal_router` import and `app.include_router()` call. Journal API endpoints (`/api/journal/analyze`, `/api/journal/patterns`) now return 404.
+
+**3B. Clean frontend** — `frontend/src/pages/Trades.tsx` + `frontend/src/hooks/useJournal.ts`
+
+- Removed all journal integration from Trades page: imports, hooks, state, Pattern Summary panel, per-trade AI analysis button, expandable analysis rows
+- Simplified `TradeRow` component to display-only (no analysis/expand props)
+- Removed unused icon imports (Brain, Loader2, Lightbulb, AlertTriangle, Sparkles, ChevronDown, ChevronUp)
+- Updated page description: "AI-powered trade analysis" → "Execution log and performance metrics"
+- Updated `colSpan` from 12 to 11 (removed analyze column)
+- Deleted `frontend/src/hooks/useJournal.ts`
+
+**Backend files kept:** `journal.py` (dead code, harmless) and `pattern_analyzer.py` (reused by Phase 2 task).
+
+### Files Changed
+
+| File | Action | Phase |
+|------|--------|-------|
+| `backend/app/tasks/run_pipeline.py` | Wire FeedbackFilter + AI reject | 1A, 1B |
+| `backend/app/config.py` | Updated flag defaults to True | 1C |
+| `backend/app/worker.py` | Daily feedback synthesis + pattern analysis task | 1D, 2A |
+| `backend/app/tasks/pattern_analysis.py` | **NEW** — periodic pattern analysis task | 2A |
+| `backend/app/advisor/risk_tuner.py` | Added pattern context loading + user message enrichment | 2B |
+| `backend/app/main.py` | Removed journal router | 3A |
+| `frontend/src/pages/Trades.tsx` | Removed journal integration | 3B |
+| `frontend/src/hooks/useJournal.ts` | **DELETED** | 3B |
+
+### Verification
+
+- `npx tsc --noEmit` — 0 TypeScript errors
+- Backend linter (`ruff`) ran automatically — no issues
+
+### Safety
+
+- **Empty rules table:** FeedbackFilter returns `(False, None)` — all signals pass through
+- **Reject only < 40 quality:** `caution` signals still execute with reduced size (existing behavior)
+- **Risk Tuner guardrails:** Max 20% change per cycle, hard parameter bounds
+- **Pattern context optional:** Redis unavailable → Risk Tuner proceeds without it
 
 ---
 

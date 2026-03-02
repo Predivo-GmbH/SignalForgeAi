@@ -105,7 +105,7 @@ Layer 2: Zone Identification ── No zones? ──→ BLOCKED
 Layer 3: Confluence Scoring ─── Score < threshold? ──→ BLOCKED
     │
     ▼
-Layer 4: Trigger Detection ──── < 2 confirmations? ──→ BLOCKED
+Layer 4: Trigger Detection ──── < N confirmations? ──→ BLOCKED
     │
     ▼
 Layer 5: Risk Management ───── R:R too low? ──→ BLOCKED
@@ -133,11 +133,11 @@ Determines the dominant trend direction using EMA (Exponential Moving Average) a
 
 | Trend | Condition |
 |-------|-----------|
-| **BULLISH** | EMA 50 > EMA 100 > EMA 200, and EMA 200 slope > 0.1% |
-| **BEARISH** | EMA 50 < EMA 100 < EMA 200, and EMA 200 slope < -0.1% |
+| **BULLISH** | EMA 50 > EMA 100 > EMA 200, and EMA 200 slope > threshold |
+| **BEARISH** | EMA 50 < EMA 100 < EMA 200, and EMA 200 slope < -threshold |
 | **UNDETERMINED** | No clear alignment → **BLOCKED** |
 
-The system only trades when there's a clear trend. No trend = no trade.
+The slope threshold (`ema_slope_threshold`) is set by the AI Advisor based on market conditions. The system only trades when there's a clear trend. No trend = no trade.
 
 ### Layer 2: Zone Identification
 
@@ -169,7 +169,7 @@ Zones scoring below the **minimum confluence threshold** (configurable, default 
 
 ### Layer 4: Trigger Detection
 
-Requires **at least 2 out of 5** independent trigger conditions to fire simultaneously:
+Requires **at least N out of 5** independent trigger conditions to fire (N is set by the AI Advisor via `min_trigger_count`, checked within the last `trigger_lookback_candles` candles):
 
 | Trigger | Bullish Condition | Bearish Condition |
 |---------|-------------------|-------------------|
@@ -179,7 +179,7 @@ Requires **at least 2 out of 5** independent trigger conditions to fire simultan
 | **Engulfing Pattern** | Bullish engulfing candle | Bearish engulfing candle |
 | **Zone Reclaim** | Price moves into/above zone | Price moves into/below zone |
 
-This prevents false signals — a single indicator can mislead, but 2+ confirming simultaneously is much more reliable.
+This prevents false signals — a single indicator can mislead, but multiple confirming simultaneously is much more reliable. The required count and lookback window are determined by the AI Advisor based on market conditions.
 
 ### Layer 5: Risk Management
 
@@ -202,19 +202,24 @@ The AI Advisor is SignalForge's flagship feature for new users. It automates the
 1. **Scanning** up to 100+ cryptocurrencies on Binance that have sufficient trading volume (>$1M/day)
 2. **Analyzing** each one through the signal pipeline layers (regime, trend, momentum, volatility)
 3. **Scoring** and ranking them (0-100) with recommendations (strong_buy, buy, neutral, avoid)
-4. **Generating a concrete investment plan** using Claude AI — which cryptos to trade, what strategy to use, what risk parameters to set
+4. **Generating a concrete investment plan** using Claude AI — which cryptos to trade, ALL optimal strategy parameters (pipeline sensitivity + risk management + features)
 5. **Auto-deploying** everything — creates the strategy, backfills historical candle data, activates paper trading
 
 ### How to Use It
 
 1. Navigate to **AI Advisor** in the sidebar
-2. Enter your investment amount (e.g., $10,000)
-3. Choose your risk tolerance: **Conservative**, **Balanced**, or **Aggressive**
-4. Click **"Scan Market"** — the system fetches real-time data from Binance and scores every liquid crypto pair (takes 1-2 minutes)
-5. Review the scored table — see which cryptos have the best technical setup right now
-6. Click **"Generate AI Plan"** — Claude AI creates a personalized investment plan
-7. Review the plan — selected assets, risk config, expected behavior, warnings
-8. Click **"Deploy & Start Trading"** — strategy is created and activated automatically
+2. Click **"Scan Market"** — the system fetches real-time data from Binance and scores every liquid crypto pair (takes 1-2 minutes)
+3. Review the scored table — see which cryptos have the best technical setup right now
+4. Enter your investment amount (e.g., $10,000)
+5. Click **"Generate Optimal Strategy"** — Claude AI analyzes market conditions and creates a fully autonomous strategy with ALL parameters optimized
+6. Review the plan — selected assets, full strategy config, AI reasoning, expected behavior, warnings
+7. Click **"Deploy & Start Trading"** — strategy is created and activated automatically
+
+### Strategy Parameter Integrity
+
+The AI Advisor is fully autonomous — it determines ALL optimal parameters based on current market conditions. There are no presets and no human risk selection. The AI decides pipeline sensitivity, risk management, timeframes, and feature toggles.
+
+**If the market doesn't match the strategy's conditions, zero trades is the correct outcome.** The system never auto-loosens or overrides the AI's chosen parameters to force trades. The strategy is working correctly by staying out when conditions aren't right.
 
 ### What the Scoring Means
 
@@ -343,12 +348,6 @@ Strategy backtesting with three modes:
 - **Single Backtest**: Choose symbol, timeframe, and lookback period. Returns metrics + equity curve.
 - **Walk-Forward Optimization**: Cross-validated parameter optimization with k-fold splits. Tests strategy robustness across different time periods.
 - **Strategy Validation**: Backtest an entire AI Advisor strategy against historical data. Select a deployed strategy or an AI Advisor plan (pre-deployment), and test all selected symbols with the strategy's exact risk configuration (confluence threshold, ATR multiplier, risk per trade). Shows portfolio-level metrics and per-symbol breakdown. Also accessible via the "Validate Historically" button on the AI Advisor page after generating a plan.
-
-### Journal (`/journal`)
-
-AI-powered trade analysis (requires `SF_ANTHROPIC_API_KEY`):
-- **Pattern Summary**: Recurring patterns in your trades, areas to improve
-- **Per-Trade Analysis**: Click "Analyze" on any trade for AI-generated insights, detected patterns, and recommendations
 
 ### Analytics (`/analytics`)
 

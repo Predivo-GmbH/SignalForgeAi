@@ -89,6 +89,23 @@ def test_validate_adjustments_ignores_unknown_params():
     assert "min_confluence" in validated
 
 
+def test_validate_adjustments_rejects_pipeline_params():
+    """Pipeline sensitivity params must not be tunable."""
+    tuner = RiskTuner()
+    current = {"min_confluence": 50}
+    adjustments = {
+        "min_trigger_count": 1,
+        "trigger_lookback_candles": 5,
+        "ema_slope_threshold": 0.0005,
+        "min_confluence": 55,
+    }
+    validated = tuner._validate_adjustments(adjustments, current)
+    assert "min_trigger_count" not in validated
+    assert "trigger_lookback_candles" not in validated
+    assert "ema_slope_threshold" not in validated
+    assert "min_confluence" in validated
+
+
 def test_validate_adjustments_skips_unchanged():
     tuner = RiskTuner()
     current = {"min_confluence": 50}
@@ -160,13 +177,7 @@ async def test_tune_insufficient_trades():
     strategy = MagicMock()
     strategy.id = "test-id"
     strategy.config = {"min_confluence": 50}
-    strategy.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
-    # First execute: signal count query (returns > 0 to skip no-signal fallback)
-    signal_count_result = MagicMock()
-    signal_count_result.scalar.return_value = 5
-
-    # Second execute: trades query (returns < 5 trades)
     trade_result = MagicMock()
     trade_result.scalars.return_value.all.return_value = [
         _make_trade(100),
@@ -174,35 +185,8 @@ async def test_tune_insufficient_trades():
     ]
 
     mock_db = AsyncMock()
-    mock_db.execute = AsyncMock(side_effect=[signal_count_result, trade_result])
+    mock_db.execute = AsyncMock(return_value=trade_result)
 
     result = await tuner.tune(strategy, mock_db)
     assert result["adjustments"] == {}
     assert "Insufficient" in result["reasoning"]
-
-
-async def test_tune_no_signals_fallback():
-    """Strategy active 48h+ with zero signals should trigger pipeline loosening."""
-    tuner = RiskTuner()
-    strategy = MagicMock()
-    strategy.id = "test-id"
-    strategy.config = {
-        "min_confluence": 50,
-        "min_trigger_count": 2,
-        "trigger_lookback_candles": 1,
-        "ema_slope_threshold": 0.001,
-    }
-    strategy.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
-
-    # Signal count = 0
-    signal_count_result = MagicMock()
-    signal_count_result.scalar.return_value = 0
-
-    mock_db = AsyncMock()
-    mock_db.execute = AsyncMock(return_value=signal_count_result)
-
-    result = await tuner.tune(strategy, mock_db)
-    adj = result["adjustments"]
-    # Should loosen at least one pipeline sensitivity param
-    assert adj.get("min_trigger_count", 2) < 2 or adj.get("trigger_lookback_candles", 1) > 1
-    assert "zero signals" in result["reasoning"]

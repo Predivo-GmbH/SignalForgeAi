@@ -14,27 +14,21 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = """\
 You are a risk management specialist for SignalForge, an automated crypto
 trading platform. You analyze recent trading performance and recommend
-parameter adjustments to optimize the strategy.
+risk parameter adjustments to optimize the strategy.
 
 Recommend CONSERVATIVE adjustments — never change any parameter by more
 than 20% from its current value in a single adjustment.
 
-RISK MANAGEMENT parameters:
+You may ONLY adjust these RISK MANAGEMENT parameters:
 - min_confluence: 10-100 (higher = fewer but better trades)
 - max_risk_per_trade: 0.005-0.10 (fraction of equity per trade)
 - max_daily_loss: 0.01-0.20 (daily loss circuit breaker)
 - atr_sl_multiplier: 0.5-5.0 (wider = fewer stop-outs)
 - min_risk_reward: 0.5-5.0 (must be <= 1.6 — pipeline R:R is ~1.618)
 
-PIPELINE SENSITIVITY parameters (directly control trade frequency):
-- min_trigger_count: 1-5 (how many of 5 trigger types must confirm entry; lower = more trades)
-- trigger_lookback_candles: 1-10 (window to check for crossovers; 1 = exact candle only, higher = more forgiving)
-- ema_slope_threshold: 0.0001-0.01 (minimum EMA-200 slope for trend; lower = accepts weaker trends)
-
-CRITICAL: If the strategy has generated ZERO signals over 24+ hours, the
-pipeline sensitivity is too strict. In that case, you MUST loosen at least
-one of: lower min_trigger_count, raise trigger_lookback_candles, or lower
-ema_slope_threshold.
+Do NOT adjust pipeline sensitivity parameters (min_trigger_count,
+trigger_lookback_candles, ema_slope_threshold). Those are part of the
+strategy identity set by the AI Advisor and must not be changed.
 
 Return ONLY valid JSON:
 {
@@ -55,17 +49,13 @@ Only include parameters that need changing in "adjustments".
 If no changes are needed, return an empty adjustments object.
 Respond ONLY with valid JSON."""
 
-# Bounds for each tunable parameter
+# Bounds for each tunable parameter (risk management only)
 PARAM_BOUNDS = {
     "min_confluence": (10, 100),
     "max_risk_per_trade": (0.005, 0.10),
     "max_daily_loss": (0.01, 0.20),
     "atr_sl_multiplier": (0.5, 5.0),
     "min_risk_reward": (0.5, 5.0),
-    # Pipeline sensitivity
-    "min_trigger_count": (1, 5),
-    "trigger_lookback_candles": (1, 10),
-    "ema_slope_threshold": (0.0001, 0.01),
 }
 
 MAX_CHANGE_PCT = 0.20  # 20% max change per adjustment
@@ -75,7 +65,11 @@ class RiskTuner:
     """Analyzes performance and adjusts strategy risk parameters."""
 
     async def tune(self, strategy, db: AsyncSession) -> dict:
-        """Analyze recent trades and return parameter adjustments.
+        """Analyze recent trades and return risk parameter adjustments.
+
+        Only adjusts risk management parameters based on actual trade
+        performance. Pipeline sensitivity parameters are part of the
+        strategy identity and are never modified here.
 
         Returns dict with adjustments, reasoning, and metrics_snapshot.
         """
@@ -86,31 +80,7 @@ class RiskTuner:
             "max_daily_loss": cfg.get("max_daily_loss", 0.06),
             "atr_sl_multiplier": cfg.get("atr_sl_multiplier", 2.0),
             "min_risk_reward": cfg.get("min_risk_reward", 1.5),
-            # Pipeline sensitivity
-            "min_trigger_count": cfg.get("min_trigger_count", 2),
-            "trigger_lookback_candles": cfg.get("trigger_lookback_candles", 1),
-            "ema_slope_threshold": cfg.get("ema_slope_threshold", 0.001),
         }
-
-        # Check for zero-signal condition — strategy active but no signals at all
-        from datetime import datetime, timedelta, timezone
-
-        from sqlalchemy import func
-
-        signal_count_result = await db.execute(
-            select(func.count(Signal.id)).where(
-                Signal.strategy_id == strategy.id,
-            )
-        )
-        total_signals = signal_count_result.scalar() or 0
-
-        strategy_age_hours = 0.0
-        if strategy.created_at:
-            strategy_age_hours = (
-                datetime.now(timezone.utc) - strategy.created_at.replace(tzinfo=timezone.utc)
-            ).total_seconds() / 3600
-
-        zero_signals = total_signals == 0 and strategy_age_hours >= 24
 
         # Load recent trades for this strategy (via Signal join)
         result = await db.execute(
@@ -125,30 +95,18 @@ class RiskTuner:
         )
         trades = list(result.scalars().all())
 
-        # Build metrics — either from trades or a zero-signal summary
-        if len(trades) >= 5:
-            metrics = self._compute_metrics(trades)
-        elif zero_signals:
-            metrics = {
-                "total_trades": 0,
-                "total_signals": 0,
-                "strategy_age_hours": round(strategy_age_hours, 1),
-                "win_rate": 0,
-                "avg_pnl": 0,
-                "avg_risk_reward": 0,
-                "max_drawdown_pct": 0,
-                "stop_loss_hit_rate": 0,
-            }
-        else:
+        if len(trades) < 5:
             return {
                 "adjustments": {},
                 "reasoning": "Insufficient trade history (need at least 5 closed trades).",
                 "metrics_snapshot": {"total_trades": len(trades)},
             }
 
+        metrics = self._compute_metrics(trades)
+
         pattern_context = await self._load_pattern_context(strategy.id)
         user_message = self._build_user_message(
-            current_params, metrics, pattern_context, zero_signals,
+            current_params, metrics, pattern_context,
         )
 
         ai_result = await claude_client.ask_json(
@@ -170,8 +128,6 @@ class RiskTuner:
             }
 
         # Algorithmic fallback only when Claude is unavailable
-        if zero_signals:
-            return self._no_signals_fallback(current_params, strategy_age_hours)
         return self._algorithmic_fallback(metrics, current_params)
 
     @staticmethod
@@ -241,7 +197,7 @@ class RiskTuner:
         metrics: dict,
         pattern_context: dict | None = None,
     ) -> str:
-        lines = ["Current strategy parameters:"]
+        lines = ["Current risk parameters:"]
         for k, v in current_params.items():
             lines.append(f"  {k}: {v}")
 
@@ -299,41 +255,6 @@ class RiskTuner:
         return validated
 
     @staticmethod
-    def _no_signals_fallback(current_params: dict, age_hours: float) -> dict:
-        """Loosen pipeline sensitivity when zero signals have been generated."""
-        adjustments = {}
-
-        # Lower min_trigger_count toward 1
-        if current_params["min_trigger_count"] > 1:
-            adjustments["min_trigger_count"] = max(1, current_params["min_trigger_count"] - 1)
-
-        # Raise trigger_lookback_candles toward 5
-        if current_params["trigger_lookback_candles"] < 5:
-            adjustments["trigger_lookback_candles"] = min(
-                5, current_params["trigger_lookback_candles"] + 2,
-            )
-
-        # Lower ema_slope_threshold toward 0.0002
-        if current_params["ema_slope_threshold"] > 0.0003:
-            adjustments["ema_slope_threshold"] = round(
-                max(0.0002, current_params["ema_slope_threshold"] * 0.6), 4,
-            )
-
-        # Also lower min_confluence if still high
-        if current_params["min_confluence"] > 40:
-            adjustments["min_confluence"] = max(35, current_params["min_confluence"] - 10)
-
-        return {
-            "adjustments": adjustments,
-            "reasoning": (
-                f"Strategy has generated zero signals after {age_hours:.0f} hours. "
-                f"Pipeline sensitivity is too strict for current market conditions. "
-                f"Loosening trigger requirements and trend threshold to enable signal generation."
-            ),
-            "metrics_snapshot": {"total_trades": 0, "total_signals": 0},
-        }
-
-    @staticmethod
     def _algorithmic_fallback(metrics: dict, current_params: dict) -> dict:
         """Simple rule-based adjustments when Claude unavailable."""
         adjustments = {}
@@ -353,12 +274,6 @@ class RiskTuner:
         if metrics["max_drawdown_pct"] > 0.10:
             new_risk = max(0.005, current_params["max_risk_per_trade"] * 0.9)
             adjustments["max_risk_per_trade"] = round(new_risk, 4)
-
-        # If few trades and min_trigger_count is high, lower it
-        if metrics["total_trades"] < 5 and current_params.get("min_trigger_count", 2) > 1:
-            adjustments["min_trigger_count"] = max(
-                1, current_params["min_trigger_count"] - 1,
-            )
 
         reasoning = "Algorithmic fallback: "
         if adjustments:

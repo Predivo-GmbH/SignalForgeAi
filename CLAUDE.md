@@ -4,13 +4,14 @@ Multi-layer automated trading platform with AI-powered confluence scoring and ad
 
 ## Status
 
-**Phases 1–7 complete** (Phase 7 uncommitted). **AI Usage & Cost Tracking complete.**
+**Phases 1–7 complete** (Phase 7 uncommitted). **AI self-learning loop active.**
 
-- 88 commits on `main` + extensive uncommitted Phase 7 work + AI cost tracking
-- Backend: 14 API routers, ~42 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 12 Celery Beat tasks, 11 DB models
-- Frontend: 8 pages, 18 hooks, ~21 components, dark/light theme
-- Phase 7 added: AI Advisor (Claude-powered planner, signal quality, risk tuner, feedback loop), 8 configurable risk management features, portfolio backtester, frontend restructure
-- AI cost tracking: Local token-based cost computation, Anthropic Admin API integration (dormant until admin key available), prepaid credit management, daily cost charts
+- 88 commits on `main` + extensive uncommitted Phase 7 work + AI cost tracking + self-learning loop
+- Backend: 12 API routers (journal removed), ~40 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 13 Celery Beat tasks, 11 DB models
+- Frontend: 8 pages, 16 hooks, ~21 components, dark/light theme
+- Phase 7 added: AI Advisor (autonomous planner, signal quality, risk tuner, feedback loop), 8 configurable risk management features, portfolio backtester, frontend restructure
+- Self-learning loop: FeedbackFilter wired → AI reject in live mode → Pattern Analysis → Risk Tuner → Feedback Synthesis (all daily, automated)
+- AI cost tracking: Local token-based cost computation, Anthropic Admin API integration (dormant until admin key available)
 
 ## Project Structure
 - `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0 (~100 source files, ~50 test files)
@@ -52,6 +53,13 @@ docker compose -f docker-compose.prod.yml up -d
 - Commit frequently, one logical change per commit
 - Always check existing code before modifying — read first
 
+### Strategy Parameter Integrity (CORE PRINCIPLE)
+The AI Advisor chose the strategy parameters for a reason. If the market doesn't match, zero trades is the correct outcome — not a problem to "fix" by loosening things. Specifically:
+- **Never** auto-override, auto-loosen, or "fall back" to weaker parameters just because zero signals/trades are generated.
+- **Pipeline sensitivity params** (`min_trigger_count`, `trigger_lookback_candles`, `ema_slope_threshold`) are strategy identity — set by the AI Advisor at creation, never modified afterward.
+- **RiskTuner** only adjusts risk management params (`min_confluence`, `max_risk_per_trade`, `max_daily_loss`, `atr_sl_multiplier`, `min_risk_reward`) based on actual trade results with 5+ closed trades.
+- No system component should treat "no trades" as a problem to solve. The strategy is working correctly by staying out when conditions don't match.
+
 ## Frontend Pages & Navigation
 Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics → Settings
 
@@ -62,7 +70,7 @@ Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics 
 | `/strategies` | Strategies | List deployed strategies with P&L, win rate, Sharpe |
 | `/strategies/:id` | Strategy Detail | Signals tab + Validation/backtest tab |
 | `/backtest` | Backtest | Standalone strategy validation tool |
-| `/trades` | Trades | Trade history + stats |
+| `/trades` | Trades | Execution log + performance metrics |
 | `/analytics` | Analytics | Equity curve, metrics grid, correlation matrix |
 | `/settings` | Settings | Connections (broker keys), Alerts (email), AI Usage (cost tracking) |
 
@@ -75,7 +83,7 @@ Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics 
 ## Config
 - All backend env vars use `SF_` prefix (e.g. `SF_DATABASE_URL`, `SF_JWT_SECRET`)
 - Frontend uses `VITE_API_URL` (defaults to `http://localhost:8000/api`)
-- AI feature flags: `ai_signal_quality_enabled`, `ai_risk_tuning_enabled`, `ai_feedback_loop_enabled`, etc.
+- AI feature flags: all True — `ai_signal_quality_enabled`, `ai_risk_tuning_enabled`, `ai_feedback_loop_enabled`, etc.
 - `SF_ANTHROPIC_API_KEY` — required for Claude calls (set in `backend/.env`)
 - `SF_ANTHROPIC_ADMIN_API_KEY` — optional, for Anthropic Admin API cost reports (not available on individual plans)
 - See `docs/PROJECT-STATUS.md` for full env var table
