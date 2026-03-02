@@ -188,6 +188,7 @@ async def _run_strategy_pipeline(db, active_strategy):
                         )
 
                     signal_row = SignalModel(
+                        user_id=active_strategy.user_id,
                         strategy_id=active_strategy.id,
                         symbol=symbol,
                         timeframe=timeframe,

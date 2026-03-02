@@ -23,17 +23,27 @@ async def _flush_async() -> dict:
     from app.config import settings
 
     r = sync_redis.from_url(settings.redis_url)
+
+    # Atomically read + trim to avoid data loss if DB commit fails
+    queue_key = "ai_usage_queue"
+    queue_len = r.llen(queue_key)
+    if queue_len == 0:
+        return {"flushed": 0}
+
+    # Cap batch size to prevent unbounded memory usage
+    batch_size = min(queue_len, 5000)
+    raw_items = r.lrange(queue_key, 0, batch_size - 1)
+
     items: list[dict] = []
-    while True:
-        raw = r.lpop("ai_usage_queue")
-        if raw is None:
-            break
+    for raw in raw_items:
         try:
             items.append(json.loads(raw))
         except json.JSONDecodeError:
             logger.warning("Skipping malformed AI usage record")
 
     if not items:
+        # All items were malformed — trim them from the queue
+        r.ltrim(queue_key, batch_size, -1)
         return {"flushed": 0}
 
     from app.core.database import task_session
@@ -56,6 +66,9 @@ async def _flush_async() -> dict:
             )
             session.add(row)
         await session.commit()
+
+    # Only trim after successful DB commit
+    r.ltrim(queue_key, batch_size, -1)
 
     logger.info("Flushed %d AI usage records to database", len(items))
     return {"flushed": len(items)}

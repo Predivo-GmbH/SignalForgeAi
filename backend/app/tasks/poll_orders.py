@@ -21,6 +21,7 @@ async def _poll_async():
     from app.core.database import task_session
     from app.execution.position_manager import PositionManagerDB
     from app.models.order import Order
+    from app.models.position import Position
     from app.models.signal import Signal
 
     async with task_session() as db:
@@ -39,6 +40,14 @@ async def _poll_async():
 
                 # If order is filled and no position exists yet, open one
                 if order.status == "filled" and order.filled_quantity > 0:
+                    # Guard: skip if a position already exists for this order
+                    existing = await db.execute(
+                        select(Position.id).where(Position.order_id == order.id).limit(1)
+                    )
+                    if existing.scalar_one_or_none():
+                        order.status = "completed"
+                        continue
+
                     # Resolve strategy_id from the signal linked to this order
                     strategy_id = None
                     if order.signal_id:
@@ -60,6 +69,7 @@ async def _poll_async():
                         order_id=str(order.id),
                         strategy_id=str(strategy_id) if strategy_id else None,
                     )
+                    order.status = "completed"
                     logger.info(
                         "Opened position %s from filled order %s "
                         "(SL=%.2f, TP=%.2f — bracket active)",
