@@ -9,6 +9,9 @@ from app.auth.jwt import decode_token
 logger = logging.getLogger(__name__)
 
 
+MAX_CONNECTIONS_PER_CHANNEL = 500
+
+
 class ConnectionManager:
     """Manages WebSocket connections across named channels with user scoping."""
 
@@ -22,8 +25,12 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket, channel: str, user_id: str | None = None):
         """Accept a WebSocket connection and register it to a channel."""
+        conns = self.active_connections.setdefault(channel, [])
+        if len(conns) >= MAX_CONNECTIONS_PER_CHANNEL:
+            await websocket.close(code=1013, reason="Server too busy")
+            return
         await websocket.accept()
-        self.active_connections.setdefault(channel, []).append((websocket, user_id))
+        conns.append((websocket, user_id))
 
     def disconnect(self, websocket: WebSocket, channel: str):
         """Remove a WebSocket connection from a channel."""

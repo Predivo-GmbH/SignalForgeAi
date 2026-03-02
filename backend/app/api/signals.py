@@ -83,13 +83,13 @@ class GenerateSignalResponse(BaseModel):
 
 def _generate_synthetic_candles(n: int = 200) -> pd.DataFrame:
     """Generate synthetic OHLCV candles for pipeline testing."""
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     dates = pd.date_range(end=pd.Timestamp.now(), periods=n, freq="1h")
-    close = 100 + np.cumsum(np.random.randn(n) * 0.5)
-    high = close + np.abs(np.random.randn(n) * 0.3)
-    low = close - np.abs(np.random.randn(n) * 0.3)
-    open_ = close + np.random.randn(n) * 0.1
-    volume = np.random.randint(100, 10000, size=n).astype(float)
+    close = 100 + np.cumsum(rng.standard_normal(n) * 0.5)
+    high = close + np.abs(rng.standard_normal(n) * 0.3)
+    low = close - np.abs(rng.standard_normal(n) * 0.3)
+    open_ = close + rng.standard_normal(n) * 0.1
+    volume = rng.integers(100, 10000, size=n).astype(float)
     return pd.DataFrame(
         {"open": open_, "high": high, "low": low, "close": close, "volume": volume},
         index=dates,

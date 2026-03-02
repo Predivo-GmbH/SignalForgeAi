@@ -183,7 +183,16 @@ async def account_state(
     )
     open_count: int = res.scalar_one()
 
-    initial_equity = 10_000.0  # TODO: make per-user / configurable
+    # Pull account equity from user's active strategy config, fallback to 10k
+    from app.models.strategy import Strategy
+
+    strat_res = await db.execute(
+        select(Strategy.config).where(
+            Strategy.user_id == uid, Strategy.is_active == True  # noqa: E712
+        ).limit(1)
+    )
+    strat_cfg = strat_res.scalar_one_or_none() or {}
+    initial_equity = float(strat_cfg.get("account_equity", 10_000.0))
 
     return {
         "equity": round(initial_equity + realized_pnl, 2),

@@ -14,6 +14,7 @@ class Trade(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         Index("ix_trades_user_id", "user_id"),
         Index("ix_trades_exit_time", "exit_time"),
+        Index("ix_trades_symbol", "symbol"),
     )
 
     signal_id: Mapped[uuid.UUID | None] = mapped_column(

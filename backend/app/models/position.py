@@ -21,7 +21,7 @@ class Position(Base, UUIDMixin):
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
     )
-    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     direction: Mapped[str] = mapped_column(String(4), nullable=False)  # BUY / SELL
     quantity: Mapped[float] = mapped_column(Float, nullable=False)
     entry_price: Mapped[float] = mapped_column(Float, nullable=False)

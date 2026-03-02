@@ -125,6 +125,8 @@ async def update_credit(
     from app.core.redis_client import redis_client
 
     await redis_client.set("ai_prepaid_credit", str(body.prepaid_usd))
+    # Reset cumulative cost counter when credit is replenished
+    await redis_client.delete("ai_cumulative_cost")
     return {"prepaid_usd": body.prepaid_usd}
 
 
