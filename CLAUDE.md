@@ -6,7 +6,7 @@ Multi-layer automated trading platform with AI-powered confluence scoring and ad
 
 **Phases 1–7 complete.** All committed and pushed. **AI self-learning loop active.**
 
-- 105 commits on `main` (latest: `17c5b28`)
+- 107+ commits on `main`
 - Backend: 12 API routers (journal removed), ~40 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 13 Celery Beat tasks, 11 DB models
 - Frontend: 8 pages, 16 hooks, ~21 components, dark/light theme
 - Phase 7 added: AI Advisor (autonomous planner, signal quality, risk tuner, feedback loop), 8 configurable risk management features, portfolio backtester, frontend restructure

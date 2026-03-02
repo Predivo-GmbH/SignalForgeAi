@@ -3,7 +3,7 @@
 > **For Claude:** Use this document as the single source of truth for the project.
 
 **Last updated:** 2026-03-03
-**Latest commit:** `17c5b28` on `main` (105 commits) — all committed and pushed
+**Latest commit:** `2351517` on `main` (107+ commits) — all committed and pushed
 **Quality gates:** 351 backend tests (2 pre-existing failures), 36 frontend tests
 
 ---
@@ -594,7 +594,7 @@ docker.exe compose exec db psql -U signalforge -c \
 
 ---
 
-## Commit History (105 commits on main)
+## Commit History (107+ commits on main)
 
 ### Phase 1–6: See git log (88 commits from `d872185` to `79baeb3`)
 
@@ -626,3 +626,5 @@ docker.exe compose exec db psql -U signalforge -c \
 - **JWT token refresh** (`23cea2b`): auto-refreshes access token on 401 before logging out
 - **WebSocket exponential backoff** (`448de29`): 3s–30s cap, max 5 retries per channel
 - Dead code cleanup (`17c5b28`): removed unused imports, preset labels, theme toggle
+- **Backend audit** (`5bd833d`): N+1 query fixes, async backtests, journal.py deleted, DB indexes, auth hardening
+- **AI feature flags + credit hard stop** (`2351517`): feedback_synthesis flag check, prepaid credit enforcement, low-confidence rule filter
