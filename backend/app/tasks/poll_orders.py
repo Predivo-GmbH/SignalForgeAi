@@ -21,6 +21,7 @@ async def _poll_async():
     from app.core.database import task_session
     from app.execution.position_manager import PositionManagerDB
     from app.models.order import Order
+    from app.models.signal import Signal
 
     async with task_session() as db:
         # Find orders in non-terminal states
@@ -38,7 +39,15 @@ async def _poll_async():
 
                 # If order is filled and no position exists yet, open one
                 if order.status == "filled" and order.filled_quantity > 0:
-                    await PositionManagerDB.open_position(
+                    # Resolve strategy_id from the signal linked to this order
+                    strategy_id = None
+                    if order.signal_id:
+                        sig_result = await db.execute(
+                            select(Signal.strategy_id).where(Signal.id == order.signal_id)
+                        )
+                        strategy_id = sig_result.scalar_one_or_none()
+
+                    pos = await PositionManagerDB.open_position(
                         db=db,
                         user_id=str(order.user_id),
                         symbol=order.symbol,
@@ -49,8 +58,14 @@ async def _poll_async():
                         take_profit=order.take_profit,
                         broker=order.broker,
                         order_id=str(order.id),
+                        strategy_id=str(strategy_id) if strategy_id else None,
                     )
-                    logger.info("Opened position from filled order %s", order.id)
+                    logger.info(
+                        "Opened position %s from filled order %s "
+                        "(SL=%.2f, TP=%.2f — bracket active)",
+                        pos.id, order.id,
+                        order.stop_loss or 0.0, order.take_profit or 0.0,
+                    )
 
             except Exception as e:
                 logger.error("Poll failed for order %s: %s", order.id, e)

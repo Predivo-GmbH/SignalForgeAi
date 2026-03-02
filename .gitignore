@@ -17,10 +17,18 @@ frontend/dist/
 # Docker
 docker-compose.override.yml
 
-# Environment
+# Environment (never commit secrets)
 .env
 .env.local
 .env.production
+*.env.prod
+backend/.env.prod
+
+# Celery beat schedule (generated at runtime)
+celerybeat-schedule*
+
+# Claude Code
+.claude/
 
 # IDE
 .vscode/

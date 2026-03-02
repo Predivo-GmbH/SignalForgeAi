@@ -18,13 +18,13 @@ import { cn } from "@/lib/cn";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
   { to: "/signals", icon: Zap, label: "Signals" },
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },
   { to: "/backtest", icon: FlaskConical, label: "Backtest Lab" },
   { to: "/journal", icon: BookOpen, label: "Journal" },
   { to: "/analytics", icon: BarChart2, label: "Analytics" },
-  { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
-  { to: "/config", icon: Settings, label: "Strategy" },
+  { to: "/config", icon: Settings, label: "Strategies" },
   { to: "/keys", icon: Key, label: "API Keys" },
   { to: "/guide", icon: HelpCircle, label: "User Guide" },
 ] as const;

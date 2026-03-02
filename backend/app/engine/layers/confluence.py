@@ -8,10 +8,15 @@ alignment between technical indicators and the identified zone.
 import pandas as pd
 
 from app.engine.indicators import (
+    compute_bollinger_bands,
+    compute_cci,
+    compute_ichimoku,
     compute_macd,
+    compute_obv,
     compute_rsi,
     compute_stochastic,
     compute_vwap,
+    compute_williams_r,
 )
 from app.engine.layers.trend import Trend, TrendResult
 from app.engine.layers.zones import EntryZone
@@ -21,18 +26,24 @@ class ConfluenceScorer:
     """
     Layer 3: Scores a zone 0-100 based on how many independent
     technical factors confirm it as a high-probability entry.
+    14 factors covering price structure, momentum, volume, and volatility.
     """
 
     WEIGHTS: dict[str, int] = {
-        "fibonacci_alignment": 15,
-        "sr_overlap": 15,
-        "multi_tf_fib": 15,
-        "vwap_proximity": 10,
-        "volume_node": 10,
-        "rsi_confirmation": 10,
-        "macd_momentum": 10,
-        "candlestick_pattern": 10,
+        "fibonacci_alignment": 12,
+        "sr_overlap": 12,
+        "multi_tf_fib": 10,
+        "vwap_proximity": 8,
+        "volume_node": 8,
+        "rsi_confirmation": 8,
+        "macd_momentum": 8,
+        "candlestick_pattern": 7,
         "stochastic_cross": 5,
+        "bollinger_position": 5,
+        "ichimoku_cloud": 5,
+        "obv_trend": 5,
+        "williams_r_extreme": 4,
+        "cci_momentum": 3,
     }
 
     def score(
@@ -57,6 +68,11 @@ class ConfluenceScorer:
             "macd_momentum": self._check_macd_momentum,
             "candlestick_pattern": self._check_candlestick_pattern,
             "stochastic_cross": self._check_stochastic_cross,
+            "bollinger_position": self._check_bollinger_position,
+            "ichimoku_cloud": self._check_ichimoku_cloud,
+            "obv_trend": self._check_obv_trend,
+            "williams_r_extreme": self._check_williams_r_extreme,
+            "cci_momentum": self._check_cci_momentum,
         }
 
         for factor, check_fn in checks.items():
@@ -242,3 +258,123 @@ class ConfluenceScorer:
             hit = False
 
         return hit, {"slow_k": k_now, "slow_d": d_now}
+
+    def _check_bollinger_position(
+        self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
+    ) -> tuple[bool, dict]:
+        """Price near lower Bollinger Band in uptrend or upper band in downtrend."""
+        upper, middle, lower = compute_bollinger_bands(candles["close"])
+        upper_clean = upper.dropna()
+        lower_clean = lower.dropna()
+        if len(upper_clean) == 0 or len(lower_clean) == 0:
+            return False, {"bb_position": "unknown"}
+
+        price = float(candles["close"].iloc[-1])
+        upper_val = float(upper_clean.iloc[-1])
+        lower_val = float(lower_clean.iloc[-1])
+        band_width = upper_val - lower_val
+        if band_width == 0:
+            return False, {"bb_position": "flat"}
+
+        # Position within bands: 0 = at lower, 1 = at upper
+        bb_pct = (price - lower_val) / band_width
+
+        if trend.direction == Trend.BULLISH:
+            hit = bb_pct < 0.3  # Near lower band = oversold bounce opportunity
+        elif trend.direction == Trend.BEARISH:
+            hit = bb_pct > 0.7  # Near upper band = overbought rejection opportunity
+        else:
+            hit = False
+
+        return hit, {"bb_pct": round(bb_pct, 3), "upper": upper_val, "lower": lower_val}
+
+    def _check_ichimoku_cloud(
+        self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
+    ) -> tuple[bool, dict]:
+        """Price position relative to Ichimoku Cloud confirms trend."""
+        ichi = compute_ichimoku(candles)
+        senkou_a = ichi["senkou_a"].dropna()
+        senkou_b = ichi["senkou_b"].dropna()
+        if len(senkou_a) == 0 or len(senkou_b) == 0:
+            return False, {"cloud_position": "insufficient_data"}
+
+        price = float(candles["close"].iloc[-1])
+        cloud_top = max(float(senkou_a.iloc[-1]), float(senkou_b.iloc[-1]))
+        cloud_bottom = min(float(senkou_a.iloc[-1]), float(senkou_b.iloc[-1]))
+
+        if trend.direction == Trend.BULLISH:
+            hit = price > cloud_top  # Price above cloud confirms uptrend
+            pos = "above"
+        elif trend.direction == Trend.BEARISH:
+            hit = price < cloud_bottom  # Price below cloud confirms downtrend
+            pos = "below"
+        else:
+            hit = False
+            pos = "inside" if cloud_bottom <= price <= cloud_top else "outside"
+
+        return hit, {"cloud_position": pos, "cloud_top": cloud_top, "cloud_bottom": cloud_bottom}
+
+    def _check_obv_trend(
+        self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
+    ) -> tuple[bool, dict]:
+        """On-Balance Volume trend aligns with price trend (rising OBV = accumulation)."""
+        obv = compute_obv(candles)
+        obv_clean = obv.dropna()
+        if len(obv_clean) < 20:
+            return False, {"obv_slope": 0}
+
+        # Compare OBV 20-period moving average slope
+        obv_ma = obv_clean.rolling(20).mean().dropna()
+        if len(obv_ma) < 2:
+            return False, {"obv_slope": 0}
+
+        obv_slope = float(obv_ma.iloc[-1] - obv_ma.iloc[-5]) if len(obv_ma) >= 5 else 0
+
+        if trend.direction == Trend.BULLISH:
+            hit = obv_slope > 0  # Rising OBV confirms buying pressure
+        elif trend.direction == Trend.BEARISH:
+            hit = obv_slope < 0  # Falling OBV confirms selling pressure
+        else:
+            hit = False
+
+        return hit, {"obv_slope": round(obv_slope, 2)}
+
+    def _check_williams_r_extreme(
+        self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
+    ) -> tuple[bool, dict]:
+        """Williams %R at extreme levels confirming entry direction."""
+        wr = compute_williams_r(candles)
+        wr_clean = wr.dropna()
+        if len(wr_clean) == 0:
+            return False, {"williams_r": -50}
+
+        wr_val = float(wr_clean.iloc[-1])
+
+        if trend.direction == Trend.BULLISH:
+            hit = wr_val < -80  # Oversold territory = buying opportunity
+        elif trend.direction == Trend.BEARISH:
+            hit = wr_val > -20  # Overbought territory = selling opportunity
+        else:
+            hit = False
+
+        return hit, {"williams_r": round(wr_val, 2)}
+
+    def _check_cci_momentum(
+        self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
+    ) -> tuple[bool, dict]:
+        """CCI confirms momentum direction. >100 = strong up, <-100 = strong down."""
+        cci = compute_cci(candles)
+        cci_clean = cci.dropna()
+        if len(cci_clean) == 0:
+            return False, {"cci": 0}
+
+        cci_val = float(cci_clean.iloc[-1])
+
+        if trend.direction == Trend.BULLISH:
+            hit = cci_val > 100  # Strong upward momentum
+        elif trend.direction == Trend.BEARISH:
+            hit = cci_val < -100  # Strong downward momentum
+        else:
+            hit = False
+
+        return hit, {"cci": round(cci_val, 2)}

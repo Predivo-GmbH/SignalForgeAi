@@ -1,12 +1,10 @@
 """AI Investment Advisor API — scan, plan, deploy."""
 
-import json
 import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -60,21 +58,61 @@ async def scan_market(
     from app.advisor.scanner import MarketScanner
     from app.advisor.analyzer import TechnicalAnalyzer
 
-    scanner = MarketScanner("binance")
-    analyzer = TechnicalAnalyzer()
+    # Step 0: Connect to Binance
+    try:
+        scanner = MarketScanner("binance")
+    except Exception as e:
+        logger.error("Failed to initialize Binance connection: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Cannot connect to Binance exchange: {e}",
+        )
 
     # Step 1: Get top pairs by volume
-    top_pairs = scanner.scan_top_pairs(top_n=req.top_n)
-    symbols = [p["symbol"] for p in top_pairs]
+    try:
+        top_pairs = scanner.scan_top_pairs(top_n=req.top_n)
+    except Exception as e:
+        logger.error("Failed to scan Binance markets: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to fetch market data from Binance: {e}",
+        )
 
-    # Build volume rank lookup
+    if not top_pairs:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No liquid trading pairs found on Binance. Try again later.",
+        )
+
+    symbols = [p["symbol"] for p in top_pairs]
     volume_ranks = {p["symbol"]: p["rank"] for p in top_pairs}
 
     # Step 2: Fetch candles for technical analysis
-    candles = scanner.fetch_candles_batch(symbols, timeframe="1h", limit=200)
+    try:
+        candles = scanner.fetch_candles_batch(symbols, timeframe="1h", limit=200)
+    except Exception as e:
+        logger.error("Failed to fetch candle data: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to fetch candle data from Binance: {e}",
+        )
+
+    if not candles:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Fetched tickers but no candle data returned. Binance may be rate-limiting.",
+        )
 
     # Step 3: Score each crypto
-    scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
+    try:
+        analyzer = TechnicalAnalyzer()
+        scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
+    except Exception as e:
+        logger.error("Technical analysis failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Technical analysis failed: {e}",
+        )
 
     # Merge 24h stats from ticker data
     ticker_lookup = {p["symbol"]: p for p in top_pairs}
@@ -83,10 +121,14 @@ async def scan_market(
         s["volume_24h"] = ticker.get("volume_24h", 0)
         s["change_pct_24h"] = ticker.get("change_pct_24h", 0)
 
+    # Step 4: Market recommendation
+    recommendation = analyzer.compute_market_recommendation(scored)
+
     return {
         "pairs_scanned": len(symbols),
         "pairs_scored": len(scored),
         "results": scored,
+        "recommendation": recommendation,
     }
 
 
@@ -107,17 +149,31 @@ async def generate_plan(
         from app.advisor.scanner import MarketScanner
         from app.advisor.analyzer import TechnicalAnalyzer
 
-        scanner = MarketScanner("binance")
-        analyzer = TechnicalAnalyzer()
-        top_pairs = scanner.scan_top_pairs(top_n=100)
-        volume_ranks = {p["symbol"]: p["rank"] for p in top_pairs}
-        candles = scanner.fetch_candles_batch(
-            [p["symbol"] for p in top_pairs], timeframe="1h", limit=200,
-        )
-        scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
+        try:
+            scanner = MarketScanner("binance")
+            analyzer = TechnicalAnalyzer()
+            top_pairs = scanner.scan_top_pairs(top_n=100)
+            volume_ranks = {p["symbol"]: p["rank"] for p in top_pairs}
+            candles = scanner.fetch_candles_batch(
+                [p["symbol"] for p in top_pairs], timeframe="1h", limit=200,
+            )
+            scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
+        except Exception as e:
+            logger.error("Fresh scan for plan generation failed: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Market scan failed: {e}",
+            )
 
-    planner = InvestmentPlanner()
-    plan = planner.generate_plan(scored, body.amount, body.risk_tolerance)
+    try:
+        planner = InvestmentPlanner()
+        plan = planner.generate_plan(scored, body.amount, body.risk_tolerance)
+    except Exception as e:
+        logger.error("Plan generation failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Plan generation failed: {e}",
+        )
     return plan
 
 
@@ -141,7 +197,9 @@ async def deploy_plan(
     preset = plan.get("strategy_preset", "balanced_momentum")
     symbols = [c["symbol"] for c in selected_cryptos]
 
-    # Determine timeframes from preset
+    # Build strategy config from full preset (includes risk management features)
+    from app.api.strategies import STRATEGY_PRESETS
+
     timeframe_map = {
         "conservative_swing": ["4h"],
         "balanced_momentum": ["1h"],
@@ -149,25 +207,18 @@ async def deploy_plan(
     }
     timeframes = timeframe_map.get(preset, ["1h"])
 
-    # Build strategy config
-    config = {
-        "symbols": symbols,
-        "timeframes": timeframes,
-        "account_equity": risk_config.get("account_equity", 10000),
-        "min_confluence": risk_config.get("min_confluence", 50),
-        "max_risk_per_trade": risk_config.get("max_risk_per_trade", 0.02),
-        "max_daily_loss": risk_config.get("max_daily_loss", 0.06),
-        "atr_sl_multiplier": risk_config.get("atr_sl_multiplier", 2.0),
-        "min_risk_reward": risk_config.get("min_risk_reward", 1.5),
-    }
+    preset_config = STRATEGY_PRESETS.get(preset, {}).get("config", {})
+    config = {**preset_config}
+    config["symbols"] = symbols
+    config["timeframes"] = timeframes
+    config["account_equity"] = risk_config.get("account_equity", config.get("account_equity", 10000))
+    config["min_confluence"] = risk_config.get("min_confluence", config.get("min_confluence", 50))
+    config["max_risk_per_trade"] = risk_config.get("max_risk_per_trade", config.get("max_risk_per_trade", 0.02))
+    config["max_daily_loss"] = risk_config.get("max_daily_loss", config.get("max_daily_loss", 0.06))
+    config["atr_sl_multiplier"] = risk_config.get("atr_sl_multiplier", config.get("atr_sl_multiplier", 2.0))
+    config["min_risk_reward"] = risk_config.get("min_risk_reward", config.get("min_risk_reward", 1.5))
 
-    # Deactivate any existing active strategies for this user
     uid = uuid.UUID(user_id)
-    result = await db.execute(
-        select(Strategy).where(Strategy.user_id == uid, Strategy.is_active == True)  # noqa: E712
-    )
-    for old_strat in result.scalars().all():
-        old_strat.is_active = False
 
     # Create new strategy
     strategy_name = f"AI Advisor — {preset.replace('_', ' ').title()}"

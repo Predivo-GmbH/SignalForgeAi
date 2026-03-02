@@ -35,11 +35,13 @@ class PositionManagerDB:
         take_profit: float | None,
         broker: str,
         order_id: str | None = None,
+        strategy_id: str | None = None,
     ) -> Position:
         """Create a new open position in the database."""
         pos = Position(
             user_id=uuid.UUID(user_id),
             order_id=uuid.UUID(order_id) if order_id else None,
+            strategy_id=uuid.UUID(strategy_id) if strategy_id else None,
             symbol=symbol,
             direction=direction,
             quantity=quantity,
@@ -47,6 +49,7 @@ class PositionManagerDB:
             current_price=entry_price,
             stop_loss=stop_loss,
             take_profit=take_profit,
+            original_stop_loss=stop_loss,
             unrealized_pnl=0.0,
             broker=broker,
             is_open=True,

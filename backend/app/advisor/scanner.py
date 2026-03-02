@@ -31,8 +31,8 @@ class MarketScanner:
         logger.info("Loading markets from %s...", self.exchange.id)
         self.exchange.load_markets()
 
-        # Filter for spot USDT pairs, exclude stablecoins
-        usdt_symbols = []
+        # Build set of valid USDT spot pairs, excluding stablecoins
+        usdt_symbols = set()
         for symbol, market in self.exchange.markets.items():
             if (
                 market.get("quote") == quote
@@ -40,15 +40,18 @@ class MarketScanner:
                 and market.get("active", True)
                 and market.get("base") not in EXCLUDE_BASES
             ):
-                usdt_symbols.append(symbol)
+                usdt_symbols.add(symbol)
 
         logger.info("Found %d %s spot pairs, fetching tickers...", len(usdt_symbols), quote)
 
-        # Fetch all tickers at once (single API call)
-        tickers = self.exchange.fetch_tickers(usdt_symbols)
+        # Fetch ALL tickers at once (single API call) — avoids Binance
+        # symbol-list format issues and is actually faster than passing a list.
+        all_tickers = self.exchange.fetch_tickers()
 
         pairs = []
-        for symbol, ticker in tickers.items():
+        for symbol, ticker in all_tickers.items():
+            if symbol not in usdt_symbols:
+                continue
             quote_volume = ticker.get("quoteVolume") or 0
             if quote_volume < 1_000_000:  # Skip pairs with < $1M daily volume
                 continue

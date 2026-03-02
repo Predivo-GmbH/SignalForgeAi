@@ -53,6 +53,91 @@ async def close_position(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+@router.get("/correlations")
+async def get_correlations(
+    user_id: str = Depends(get_current_user),
+):
+    """Return current correlation matrix and alerts for open positions."""
+    try:
+        from app.execution.correlation_monitor import CorrelationMonitor
+
+        monitor = CorrelationMonitor()
+        result = await monitor.get_cached_result(user_id)
+        if result:
+            return {
+                "matrix": result.matrix,
+                "alerts": [
+                    {
+                        "symbol_a": a.symbol_a,
+                        "symbol_b": a.symbol_b,
+                        "correlation": a.correlation,
+                        "risk_level": a.risk_level,
+                    }
+                    for a in result.alerts
+                ],
+                "max_correlation": result.max_correlation,
+                "exposure_penalty": result.exposure_penalty,
+            }
+    except Exception:
+        pass
+    return {"matrix": {}, "alerts": [], "max_correlation": 0, "exposure_penalty": 1.0}
+
+
+@router.get("/drawdown")
+async def get_drawdown_state(
+    user_id: str = Depends(get_current_user),
+):
+    """Return current portfolio drawdown circuit breaker state."""
+    try:
+        from app.execution.drawdown_breaker import DrawdownBreaker
+
+        breaker = DrawdownBreaker()
+        state = await breaker.get_state(user_id)
+        if state:
+            return {
+                "peak_equity": state.peak_equity,
+                "current_equity": state.current_equity,
+                "drawdown_pct": round(state.drawdown_pct * 100, 2),
+                "level": state.level,
+                "level_name": ["Normal", "Warning", "Halt", "Emergency"][
+                    min(state.level, 3)
+                ],
+            }
+    except Exception:
+        pass
+    return {
+        "peak_equity": 0, "current_equity": 0,
+        "drawdown_pct": 0, "level": 0, "level_name": "Normal",
+    }
+
+
+@router.get("/cppi")
+async def get_cppi_state(
+    user_id: str = Depends(get_current_user),
+):
+    """Return current CPPI (portfolio insurance) state."""
+    try:
+        from app.execution.cppi import CPPIManager
+
+        cppi = CPPIManager()
+        state = await cppi.get_state(user_id)
+        if state:
+            return {
+                "floor": state.floor,
+                "peak_equity": state.peak_equity,
+                "exposure_pct": round(state.current_exposure_pct * 100, 2),
+                "cushion": state.cushion,
+                "multiplier": state.multiplier,
+                "max_drawdown_pct": round(state.max_drawdown_pct * 100, 2),
+            }
+    except Exception:
+        pass
+    return {
+        "floor": 0, "peak_equity": 0, "exposure_pct": 100,
+        "cushion": 0, "multiplier": 3.0, "max_drawdown_pct": 15,
+    }
+
+
 @router.get("/account")
 async def account_state(
     user_id: str = Depends(get_current_user),
@@ -109,6 +194,14 @@ async def account_state(
 # ---------------------------------------------------------------------------
 def _pos_to_dict(p: Position) -> dict:
     """Convert a Position ORM model to a JSON-serializable dict."""
+    # Compute bracket_status from SL/TP presence
+    if p.stop_loss and p.take_profit:
+        bracket_status = "active"
+    elif p.stop_loss or p.take_profit:
+        bracket_status = "partial"
+    else:
+        bracket_status = "none"
+
     return {
         "id": str(p.id),
         "symbol": p.symbol,
@@ -117,10 +210,15 @@ def _pos_to_dict(p: Position) -> dict:
         "quantity": p.quantity,
         "stop_loss": p.stop_loss,
         "take_profit": p.take_profit,
+        "original_stop_loss": p.original_stop_loss,
         "is_open": p.is_open,
         "unrealized_pnl": p.unrealized_pnl,
         "current_price": p.current_price,
         "broker": p.broker,
+        "bracket_status": bracket_status,
+        "break_even_applied": p.break_even_applied,
+        "trailing_activated": p.trailing_activated,
+        "strategy_id": str(p.strategy_id) if p.strategy_id else None,
         "order_id": str(p.order_id) if p.order_id else None,
         "opened_at": p.opened_at.isoformat() if p.opened_at else None,
         "closed_at": p.closed_at.isoformat() if p.closed_at else None,

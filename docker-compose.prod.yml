@@ -10,8 +10,7 @@ services:
       POSTGRES_PASSWORD: ${SF_DB_PASSWORD:-signalforge}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # No ports exposed to host — only accessible within Docker network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U signalforge"]
       interval: 10s
@@ -24,8 +23,7 @@ services:
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redisdata:/data
-    ports:
-      - "6379:6379"
+    # No ports exposed to host — only accessible within Docker network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -40,7 +38,7 @@ services:
     env_file:
       - backend/.env.prod
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"  # Only accessible via Caddy reverse proxy
     depends_on:
       timescaledb:
         condition: service_healthy

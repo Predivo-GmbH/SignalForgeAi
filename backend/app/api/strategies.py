@@ -26,6 +26,32 @@ class StrategyConfig(BaseModel):
     max_daily_loss: float = Field(default=0.06, ge=0.01, le=0.20)
     atr_sl_multiplier: float = Field(default=2.0, ge=0.5, le=5.0)
     min_risk_reward: float = Field(default=1.5, ge=0.5, le=5.0)
+    # -- Risk Management Features --
+    # Feature 1: ATR-adaptive trailing stop-loss
+    trailing_stop_enabled: bool = Field(default=False)
+    atr_trail_multiplier: float = Field(default=2.0, ge=0.5, le=5.0)
+    # Feature 2: Portfolio drawdown circuit breaker
+    drawdown_breaker_enabled: bool = Field(default=False)
+    max_drawdown_pct: float = Field(default=0.15, ge=0.05, le=0.50)
+    # Feature 3: Kelly criterion position sizing
+    kelly_enabled: bool = Field(default=False)
+    kelly_fraction: float = Field(default=0.5, ge=0.1, le=1.0)
+    kelly_min_trades: int = Field(default=20, ge=10, le=100)
+    kelly_lookback: int = Field(default=50, ge=20, le=200)
+    # Feature 4: Break-even stop automation
+    break_even_enabled: bool = Field(default=False)
+    break_even_r_multiple: float = Field(default=1.0, ge=0.5, le=3.0)
+    # Feature 6: CPPI portfolio insurance
+    cppi_enabled: bool = Field(default=False)
+    cppi_multiplier: float = Field(default=3.0, ge=1.0, le=10.0)
+    cppi_max_drawdown_pct: float = Field(default=0.15, ge=0.05, le=0.50)
+    # Feature 7: Time-based stops
+    max_hold_hours: float = Field(default=24.0, ge=1.0, le=168.0)
+    time_stop_profit_threshold_pct: float = Field(default=1.0, ge=0.0, le=10.0)
+    # Feature 8: Correlation exposure alerts
+    correlation_monitor_enabled: bool = Field(default=False)
+    correlation_threshold: float = Field(default=0.7, ge=0.3, le=0.95)
+    correlation_auto_reduce: bool = Field(default=False)
 
 
 STRATEGY_PRESETS: dict[str, dict] = {
@@ -41,6 +67,19 @@ STRATEGY_PRESETS: dict[str, dict] = {
             "max_daily_loss": 0.04,
             "atr_sl_multiplier": 2.5,
             "min_risk_reward": 2.0,
+            "trailing_stop_enabled": True,
+            "atr_trail_multiplier": 2.5,
+            "drawdown_breaker_enabled": True,
+            "max_drawdown_pct": 0.10,
+            "break_even_enabled": True,
+            "break_even_r_multiple": 1.0,
+            "cppi_enabled": True,
+            "cppi_multiplier": 3.0,
+            "cppi_max_drawdown_pct": 0.10,
+            "max_hold_hours": 48,
+            "time_stop_profit_threshold_pct": 1.0,
+            "correlation_monitor_enabled": True,
+            "correlation_threshold": 0.7,
         },
     },
     "balanced_momentum": {
@@ -55,6 +94,14 @@ STRATEGY_PRESETS: dict[str, dict] = {
             "max_daily_loss": 0.06,
             "atr_sl_multiplier": 2.0,
             "min_risk_reward": 1.5,
+            "drawdown_breaker_enabled": True,
+            "max_drawdown_pct": 0.15,
+            "break_even_enabled": True,
+            "break_even_r_multiple": 1.0,
+            "max_hold_hours": 24,
+            "time_stop_profit_threshold_pct": 1.0,
+            "correlation_monitor_enabled": True,
+            "correlation_threshold": 0.7,
         },
     },
     "aggressive_scalper": {
@@ -69,6 +116,12 @@ STRATEGY_PRESETS: dict[str, dict] = {
             "max_daily_loss": 0.08,
             "atr_sl_multiplier": 1.5,
             "min_risk_reward": 1.2,
+            "trailing_stop_enabled": True,
+            "atr_trail_multiplier": 1.5,
+            "max_drawdown_pct": 0.20,
+            "break_even_r_multiple": 1.5,
+            "max_hold_hours": 8,
+            "time_stop_profit_threshold_pct": 1.5,
         },
     },
 }

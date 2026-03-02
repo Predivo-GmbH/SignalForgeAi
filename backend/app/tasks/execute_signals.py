@@ -1,4 +1,9 @@
-"""Execute pending signals — place orders via BrokerRouter."""
+"""Execute pending signals — place orders via BrokerRouter.
+
+Applies risk management checks before execution:
+  - Drawdown circuit breaker (Feature 2): skip/reduce at high drawdown
+  - Correlation penalty (Feature 8): reduce sizing for correlated positions
+"""
 
 import logging
 
@@ -56,18 +61,75 @@ async def _execute_async():
                     logger.warning("Signal %s has no valid strategy, skipping", sig.id)
                     continue
 
+                cfg = strategy.config or {}
+                user_id = str(strategy.user_id)
+                quantity = sig.position_size if sig.position_size and sig.position_size > 0 else 0.01
+
+                # --- Drawdown circuit breaker check (Feature 2) ---
+                if cfg.get("drawdown_breaker_enabled", False):
+                    try:
+                        from app.execution.drawdown_breaker import DrawdownBreaker
+
+                        breaker = DrawdownBreaker(
+                            max_drawdown_pct=cfg.get("max_drawdown_pct", 0.15)
+                        )
+                        multiplier = await breaker.get_sizing_multiplier(user_id)
+                        if multiplier <= 0:
+                            logger.warning(
+                                "Drawdown breaker HALT: skipping signal %s for user %s",
+                                sig.id, user_id,
+                            )
+                            sig.status = "rejected"
+                            continue
+                        if multiplier < 1.0:
+                            old_qty = quantity
+                            quantity *= multiplier
+                            logger.info(
+                                "Drawdown breaker: reduced quantity %.6f -> %.6f "
+                                "for signal %s (multiplier=%.2f)",
+                                old_qty, quantity, sig.id, multiplier,
+                            )
+                    except Exception as e:
+                        logger.warning("Drawdown breaker check failed: %s", e)
+
+                # --- Correlation penalty check (Feature 8) ---
+                if cfg.get("correlation_auto_reduce", False):
+                    try:
+                        from app.execution.correlation_monitor import CorrelationMonitor
+
+                        monitor = CorrelationMonitor()
+                        penalty = await monitor.get_cached_penalty(user_id)
+                        if penalty < 1.0:
+                            old_qty = quantity
+                            quantity *= penalty
+                            logger.info(
+                                "Correlation penalty: reduced quantity %.6f -> %.6f "
+                                "for signal %s (penalty=%.2f)",
+                                old_qty, quantity, sig.id, penalty,
+                            )
+                    except Exception as e:
+                        logger.warning("Correlation penalty check failed: %s", e)
+
+                # Skip if quantity reduced to effectively zero
+                if quantity <= 0:
+                    logger.warning(
+                        "Quantity reduced to zero for signal %s, skipping", sig.id
+                    )
+                    sig.status = "rejected"
+                    continue
+
                 signal_dict = {
                     "signal_id": str(sig.id),
                     "symbol": sig.symbol,
                     "direction": sig.direction,
-                    "quantity": sig.position_size if sig.position_size and sig.position_size > 0 else 0.01,
+                    "quantity": quantity,
                     "price": sig.entry_price,
                     "order_type": "market",
                     "stop_loss": sig.stop_loss,
                     "take_profit": sig.take_profit_1,
                 }
                 order = await executor.execute_signal(
-                    db, str(strategy.user_id), signal_dict
+                    db, user_id, signal_dict
                 )
 
                 # Mark signal as active after successful execution

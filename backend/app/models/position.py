@@ -18,6 +18,9 @@ class Position(Base, UUIDMixin):
     order_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("orders.id"), nullable=True
     )
+    strategy_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
+    )
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     direction: Mapped[str] = mapped_column(String(4), nullable=False)  # BUY / SELL
     quantity: Mapped[float] = mapped_column(Float, nullable=False)
@@ -25,10 +28,13 @@ class Position(Base, UUIDMixin):
     current_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
     take_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    original_stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
     unrealized_pnl: Mapped[float] = mapped_column(Float, default=0.0)
     broker: Mapped[str] = mapped_column(String(20), nullable=False)
     broker_position_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_open: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    break_even_applied: Mapped[bool] = mapped_column(Boolean, default=False)
+    trailing_activated: Mapped[bool] = mapped_column(Boolean, default=False)
     opened_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

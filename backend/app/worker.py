@@ -33,6 +33,7 @@ celery_app.conf.include = [
     "app.tasks.send_alerts",
     "app.tasks.hmm_train",
     "app.tasks.backtest_task",
+    "app.tasks.check_correlations",
 ]
 
 # ---------------------------------------------------------------------------
@@ -70,5 +71,9 @@ celery_app.conf.beat_schedule = {
     "retrain-hmm-weekly": {
         "task": "train_hmm_regime",
         "schedule": crontab(hour=2, minute=0, day_of_week="sunday"),
+    },
+    "check-correlations-5m": {
+        "task": "check_correlations",
+        "schedule": 300.0,
     },
 }

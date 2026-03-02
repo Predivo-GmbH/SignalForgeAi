@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Play, Loader2 } from "lucide-react";
 import { useSymbols } from "@/hooks/useSymbols";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { BacktestRequest } from "@/hooks/useBacktest";
 
-const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1D"] as const;
+const TIMEFRAMES: { key: string; label: string; tip: string }[] = [
+  { key: "1m", label: "1m", tip: "1-minute candles. Very short-term scalping. Generates many signals but more noise. Best for 1-7 day backtests." },
+  { key: "5m", label: "5m", tip: "5-minute candles. Short-term day trading. Good for intraday patterns. Best for 7-30 day backtests." },
+  { key: "15m", label: "15m", tip: "15-minute candles. Intraday swing trades. Balances signal frequency with reliability. Best for 14-60 day backtests." },
+  { key: "1h", label: "1h", tip: "1-hour candles. The default and most balanced timeframe. Good for swing trades lasting hours to days. Best for 30-90 day backtests." },
+  { key: "4h", label: "4h", tip: "4-hour candles. Medium-term swing trading. Higher quality signals but fewer trades. Best for 60-180 day backtests." },
+  { key: "1D", label: "1D", tip: "Daily candles. Long-term position trading. Very reliable signals but very few trades. Best for 90-365 day backtests." },
+];
+
 const FALLBACK_SYMBOLS = [
-  "BTC/USDT",
-  "ETH/USDT",
-  "SOL/USDT",
-  "EUR/USD",
-  "GBP/USD",
-  "USD/JPY",
-  "SPY",
-  "QQQ",
-  "AAPL",
+  "BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT",
+  "DOGE/USDT", "AVAX/USDT", "LINK/USDT",
 ];
 
 interface BacktestFormProps {
@@ -54,41 +56,46 @@ export function BacktestForm({ onSubmit, isLoading }: BacktestFormProps) {
           className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
         >
           {symbols.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
+            <option key={s} value={s}>{s}</option>
           ))}
         </select>
       </div>
 
       {/* Timeframe */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Timeframe
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Timeframe
+          </label>
+          <Tooltip icon text="How often each candle/bar is formed. Shorter timeframes give more data points but more noise. Longer timeframes are more reliable but produce fewer trading signals." />
+        </div>
         <div className="grid grid-cols-3 gap-1.5">
           {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf}
-              type="button"
-              onClick={() => setTimeframe(tf)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-mono font-medium transition-colors ${
-                timeframe === tf
-                  ? "bg-(--color-accent) text-white"
-                  : "bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary)"
-              }`}
-            >
-              {tf}
-            </button>
+            <Tooltip key={tf.key} text={tf.tip}>
+              <button
+                type="button"
+                onClick={() => setTimeframe(tf.key)}
+                className={`w-full px-3 py-1.5 rounded-lg text-sm font-mono font-medium transition-colors ${
+                  timeframe === tf.key
+                    ? "bg-(--color-accent) text-white"
+                    : "bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary)"
+                }`}
+              >
+                {tf.label}
+              </button>
+            </Tooltip>
           ))}
         </div>
       </div>
 
       {/* Days */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Lookback (days)
-        </label>
+        <div className="flex items-center gap-1.5">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Lookback (days)
+          </label>
+          <Tooltip icon text="How far back in history to simulate. More days = more data and trades, but takes longer to compute. Use at least 30 days for statistically meaningful results." />
+        </div>
         <input
           type="number"
           min={1}

@@ -20,12 +20,13 @@ class TestBacktestTask:
         from app.tasks.backtest_task import run_backtest_task
 
         result = run_backtest_task("BTC/USDT", "1h", 30)
-        assert "metrics" in result
-        assert "trade_count" in result
         assert result["symbol"] == "BTC/USDT"
         assert result["timeframe"] == "1h"
         assert result["days"] == 30
-        assert isinstance(result["metrics"], dict)
+        assert "total_trades" in result
+        assert "total_return" in result
+        assert "win_rate" in result
+        assert "equity_curve" in result
 
     def test_backtest_with_custom_params(self):
         from app.tasks.backtest_task import run_backtest_task
@@ -40,25 +41,23 @@ class TestBacktestTask:
 
         # Even with 1 day, should still produce a result (min 300 bars)
         result = run_backtest_task("SOL/USDT", "1h", 1)
-        assert "metrics" in result
-        assert result["trade_count"] >= 0
+        assert "total_trades" in result
+        assert result["total_trades"] >= 0
 
-    def test_backtest_metrics_have_expected_keys(self):
+    def test_backtest_result_has_expected_keys(self):
         from app.tasks.backtest_task import run_backtest_task
 
         result = run_backtest_task("BTC/USDT", "1h", 10)
-        metrics = result["metrics"]
         expected_keys = [
             "total_trades",
             "win_rate",
             "profit_factor",
-            "total_return_pct",
-            "max_drawdown_pct",
+            "total_return",
+            "max_drawdown",
             "sharpe_ratio",
-            "avg_risk_reward",
         ]
         for key in expected_keys:
-            assert key in metrics, f"Missing metric key: {key}"
+            assert key in result, f"Missing result key: {key}"
 
 
 class TestCeleryConfig:
@@ -104,8 +103,8 @@ class TestBacktestAPI:
         assert resp.status_code == 200
         data = resp.json()
         assert data["symbol"] == "BTC/USDT"
-        assert "metrics" in data
-        assert "trade_count" in data
+        assert "total_return" in data
+        assert "total_trades" in data
 
     @pytest.mark.asyncio
     async def test_run_backtest_with_params(self, auth_headers):

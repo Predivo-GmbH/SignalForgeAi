@@ -120,6 +120,108 @@ def calculate_fib_levels(swing_low: float, swing_high: float) -> dict[float, flo
     }
 
 
+def compute_bollinger_bands(
+    close: pd.Series, period: int = 20, num_std: float = 2.0
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Bollinger Bands — returns (upper, middle, lower)."""
+    if HAS_TALIB:
+        upper, middle, lower = talib.BBANDS(
+            close.values, timeperiod=period, nbdevup=num_std, nbdevdn=num_std
+        )
+        return (
+            pd.Series(upper, index=close.index),
+            pd.Series(middle, index=close.index),
+            pd.Series(lower, index=close.index),
+        )
+    middle = close.rolling(window=period).mean()
+    std = close.rolling(window=period).std()
+    upper = middle + num_std * std
+    lower = middle - num_std * std
+    return upper, middle, lower
+
+
+def compute_ichimoku(
+    candles: pd.DataFrame,
+    tenkan_period: int = 9,
+    kijun_period: int = 26,
+    senkou_b_period: int = 52,
+) -> dict[str, pd.Series]:
+    """Ichimoku Cloud — returns dict with tenkan, kijun, senkou_a, senkou_b, chikou."""
+    high = candles["high"]
+    low = candles["low"]
+    close = candles["close"]
+
+    tenkan = (high.rolling(tenkan_period).max() + low.rolling(tenkan_period).min()) / 2
+    kijun = (high.rolling(kijun_period).max() + low.rolling(kijun_period).min()) / 2
+    senkou_a = ((tenkan + kijun) / 2).shift(kijun_period)
+    senkou_b = (
+        (high.rolling(senkou_b_period).max() + low.rolling(senkou_b_period).min()) / 2
+    ).shift(kijun_period)
+    chikou = close.shift(-kijun_period)
+
+    return {
+        "tenkan": tenkan,
+        "kijun": kijun,
+        "senkou_a": senkou_a,
+        "senkou_b": senkou_b,
+        "chikou": chikou,
+    }
+
+
+def compute_obv(candles: pd.DataFrame) -> pd.Series:
+    """On-Balance Volume — cumulative volume weighted by price direction."""
+    if HAS_TALIB:
+        return pd.Series(
+            talib.OBV(candles["close"].values, candles["volume"].values),
+            index=candles.index,
+        )
+    close = candles["close"]
+    volume = candles["volume"]
+    direction = np.sign(close.diff())
+    direction.iloc[0] = 0
+    obv = (direction * volume).cumsum()
+    return obv
+
+
+def compute_williams_r(candles: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Williams %R — momentum oscillator (-100 to 0). -80 to -100 is oversold, 0 to -20 is overbought."""
+    if HAS_TALIB:
+        return pd.Series(
+            talib.WILLR(
+                candles["high"].values,
+                candles["low"].values,
+                candles["close"].values,
+                timeperiod=period,
+            ),
+            index=candles.index,
+        )
+    highest_high = candles["high"].rolling(window=period).max()
+    lowest_low = candles["low"].rolling(window=period).min()
+    wr = -100 * (highest_high - candles["close"]) / (highest_high - lowest_low)
+    return wr
+
+
+def compute_cci(candles: pd.DataFrame, period: int = 20) -> pd.Series:
+    """Commodity Channel Index — measures price deviation from statistical mean."""
+    if HAS_TALIB:
+        return pd.Series(
+            talib.CCI(
+                candles["high"].values,
+                candles["low"].values,
+                candles["close"].values,
+                timeperiod=period,
+            ),
+            index=candles.index,
+        )
+    typical_price = (candles["high"] + candles["low"] + candles["close"]) / 3
+    sma = typical_price.rolling(window=period).mean()
+    mean_dev = typical_price.rolling(window=period).apply(
+        lambda x: np.abs(x - x.mean()).mean(), raw=True
+    )
+    cci = (typical_price - sma) / (0.015 * mean_dev)
+    return cci
+
+
 def compute_adx(candles: pd.DataFrame, period: int = 14) -> pd.Series:
     """Average Directional Index — measures trend strength (0-100)."""
     if HAS_TALIB:

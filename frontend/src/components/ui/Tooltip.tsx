@@ -1,0 +1,58 @@
+import { useState, useRef, useCallback } from "react";
+import { Info } from "lucide-react";
+
+interface TooltipProps {
+  text: string;
+  children?: React.ReactNode;
+  /** Show a small (i) icon instead of wrapping children */
+  icon?: boolean;
+}
+
+export function Tooltip({ text, children, icon }: TooltipProps) {
+  const [show, setShow] = useState(false);
+  const [coords, setCoords] = useState({ x: 0, y: 0, pos: "bottom" as "top" | "bottom" });
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleEnter = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      // Show below if near top of viewport, otherwise above
+      if (rect.top < 100) {
+        setCoords({ x: centerX, y: rect.bottom + 8, pos: "bottom" });
+      } else {
+        setCoords({ x: centerX, y: rect.top - 8, pos: "top" });
+      }
+    }
+    setShow(true);
+  }, []);
+
+  return (
+    <div
+      className="relative inline-flex"
+      onMouseEnter={handleEnter}
+      onMouseLeave={() => setShow(false)}
+      ref={ref}
+    >
+      {icon ? (
+        <Info className="w-3.5 h-3.5 text-[var(--color-text-secondary)]/50 hover:text-[var(--color-text-secondary)] cursor-help transition-colors" />
+      ) : (
+        children
+      )}
+      {show && (
+        <div
+          className="fixed z-[100] w-64 px-3 py-2 text-xs leading-relaxed text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg shadow-lg pointer-events-none"
+          style={{
+            left: `${coords.x}px`,
+            transform: "translateX(-50%)",
+            ...(coords.pos === "top"
+              ? { bottom: `${window.innerHeight - coords.y}px` }
+              : { top: `${coords.y}px` }),
+          }}
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  );
+}

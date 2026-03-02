@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -97,10 +97,17 @@ async def get_user_guide():
     """Return the user guide markdown content."""
     from pathlib import Path
 
-    guide_path = Path(__file__).resolve().parent.parent.parent / "docs" / "USER-GUIDE.md"
-    if not guide_path.exists():
-        return {"content": "# User Guide\n\nGuide not found."}
-    return {"content": guide_path.read_text(encoding="utf-8")}
+    # Try multiple locations: Docker mount, relative to project root, etc.
+    candidates = [
+        Path("/code/docs/USER-GUIDE.md"),                              # Docker volume mount
+        Path(__file__).resolve().parent.parent.parent / "docs" / "USER-GUIDE.md",  # relative to app/
+        Path(__file__).resolve().parent.parent / "docs" / "USER-GUIDE.md",         # if running from backend/
+    ]
+    for guide_path in candidates:
+        if guide_path.exists():
+            return {"content": guide_path.read_text(encoding="utf-8")}
+    logger.warning("User guide not found. Tried: %s", [str(p) for p in candidates])
+    raise HTTPException(status_code=404, detail="User guide file not found on server")
 
 
 # ---------------------------------------------------------------------------

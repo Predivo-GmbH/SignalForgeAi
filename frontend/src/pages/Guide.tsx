@@ -22,7 +22,12 @@ export function GuidePage() {
   if (error || !data?.content) {
     return (
       <div className="p-6">
-        <p className="text-sm text-(--color-negative)">Failed to load user guide.</p>
+        <div className="rounded-lg border border-(--color-negative)/30 bg-(--color-negative)/10 px-4 py-3 space-y-2">
+          <p className="text-sm font-semibold text-(--color-negative)">Failed to load user guide</p>
+          <p className="text-xs text-(--color-text-secondary)">
+            The guide file could not be found on the server. If running in Docker, ensure the docs/ volume is mounted.
+          </p>
+        </div>
       </div>
     );
   }

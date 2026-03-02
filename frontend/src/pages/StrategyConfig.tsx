@@ -1,26 +1,24 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Plus,
-  Pencil,
   Trash2,
   Power,
-  X,
-  Loader2,
   Zap,
-  Settings2,
-  Shield,
+  Sparkles,
   TrendingUp,
-  Flame,
+  TrendingDown,
+  BarChart3,
+  Target,
+  Activity,
 } from "lucide-react";
 import {
   useStrategies,
-  useCreateStrategy,
-  useUpdateStrategy,
   useToggleStrategy,
   useDeleteStrategy,
-  useStrategyPresets,
 } from "@/hooks/useStrategies";
-import type { Strategy, StrategyPreset } from "@/hooks/useStrategies";
+import { useStrategyComparison } from "@/hooks/useAnalytics";
+import type { Strategy } from "@/hooks/useStrategies";
+import type { StrategyMetrics } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/cn";
 
 function formatDate(iso: string): string {
@@ -31,201 +29,26 @@ function formatDate(iso: string): string {
   });
 }
 
-/* ----- Preset Card ----- */
-function PresetCard({
-  presetKey,
-  preset,
-  onSelect,
-}: {
-  presetKey: string;
-  preset: StrategyPreset;
-  onSelect: (key: string, preset: StrategyPreset) => void;
-}) {
-  const icons: Record<string, React.ReactNode> = {
-    conservative_swing: <Shield className="w-5 h-5 text-blue-400" />,
-    balanced_momentum: <TrendingUp className="w-5 h-5 text-(--color-accent)" />,
-    aggressive_scalper: <Flame className="w-5 h-5 text-orange-400" />,
-  };
-
-  const config = preset.config as Record<string, unknown>;
-
-  return (
-    <button
-      onClick={() => onSelect(presetKey, preset)}
-      className="bg-(--color-bg-elevated) border border-(--color-border) rounded-xl p-4 text-left hover:border-(--color-accent)/50 hover:shadow-[0_0_12px_rgba(123,97,255,0.08)] transition-all group"
-    >
-      <div className="flex items-center gap-2 mb-2">
-        {icons[presetKey] || <Settings2 className="w-5 h-5" />}
-        <h4 className="text-sm font-semibold text-(--color-text-primary) group-hover:text-(--color-accent) transition-colors">
-          {preset.name}
-        </h4>
-      </div>
-      <p className="text-xs text-(--color-text-secondary) mb-3 line-clamp-2">{preset.description}</p>
-      <div className="flex flex-wrap gap-1.5">
-        <span className="text-[10px] bg-(--color-bg-surface) rounded px-1.5 py-0.5 text-(--color-text-secondary)">
-          Risk: {((config.max_risk_per_trade as number) * 100).toFixed(0)}%
-        </span>
-        <span className="text-[10px] bg-(--color-bg-surface) rounded px-1.5 py-0.5 text-(--color-text-secondary)">
-          Confluence: {String(config.min_confluence)}+
-        </span>
-        <span className="text-[10px] bg-(--color-bg-surface) rounded px-1.5 py-0.5 text-(--color-text-secondary)">
-          {(config.symbols as string[])?.length || 0} symbols
-        </span>
-      </div>
-    </button>
-  );
-}
-
-/* ----- Strategy Form ----- */
-function StrategyForm({
-  initial,
-  onSubmit,
-  onCancel,
-  isLoading,
-}: {
-  initial?: { name: string; config: string };
-  onSubmit: (name: string, config: Record<string, unknown>, preset?: string) => void;
-  onCancel: () => void;
-  isLoading: boolean;
-}) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [configStr, setConfigStr] = useState(initial?.config ?? "{}");
-  const [configError, setConfigError] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
-  const { data: presetsData } = useStrategyPresets();
-
-  const presets = presetsData?.presets ?? {};
-  const isNew = !initial;
-
-  function handlePresetSelect(key: string, preset: StrategyPreset) {
-    setSelectedPreset(key);
-    setName(preset.name);
-    setConfigStr(JSON.stringify(preset.config, null, 2));
-    setConfigError(null);
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      const parsed = JSON.parse(configStr);
-      setConfigError(null);
-      onSubmit(name.trim(), parsed, selectedPreset || undefined);
-    } catch {
-      setConfigError("Invalid JSON");
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Preset Cards (only for new strategies) */}
-      {isNew && Object.keys(presets).length > 0 && (
-        <div>
-          <h3 className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider mb-2">
-            Quick Start — Choose a Preset
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {Object.entries(presets).map(([key, preset]) => (
-              <PresetCard
-                key={key}
-                presetKey={key}
-                preset={preset}
-                onSelect={handlePresetSelect}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-(--color-bg-surface) border border-(--color-accent)/30 rounded-xl p-5 space-y-4"
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-(--color-text-primary)">
-            {initial ? "Edit Strategy" : selectedPreset ? `New Strategy — ${presets[selectedPreset]?.name}` : "New Custom Strategy"}
-          </h3>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="p-1 rounded hover:bg-(--color-bg-elevated) transition-colors"
-          >
-            <X className="w-4 h-4 text-(--color-text-secondary)" />
-          </button>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Strategy Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., My BTC Strategy"
-            required
-            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Configuration (JSON)
-          </label>
-          <textarea
-            value={configStr}
-            onChange={(e) => {
-              setConfigStr(e.target.value);
-              setConfigError(null);
-              setSelectedPreset(null);
-            }}
-            rows={8}
-            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 resize-y"
-          />
-          {configError && (
-            <p className="text-xs text-(--color-negative)">{configError}</p>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={isLoading || !name.trim()}
-            className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
-          >
-            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {initial ? "Save Changes" : "Create Strategy"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="py-2 px-4 rounded-lg text-sm text-(--color-text-secondary) hover:bg-(--color-bg-elevated) transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
 /* ----- Strategy Card ----- */
 function StrategyCard({
   strategy,
-  onEdit,
+  metrics,
   onToggle,
   onDelete,
   isToggling,
   isDeleting,
 }: {
   strategy: Strategy;
-  onEdit: () => void;
+  metrics?: StrategyMetrics;
   onToggle: () => void;
   onDelete: () => void;
   isToggling: boolean;
   isDeleting: boolean;
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const config = (strategy.config ?? {}) as Record<string, unknown>;
+  const symbols = (config.symbols as string[]) ?? [];
+  const equity = (config.account_equity as number) ?? 0;
 
   return (
     <div
@@ -271,13 +94,6 @@ function StrategyCard({
 
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={onEdit}
-            className="p-1.5 rounded-lg hover:bg-(--color-bg-elevated) transition-colors"
-            title="Edit strategy"
-          >
-            <Pencil className="w-3.5 h-3.5 text-(--color-text-secondary)" />
-          </button>
-          <button
             onClick={onToggle}
             disabled={isToggling}
             className={cn(
@@ -321,12 +137,132 @@ function StrategyCard({
         </div>
       </div>
 
+      {/* Symbols being traded */}
+      {symbols.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[10px] font-semibold text-(--color-text-secondary) uppercase tracking-wider mb-1.5">
+            Trading Pairs ({symbols.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {symbols.map((s) => (
+              <span
+                key={s}
+                className="text-[11px] bg-(--color-accent-soft) text-(--color-accent) rounded-md px-2 py-0.5 font-medium"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Performance metrics */}
+      {metrics && metrics.total_trades > 0 ? (
+        <div className="mt-3 border-t border-(--color-border)/50 pt-3 space-y-2">
+          <p className="text-[10px] font-semibold text-(--color-text-secondary) uppercase tracking-wider flex items-center gap-1.5">
+            <BarChart3 className="w-3 h-3" />
+            Performance
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* Total P&L */}
+            <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-(--color-text-secondary)">Total P&L</p>
+              <p className={cn(
+                "text-sm font-semibold font-mono",
+                metrics.total_pnl >= 0 ? "text-(--color-positive)" : "text-(--color-negative)"
+              )}>
+                {metrics.total_pnl >= 0 ? "+" : ""}{metrics.total_pnl < 1000 ? `$${metrics.total_pnl.toFixed(2)}` : `$${(metrics.total_pnl / 1000).toFixed(1)}k`}
+              </p>
+            </div>
+            {/* Return % */}
+            <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-(--color-text-secondary)">Return</p>
+              <div className="flex items-center gap-1">
+                {metrics.total_return_pct >= 0
+                  ? <TrendingUp className="w-3 h-3 text-(--color-positive)" />
+                  : <TrendingDown className="w-3 h-3 text-(--color-negative)" />
+                }
+                <p className={cn(
+                  "text-sm font-semibold font-mono",
+                  metrics.total_return_pct >= 0 ? "text-(--color-positive)" : "text-(--color-negative)"
+                )}>
+                  {metrics.total_return_pct >= 0 ? "+" : ""}{metrics.total_return_pct.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+            {/* Win Rate */}
+            <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-(--color-text-secondary)">Win Rate</p>
+              <div className="flex items-center gap-1">
+                <Target className="w-3 h-3 text-(--color-accent)" />
+                <p className="text-sm font-semibold font-mono text-(--color-text-primary)">
+                  {(metrics.win_rate * 100).toFixed(0)}%
+                </p>
+              </div>
+            </div>
+            {/* Total Trades */}
+            <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-(--color-text-secondary)">Trades</p>
+              <p className="text-sm font-semibold font-mono text-(--color-text-primary)">
+                {metrics.total_trades}
+                <span className="text-[10px] font-normal text-(--color-text-secondary) ml-1">
+                  ({metrics.winning_trades}W / {metrics.losing_trades}L)
+                </span>
+              </p>
+            </div>
+          </div>
+          {/* Secondary metrics row */}
+          <div className="flex flex-wrap gap-3 text-xs">
+            {equity > 0 && (
+              <span className="text-(--color-text-secondary)">
+                Capital: <span className="font-mono font-semibold text-(--color-text-primary)">${equity.toLocaleString()}</span>
+              </span>
+            )}
+            {metrics.profit_factor != null && (
+              <span className="text-(--color-text-secondary)">
+                Profit Factor: <span className="font-mono font-semibold text-(--color-text-primary)">{metrics.profit_factor.toFixed(2)}</span>
+              </span>
+            )}
+            {metrics.sharpe_ratio != null && (
+              <span className="text-(--color-text-secondary)">
+                Sharpe: <span className="font-mono font-semibold text-(--color-text-primary)">{metrics.sharpe_ratio.toFixed(2)}</span>
+              </span>
+            )}
+            {metrics.max_drawdown_pct > 0 && (
+              <span className="text-(--color-text-secondary)">
+                Max DD: <span className="font-mono font-semibold text-(--color-negative)">{metrics.max_drawdown_pct.toFixed(1)}%</span>
+              </span>
+            )}
+            {metrics.avg_pnl_per_trade !== 0 && (
+              <span className="text-(--color-text-secondary)">
+                Avg Trade: <span className={cn("font-mono font-semibold", metrics.avg_pnl_per_trade >= 0 ? "text-(--color-positive)" : "text-(--color-negative)")}>
+                  {metrics.avg_pnl_per_trade >= 0 ? "+" : ""}${metrics.avg_pnl_per_trade.toFixed(2)}
+                </span>
+              </span>
+            )}
+            {metrics.active_signals > 0 && (
+              <span className="flex items-center gap-1 text-(--color-text-secondary)">
+                <Activity className="w-3 h-3 text-(--color-warning)" />
+                {metrics.active_signals} active signal{metrics.active_signals > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : metrics && metrics.total_trades === 0 ? (
+        <div className="mt-3 border-t border-(--color-border)/50 pt-3">
+          <p className="text-xs text-(--color-text-secondary) italic">
+            No trades executed yet{metrics.active_signals > 0 ? ` — ${metrics.active_signals} signal${metrics.active_signals > 1 ? "s" : ""} pending` : ""}
+          </p>
+        </div>
+      ) : null}
+
       {/* Config preview */}
-      {strategy.config && Object.keys(strategy.config).length > 0 && (
+      {Object.keys(config).length > 0 && (
         <div className="mt-3 bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {Object.entries(strategy.config)
-              .slice(0, 6)
+            {Object.entries(config)
+              .filter(([key]) => key !== "symbols" && key !== "account_equity")
+              .slice(0, 8)
               .map(([key, val]) => (
                 <span key={key} className="text-xs">
                   <span className="text-(--color-text-secondary)">{key}:</span>{" "}
@@ -335,9 +271,9 @@ function StrategyCard({
                   </span>
                 </span>
               ))}
-            {Object.keys(strategy.config).length > 6 && (
+            {Object.keys(config).filter(k => k !== "symbols" && k !== "account_equity").length > 8 && (
               <span className="text-xs text-(--color-text-secondary)">
-                +{Object.keys(strategy.config).length - 6} more
+                +{Object.keys(config).filter(k => k !== "symbols" && k !== "account_equity").length - 8} more
               </span>
             )}
           </div>
@@ -349,78 +285,28 @@ function StrategyCard({
 
 /* ----- Main Page ----- */
 export function StrategyConfigPage() {
+  const navigate = useNavigate();
   const { data, isLoading } = useStrategies();
-  const createMutation = useCreateStrategy();
-  const updateMutation = useUpdateStrategy();
+  const { data: comparison } = useStrategyComparison();
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
   const strategies = data?.strategies ?? [];
-
-  function handleCreate(name: string, config: Record<string, unknown>, preset?: string) {
-    createMutation.mutate(
-      { name, config, preset },
-      { onSuccess: () => setShowForm(false) }
-    );
-  }
-
-  function handleUpdate(name: string, config: Record<string, unknown>) {
-    if (!editingId) return;
-    updateMutation.mutate(
-      { id: editingId, name, config },
-      { onSuccess: () => setEditingId(null) }
-    );
-  }
-
-  const editingStrategy = strategies.find((s) => s.id === editingId);
+  const metricsMap = new Map(
+    (comparison?.strategies ?? []).map((m) => [m.strategy_id, m])
+  );
 
   return (
     <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-(--color-text-primary)">
-            Strategies
-          </h1>
-          <p className="text-sm text-(--color-text-secondary) mt-1">
-            Configure and manage trading strategies
-          </p>
-        </div>
-        {!showForm && !editingId && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Strategy
-          </button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-(--color-text-primary)">
+          Strategies
+        </h1>
+        <p className="text-sm text-(--color-text-secondary) mt-1">
+          Monitor and manage your active trading strategies
+        </p>
       </div>
-
-      {/* Create form */}
-      {showForm && (
-        <StrategyForm
-          onSubmit={handleCreate}
-          onCancel={() => setShowForm(false)}
-          isLoading={createMutation.isPending}
-        />
-      )}
-
-      {/* Edit form */}
-      {editingId && editingStrategy && (
-        <StrategyForm
-          initial={{
-            name: editingStrategy.name,
-            config: JSON.stringify(editingStrategy.config, null, 2),
-          }}
-          onSubmit={handleUpdate}
-          onCancel={() => setEditingId(null)}
-          isLoading={updateMutation.isPending}
-        />
-      )}
 
       {/* Strategy list */}
       {isLoading ? (
@@ -434,17 +320,24 @@ export function StrategyConfigPage() {
         </div>
       ) : strategies.length === 0 ? (
         <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-12 text-center">
-          <Settings2 className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto mb-3" />
-          <p className="text-sm text-(--color-text-secondary)">
-            No strategies configured yet
+          <Sparkles className="w-10 h-10 text-(--color-accent)/40 mx-auto mb-3" />
+          <p className="text-sm font-medium text-(--color-text-primary)">
+            No strategies yet
           </p>
-          <p className="text-xs text-(--color-text-secondary)/60 mt-1">
-            Create your first strategy to start automated trading
+          <p className="text-xs text-(--color-text-secondary) mt-1 mb-4 max-w-sm mx-auto">
+            Use the AI Advisor to scan the market, pick the best trading pairs,
+            and deploy an optimized strategy automatically.
           </p>
+          <button
+            onClick={() => navigate("/advisor")}
+            className="inline-flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2.5 px-5 rounded-lg text-sm transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            Go to AI Advisor
+          </button>
         </div>
       ) : (
         <div className="grid gap-4">
-          {/* Active strategies first */}
           {strategies
             .sort((a, b) =>
               a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1
@@ -453,10 +346,7 @@ export function StrategyConfigPage() {
               <StrategyCard
                 key={strategy.id}
                 strategy={strategy}
-                onEdit={() => {
-                  setEditingId(strategy.id);
-                  setShowForm(false);
-                }}
+                metrics={metricsMap.get(strategy.id)}
                 onToggle={() => toggleMutation.mutate(strategy.id)}
                 onDelete={() => deleteMutation.mutate(strategy.id)}
                 isToggling={

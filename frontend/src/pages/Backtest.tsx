@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Info } from "lucide-react";
 import { BacktestForm } from "@/components/backtest/BacktestForm";
 import { BacktestResults } from "@/components/backtest/BacktestResults";
 import { WalkForwardForm } from "@/components/backtest/WalkForwardForm";
 import { WalkForwardResults } from "@/components/backtest/WalkForwardResults";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useRunBacktest } from "@/hooks/useBacktest";
 import { useRunWalkForward } from "@/hooks/useWalkForward";
 import type { BacktestResult } from "@/hooks/useBacktest";
@@ -11,9 +13,9 @@ import { cn } from "@/lib/cn";
 
 type Tab = "backtest" | "walkforward";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "backtest", label: "Single Backtest" },
-  { key: "walkforward", label: "Walk-Forward" },
+const TABS: { key: Tab; label: string; tip: string }[] = [
+  { key: "backtest", label: "Single Backtest", tip: "Run the signal pipeline on historical data to see how it would have performed. Good for quick testing of a symbol and timeframe." },
+  { key: "walkforward", label: "Walk-Forward", tip: "Advanced optimization that splits data into training/testing folds, finds the best parameters on training data, then validates on unseen test data. Prevents overfitting and gives more realistic performance estimates." },
 ];
 
 export function BacktestPage() {
@@ -47,13 +49,14 @@ export function BacktestPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
+                "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
                 activeTab === tab.key
                   ? "border-(--color-accent) text-(--color-accent)"
                   : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)"
               )}
             >
               {tab.label}
+              <Tooltip icon text={tab.tip} />
             </button>
           ))}
         </div>

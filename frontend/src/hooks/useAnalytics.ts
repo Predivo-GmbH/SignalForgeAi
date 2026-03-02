@@ -40,3 +40,33 @@ export function useCorrelation(symbolA: string, symbolB: string) {
     enabled: !!symbolA && !!symbolB && symbolA !== symbolB,
   });
 }
+
+export interface StrategyMetrics {
+  strategy_id: string;
+  strategy_name: string;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  total_pnl: number;
+  total_return_pct: number;
+  max_drawdown_pct: number;
+  sharpe_ratio: number | null;
+  avg_pnl_per_trade: number;
+  profit_factor: number | null;
+  active_signals: number;
+}
+
+export interface StrategyComparison {
+  strategies: StrategyMetrics[];
+  best_by_return: string | null;
+  best_by_sharpe: string | null;
+  best_by_win_rate: string | null;
+}
+
+export function useStrategyComparison() {
+  return useQuery({
+    queryKey: ["analytics", "compare"],
+    queryFn: () => api.get<StrategyComparison>("/analytics/compare"),
+  });
+}

@@ -18,10 +18,25 @@ export interface ScoredCrypto {
   recommendation: string;
 }
 
+export interface MarketSummary {
+  trending_pct: number;
+  bullish_pct: number;
+  avg_score: number;
+  avg_adx: number;
+  avg_volatility: number;
+}
+
+export interface MarketRecommendation {
+  preset: string;
+  reason: string;
+  market_summary: MarketSummary;
+}
+
 export interface ScanResponse {
   pairs_scanned: number;
   pairs_scored: number;
   results: ScoredCrypto[];
+  recommendation: MarketRecommendation;
 }
 
 export interface InvestmentPlan {
@@ -38,13 +53,6 @@ export interface DeployResponse {
   strategy_name: string;
   symbols_count: number;
   message: string;
-}
-
-export function useScanMarket() {
-  return useMutation({
-    mutationFn: (topN: number = 100) =>
-      api.post<ScanResponse>("/advisor/scan", { top_n: topN }),
-  });
 }
 
 export function useGeneratePlan() {
