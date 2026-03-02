@@ -18,8 +18,13 @@ async def _synthesize_async(strategy_id: str | None):
     from sqlalchemy import select
 
     from app.advisor.feedback_synthesizer import FeedbackSynthesizer
+    from app.config import settings
     from app.core.database import task_session
     from app.models.strategy import Strategy
+
+    if not settings.ai_feedback_loop_enabled:
+        logger.info("AI feedback loop is disabled via feature flag")
+        return
 
     async with task_session() as db:
         if strategy_id:

@@ -245,7 +245,9 @@ The AI Advisor requires a valid Claude API key (`SF_ANTHROPIC_API_KEY`). If Clau
 
 ## 5. Strategy Presets and Configuration
 
-### Pre-Built Presets
+> **Note:** The AI Advisor (Section 4) is the primary workflow and determines ALL strategy parameters autonomously from market conditions. The presets below are legacy — they remain available for manual strategy creation via `POST /api/strategies` but are not used by the AI Advisor.
+
+### Pre-Built Presets (Legacy — Manual Creation Only)
 
 #### Conservative Swing
 

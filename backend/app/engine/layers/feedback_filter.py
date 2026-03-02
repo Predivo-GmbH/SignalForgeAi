@@ -31,6 +31,10 @@ class FeedbackFilter:
         rules = await self._load_active_rules(db, strategy_id)
 
         for rule in rules:
+            # Skip low-confidence rules
+            if rule.confidence is not None and rule.confidence < 0.5:
+                continue
+
             conditions = rule.conditions_json or {}
 
             # Check symbol match

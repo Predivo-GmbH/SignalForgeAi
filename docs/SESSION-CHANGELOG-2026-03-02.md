@@ -1,7 +1,7 @@
 # SignalForge — Session Changelog (2026-03-02)
 
 > **Purpose:** Complete record of all changes made during the March 2 development session.
-> All changes are uncommitted and live in the working directory.
+> All changes committed and pushed to `main` (commits `033faa0` through `17c5b28`).
 
 **Session scope:** Celery infrastructure, pipeline debugging, broker UI cleanup, chart timeframe fix, storage optimization, AI enrichment pipeline (5 waves), AI Usage & Cost Tracking dashboard, AI autonomous self-learning loop redesign, Alpaca broker removal.
 
@@ -22,6 +22,9 @@
 11. [AI Usage & Cost Tracking Dashboard](#11-ai-usage--cost-tracking-dashboard)
 12. [AI Autonomous Self-Learning Loop — Redesign](#12-ai-autonomous-self-learning-loop--redesign)
 13. [Remove Alpaca Broker — Standardize on CCXT/Binance](#13-remove-alpaca-broker--standardize-on-ccxtbinance)
+14. [No AI, No Trading — Remove Algorithmic Fallbacks](#14-no-ai-no-trading--remove-algorithmic-fallbacks)
+15. [Network Resilience — JWT Refresh & WebSocket Backoff](#15-network-resilience--jwt-refresh--websocket-backoff)
+16. [Cleanup — Dead Code, Line Endings, Stale Files](#16-cleanup--dead-code-line-endings-stale-files)
 
 ---
 
@@ -369,10 +372,14 @@ await db.execute(stmt)
 - Runs every 60 seconds — leaves ~30 seconds of headroom
 - If symbols grow significantly, may need to increase interval or add batching
 
-### All Changes Are Uncommitted
-- 90+ modified files, 30+ new files — accumulated across multiple sessions
-- See `git status` output below for full list
-- Should be committed in logical groups when ready
+### Commit Status
+All changes committed and pushed to `main` — 105 total commits. Key commits from this session:
+- `033faa0` — self-learning loop, journal deprecation
+- `dc52284` — Alpaca removal, No AI/No Trading, lint fixes
+- `da4ad28` — docs, .gitattributes, stale file removal
+- `23cea2b` — JWT token refresh
+- `448de29` — WebSocket exponential backoff
+- `17c5b28` — dead code cleanup
 
 ---
 
@@ -663,6 +670,73 @@ SignalForge trades crypto exclusively (15 USDT pairs). Alpaca is primarily a US 
 | `docs/DEPLOYMENT-GUIDE.md` | 1 Alpaca reference updated |
 | `docs/USER-GUIDE.md` | 6 Alpaca references updated |
 | `CLAUDE.md` | Added "Questions → answer only" rule |
+
+---
+
+## 14. No AI, No Trading — Remove Algorithmic Fallbacks
+
+### Context
+
+Every AI-dependent advisor component had an `_algorithmic_fallback()` method that tried to approximate Claude's analysis with simple heuristics when the API was unavailable. This violated a core principle: if Claude is down, the system should NOT trade, guess, or fabricate analysis.
+
+### What Changed
+
+**Removed all `_algorithmic_fallback()` methods from:**
+- `signal_quality.py` — split into `_feature_disabled_result()` (config toggle, passthrough OK) and `_ai_unavailable_reject()` (Claude down, reject with score=0)
+- `risk_tuner.py` — returns empty adjustments when Claude unavailable
+- `feedback_synthesizer.py` — returns empty `[]` when Claude unavailable
+- `pattern_analyzer.py` — returns `_empty_result()` when Claude unavailable
+- `multi_tf_analyzer.py` — three methods for three cases: single TF (confirm), AI unavailable (reject), feature disabled (confirm)
+
+**Additional fixes:**
+- `claude_client.py` — docstring updated: "callers must abort the operation or reject the signal"
+- `api/advisor.py` — added HTTP 503 when `planner.generate_plan()` returns None
+- `tasks/run_pipeline.py` — exception handler now rejects signal (was "signal proceeds without AI")
+- `api/journal.py` — removed dead `_algorithmic_fallback()` call
+
+**Tests updated:**
+- `test_signal_quality.py` — expects reject (score=0, position_size_factor=0.0)
+- `test_risk_tuner.py` — removed 3 `_algorithmic_fallback` tests
+
+**Lint fixes (20 pre-existing errors across 11 files):**
+All E501, I001, F401, E741 errors resolved. `ruff check app/` passes with zero errors.
+
+**Committed as:** `dc52284`
+
+---
+
+## 15. Network Resilience — JWT Refresh & WebSocket Backoff
+
+### JWT Token Refresh (`frontend/src/lib/api.ts`)
+- On 401 response, attempts to refresh the access token using the stored refresh token
+- Only logs out if the refresh itself fails
+- Prevents unnecessary logouts when tokens expire mid-session
+- **Committed as:** `23cea2b`
+
+### WebSocket Exponential Backoff (`frontend/src/lib/ws.ts`)
+- Replaced infinite 3-second reconnect loop with exponential backoff (3s → 30s cap)
+- Maximum 5 retries per channel, then gives up with console warning
+- Reset counter on successful connection
+- Prevents resource exhaustion when server is down
+- **Committed as:** `448de29`
+
+---
+
+## 16. Cleanup — Dead Code, Line Endings, Stale Files
+
+### .gitattributes (`da4ad28`)
+- Added `* text=auto eol=lf` to enforce LF line endings
+- Prevents WSL2/Windows CRLF ghost diffs (was causing ~70 phantom modified files)
+
+### Stale File Removal (`da4ad28`)
+- Deleted `BacktestForm.tsx`, `BacktestResults.tsx`, `WalkForwardForm.tsx`, `WalkForwardResults.tsx` (replaced by Strategy* versions)
+- Deleted `useBacktest.ts` (replaced by strategy-specific hooks)
+- Extracted `pnlColor` to shared `frontend/src/lib/format.ts`
+
+### Dead Code Cleanup (`17c5b28`)
+- `App.tsx` — removed unused `useEffect` import and dead theme toggle (handled by CSS)
+- `StrategyBacktestForm.tsx` — removed unused `PRESET_LABELS` dict
+- `useTradeStream.ts` — removed unused `useRef` import and dead `tokenRef`
 
 ---
 

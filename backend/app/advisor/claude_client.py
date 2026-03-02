@@ -96,6 +96,17 @@ class ClaudeClient:
             import redis
 
             r = redis.from_url(settings.redis_url)
+
+            # Credit hard stop
+            if settings.ai_prepaid_credit_usd > 0:
+                cumulative = float(r.get("ai_cumulative_cost") or 0)
+                if cumulative >= settings.ai_prepaid_credit_usd:
+                    logger.warning(
+                        "AI prepaid credit exhausted ($%.4f / $%.2f)",
+                        cumulative, settings.ai_prepaid_credit_usd,
+                    )
+                    return False
+
             key = f"ai_calls:{datetime.now(UTC).strftime('%Y-%m-%d')}"
             count = r.incr(key)
             if count == 1:
@@ -114,6 +125,16 @@ class ClaudeClient:
         """Check and increment daily call counter (async). Returns True if OK."""
         try:
             from app.core.redis_client import redis_client as aredis
+
+            # Credit hard stop
+            if settings.ai_prepaid_credit_usd > 0:
+                cumulative = float(await aredis.get("ai_cumulative_cost") or 0)
+                if cumulative >= settings.ai_prepaid_credit_usd:
+                    logger.warning(
+                        "AI prepaid credit exhausted ($%.4f / $%.2f)",
+                        cumulative, settings.ai_prepaid_credit_usd,
+                    )
+                    return False
 
             key = f"ai_calls:{datetime.now(UTC).strftime('%Y-%m-%d')}"
             count = await aredis.incr(key)
@@ -166,6 +187,14 @@ class ClaudeClient:
         except Exception:
             logger.debug("Failed to record AI usage (async)", exc_info=True)
 
+        # Increment cumulative cost in Redis for credit hard stop
+        try:
+            from app.core.redis_client import redis_client as aredis
+
+            await aredis.incrbyfloat("ai_cumulative_cost", cost_usd)
+        except Exception:
+            logger.debug("Failed to increment cumulative cost (async)", exc_info=True)
+
     def _record_usage_sync(
         self,
         *,
@@ -191,6 +220,9 @@ class ClaudeClient:
                 "created_at": datetime.now(UTC).isoformat(),
             })
             r.rpush("ai_usage_queue", payload)
+
+            # Increment cumulative cost for credit hard stop
+            r.incrbyfloat("ai_cumulative_cost", cost_usd)
         except Exception:
             logger.debug("Failed to queue AI usage (sync)", exc_info=True)
 
