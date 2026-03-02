@@ -10,7 +10,7 @@ describe("Sidebar", () => {
       </MemoryRouter>
     );
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Signals")).toBeInTheDocument();
+    expect(screen.getByText("AI Advisor")).toBeInTheDocument();
     expect(screen.getByText("Trades")).toBeInTheDocument();
   });
 
@@ -29,10 +29,8 @@ describe("Sidebar", () => {
         <Sidebar />
       </MemoryRouter>
     );
-    expect(screen.getByText("Backtest Lab")).toBeInTheDocument();
-    expect(screen.getByText("Journal")).toBeInTheDocument();
+    expect(screen.getByText("Strategies")).toBeInTheDocument();
     expect(screen.getByText("Analytics")).toBeInTheDocument();
-    expect(screen.getByText("Strategy")).toBeInTheDocument();
-    expect(screen.getByText("API Keys")).toBeInTheDocument();
+    expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 });

@@ -18,32 +18,29 @@ export interface ScoredCrypto {
   recommendation: string;
 }
 
-export interface MarketSummary {
+export interface MarketProfile {
   trending_pct: number;
   bullish_pct: number;
   avg_score: number;
   avg_adx: number;
   avg_volatility: number;
-}
-
-export interface MarketRecommendation {
-  preset: string;
-  reason: string;
-  market_summary: MarketSummary;
+  chaotic_pct?: number;
+  avg_rsi?: number;
+  total_scanned?: number;
 }
 
 export interface ScanResponse {
   pairs_scanned: number;
   pairs_scored: number;
   results: ScoredCrypto[];
-  recommendation: MarketRecommendation;
+  market_profile: MarketProfile;
 }
 
 export interface InvestmentPlan {
   summary: string;
-  strategy_preset: string;
   selected_cryptos: Array<{ symbol: string; reason: string }>;
-  risk_config: Record<string, number>;
+  strategy_config: Record<string, unknown>;
+  reasoning: string;
   expected_behavior: string;
   warnings: string[];
 }
@@ -59,7 +56,6 @@ export function useGeneratePlan() {
   return useMutation({
     mutationFn: (data: {
       amount: number;
-      risk_tolerance: string;
       scan_results?: ScoredCrypto[];
     }) => api.post<InvestmentPlan>("/advisor/plan", data),
   });

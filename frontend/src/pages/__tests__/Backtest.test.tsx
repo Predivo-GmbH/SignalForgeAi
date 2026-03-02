@@ -16,31 +16,15 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("BacktestPage", () => {
-  test("renders both tabs", () => {
+  test("renders page heading", () => {
     render(<BacktestPage />, { wrapper });
-    expect(screen.getByText("Single Backtest")).toBeInTheDocument();
-    expect(screen.getByText("Walk-Forward")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Strategy Validation" })).toBeInTheDocument();
   });
 
-  test("renders configuration form", () => {
-    render(<BacktestPage />, { wrapper });
-    expect(screen.getByText("Backtest Lab")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /run backtest/i })
-    ).toBeInTheDocument();
-  });
-
-  test("renders empty results state", () => {
+  test("renders page description", () => {
     render(<BacktestPage />, { wrapper });
     expect(
-      screen.getByText("Run a backtest to see results")
+      screen.getByText("Test how a strategy or AI Advisor plan would have performed on historical data")
     ).toBeInTheDocument();
-  });
-
-  test("renders timeframe options", () => {
-    render(<BacktestPage />, { wrapper });
-    expect(screen.getByText("1h")).toBeInTheDocument();
-    expect(screen.getByText("4h")).toBeInTheDocument();
-    expect(screen.getByText("1D")).toBeInTheDocument();
   });
 });

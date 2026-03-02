@@ -21,13 +21,14 @@ const FALLBACK_SYMBOLS = [
 interface BacktestFormProps {
   onSubmit: (req: BacktestRequest) => void;
   isLoading: boolean;
+  initialSymbol?: string;
 }
 
-export function BacktestForm({ onSubmit, isLoading }: BacktestFormProps) {
+export function BacktestForm({ onSubmit, isLoading, initialSymbol }: BacktestFormProps) {
   const { data: apiSymbols } = useSymbols();
   const symbols = apiSymbols ?? FALLBACK_SYMBOLS;
 
-  const [symbol, setSymbol] = useState(symbols[0] ?? "BTC/USDT");
+  const [symbol, setSymbol] = useState(initialSymbol ?? symbols[0] ?? "BTC/USDT");
   const [timeframe, setTimeframe] = useState<string>("1h");
   const [days, setDays] = useState(30);
 

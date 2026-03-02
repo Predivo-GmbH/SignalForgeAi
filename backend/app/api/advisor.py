@@ -1,4 +1,9 @@
-"""AI Investment Advisor API — scan, plan, deploy."""
+"""AI Investment Advisor API — scan, plan, deploy.
+
+The AI advisor is fully autonomous: it analyzes market conditions and
+determines ALL optimal strategy parameters. No presets, no human risk
+selection. The human provides investment amount and approves deployment.
+"""
 
 import logging
 import uuid
@@ -25,7 +30,6 @@ class ScanRequest(BaseModel):
 
 class PlanRequest(BaseModel):
     amount: float = Field(default=10000, ge=100, le=10_000_000)
-    risk_tolerance: str = Field(default="balanced")
     scan_results: list[dict] | None = None
 
 
@@ -50,8 +54,7 @@ async def scan_market(
 ):
     """Scan Binance for all liquid crypto pairs and score them technically.
 
-    Scans up to 100+ USDT pairs with >$1M daily volume.
-    This may take 1-2 minutes as it fetches candles for each pair.
+    Returns scored cryptos and a market profile for the AI advisor.
     """
     req = body or ScanRequest()
 
@@ -121,14 +124,14 @@ async def scan_market(
         s["volume_24h"] = ticker.get("volume_24h", 0)
         s["change_pct_24h"] = ticker.get("change_pct_24h", 0)
 
-    # Step 4: Market recommendation
-    recommendation = analyzer.compute_market_recommendation(scored)
+    # Step 4: Market profile (raw metrics for the AI advisor)
+    market_profile = analyzer.compute_market_profile(scored)
 
     return {
         "pairs_scanned": len(symbols),
         "pairs_scored": len(scored),
         "results": scored,
-        "recommendation": recommendation,
+        "market_profile": market_profile,
     }
 
 
@@ -137,13 +140,15 @@ async def generate_plan(
     body: PlanRequest,
     _user_id: str = Depends(get_current_user),
 ):
-    """Generate an AI-powered investment plan based on scan results.
+    """Generate an AI-powered optimal strategy based on scan results.
 
-    If scan_results are not provided, runs a fresh scan first.
+    The AI advisor determines ALL parameters autonomously — no presets,
+    no human risk selection. Just provide the investment amount.
     """
     from app.advisor.planner import InvestmentPlanner
 
     scored = body.scan_results
+    market_profile = None
     if not scored:
         # Run a fresh scan
         from app.advisor.scanner import MarketScanner
@@ -158,6 +163,7 @@ async def generate_plan(
                 [p["symbol"] for p in top_pairs], timeframe="1h", limit=200,
             )
             scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
+            market_profile = analyzer.compute_market_profile(scored)
         except Exception as e:
             logger.error("Fresh scan for plan generation failed: %s", e)
             raise HTTPException(
@@ -167,7 +173,7 @@ async def generate_plan(
 
     try:
         planner = InvestmentPlanner()
-        plan = planner.generate_plan(scored, body.amount, body.risk_tolerance)
+        plan = planner.generate_plan(scored, body.amount, market_profile)
     except Exception as e:
         logger.error("Plan generation failed: %s", e)
         raise HTTPException(
@@ -183,7 +189,10 @@ async def deploy_plan(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Deploy an investment plan — creates strategy, triggers backfill, activates."""
+    """Deploy an AI-generated plan — creates strategy, triggers backfill, activates.
+
+    Takes the AI's complete strategy_config directly. No preset lookup needed.
+    """
     plan = body.plan
 
     selected_cryptos = plan.get("selected_cryptos", [])
@@ -193,35 +202,32 @@ async def deploy_plan(
             detail="Plan has no selected cryptos",
         )
 
-    risk_config = plan.get("risk_config", {})
-    preset = plan.get("strategy_preset", "balanced_momentum")
+    # Get the AI's full strategy config
+    strategy_config = plan.get("strategy_config", plan.get("risk_config", {}))
     symbols = [c["symbol"] for c in selected_cryptos]
+    timeframes = strategy_config.get("timeframes", ["1h"])
 
-    # Build strategy config from full preset (includes risk management features)
-    from app.api.strategies import STRATEGY_PRESETS
+    # Build the final config — AI's config is used directly
+    from app.api.strategies import StrategyConfig
 
-    timeframe_map = {
-        "conservative_swing": ["4h"],
-        "balanced_momentum": ["1h"],
-        "aggressive_scalper": ["1h", "4h"],
+    config = {
+        "symbols": symbols,
+        "timeframes": timeframes,
+        **strategy_config,
     }
-    timeframes = timeframe_map.get(preset, ["1h"])
+    config["symbols"] = symbols  # Ensure symbols match selected_cryptos
 
-    preset_config = STRATEGY_PRESETS.get(preset, {}).get("config", {})
-    config = {**preset_config}
-    config["symbols"] = symbols
-    config["timeframes"] = timeframes
-    config["account_equity"] = risk_config.get("account_equity", config.get("account_equity", 10000))
-    config["min_confluence"] = risk_config.get("min_confluence", config.get("min_confluence", 50))
-    config["max_risk_per_trade"] = risk_config.get("max_risk_per_trade", config.get("max_risk_per_trade", 0.02))
-    config["max_daily_loss"] = risk_config.get("max_daily_loss", config.get("max_daily_loss", 0.06))
-    config["atr_sl_multiplier"] = risk_config.get("atr_sl_multiplier", config.get("atr_sl_multiplier", 2.0))
-    config["min_risk_reward"] = risk_config.get("min_risk_reward", config.get("min_risk_reward", 1.5))
+    # Validate through Pydantic model (fills in defaults for any missing fields)
+    try:
+        validated = StrategyConfig(**config)
+        config = validated.model_dump()
+    except Exception as e:
+        logger.warning("Strategy config validation: %s — using raw config", e)
 
     uid = uuid.UUID(user_id)
 
     # Create new strategy
-    strategy_name = f"AI Advisor — {preset.replace('_', ' ').title()}"
+    strategy_name = "AI Advisor — Optimal"
     strategy = Strategy(
         user_id=uid,
         name=strategy_name,
@@ -244,6 +250,6 @@ async def deploy_plan(
         strategy_id=str(strategy.id),
         strategy_name=strategy_name,
         symbols_count=len(symbols),
-        message=f"Strategy deployed with {len(symbols)} symbols! "
+        message=f"Optimal strategy deployed with {len(symbols)} symbols! "
                 f"Candle backfill started. Paper trading will begin within 5 minutes.",
     )

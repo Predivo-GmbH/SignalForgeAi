@@ -24,7 +24,7 @@ describe("AnalyticsPage", () => {
   test("renders subtitle text", () => {
     render(<AnalyticsPage />, { wrapper });
     expect(
-      screen.getByText("Portfolio performance and risk metrics")
+      screen.getByText("Portfolio performance, risk metrics, and strategy comparison")
     ).toBeInTheDocument();
   });
 

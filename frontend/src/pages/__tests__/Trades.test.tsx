@@ -18,13 +18,13 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe("TradesPage", () => {
   test("renders page heading", () => {
     render(<TradesPage />, { wrapper });
-    expect(screen.getByText("Trade History")).toBeInTheDocument();
+    expect(screen.getByText("Trades")).toBeInTheDocument();
   });
 
-  test("renders stats cards section", () => {
+  test("renders page description with AI analysis mention", () => {
     render(<TradesPage />, { wrapper });
     expect(
-      screen.getByText("Execution log with performance metrics")
+      screen.getByText("Execution log, performance metrics, and AI-powered trade analysis")
     ).toBeInTheDocument();
   });
 
@@ -32,5 +32,10 @@ describe("TradesPage", () => {
     render(<TradesPage />, { wrapper });
     expect(screen.getByText("Symbol")).toBeInTheDocument();
     expect(screen.getByText("Exit Reason")).toBeInTheDocument();
+  });
+
+  test("renders pattern summary section", () => {
+    render(<TradesPage />, { wrapper });
+    expect(screen.getByText("Pattern Summary")).toBeInTheDocument();
   });
 });

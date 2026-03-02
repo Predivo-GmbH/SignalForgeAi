@@ -41,7 +41,14 @@ class SignalResponse(BaseModel):
     regime: str
     triggers: dict | None
     status: str
+    strategy_id: str | None = None
     created_at: str
+    # AI enrichment fields
+    ai_quality_score: float | None = None
+    ai_reasoning: str | None = None
+    ai_recommendation: str | None = None
+    mtf_confidence: float | None = None
+    mtf_alignment: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -152,8 +159,49 @@ async def get_signal(
     signal = result.scalar_one_or_none()
     if not signal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found")
+    return _signal_to_response(signal)
+
+
+@router.get("", response_model=SignalListResponse)
+async def list_signals(
+    _user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    strategy_id: uuid.UUID | None = Query(default=None),
+):
+    """List signals with pagination, optionally filtered by strategy."""
+    filters = []
+    if strategy_id:
+        filters.append(Signal.strategy_id == strategy_id)
+
+    count_q = select(func.count()).select_from(Signal)
+    data_q = select(Signal)
+    for f in filters:
+        count_q = count_q.where(f)
+        data_q = data_q.where(f)
+
+    count_result = await db.execute(count_q)
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        data_q.order_by(Signal.created_at.desc()).limit(limit).offset(offset)
+    )
+    signals = result.scalars().all()
+
+    return SignalListResponse(
+        signals=[_signal_to_response(s) for s in signals],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def _signal_to_response(signal: Signal) -> SignalResponse:
+    """Convert a Signal model to a SignalResponse."""
     return SignalResponse(
         id=str(signal.id),
+        strategy_id=str(signal.strategy_id) if signal.strategy_id else None,
         symbol=signal.symbol,
         timeframe=signal.timeframe,
         direction=signal.direction,
@@ -167,46 +215,9 @@ async def get_signal(
         triggers=signal.triggers,
         status=signal.status,
         created_at=signal.created_at.isoformat() if signal.created_at else "",
-    )
-
-
-@router.get("", response_model=SignalListResponse)
-async def list_signals(
-    _user_id: str = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
-):
-    """List signals with pagination."""
-    count_result = await db.execute(select(func.count()).select_from(Signal))
-    total = count_result.scalar() or 0
-
-    result = await db.execute(
-        select(Signal).order_by(Signal.created_at.desc()).limit(limit).offset(offset)
-    )
-    signals = result.scalars().all()
-
-    return SignalListResponse(
-        signals=[
-            SignalResponse(
-                id=str(s.id),
-                symbol=s.symbol,
-                timeframe=s.timeframe,
-                direction=s.direction,
-                entry_price=s.entry_price,
-                stop_loss=s.stop_loss,
-                take_profit_1=s.take_profit_1,
-                take_profit_2=s.take_profit_2,
-                position_size=s.position_size,
-                confluence_score=s.confluence_score,
-                regime=s.regime,
-                triggers=s.triggers,
-                status=s.status,
-                created_at=s.created_at.isoformat() if s.created_at else "",
-            )
-            for s in signals
-        ],
-        total=total,
-        limit=limit,
-        offset=offset,
+        ai_quality_score=signal.ai_quality_score,
+        ai_reasoning=signal.ai_reasoning,
+        ai_recommendation=signal.ai_recommendation,
+        mtf_confidence=signal.mtf_confidence,
+        mtf_alignment=signal.mtf_alignment,
     )

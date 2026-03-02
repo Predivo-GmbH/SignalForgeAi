@@ -11,6 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -102,59 +103,45 @@ class CandleStorage:
         """
         from app.models.candle import Candle
 
-        count = 0
+        if candles_df.empty:
+            return 0
+
+        has_exchange_col = "exchange" in candles_df.columns
+        has_vwap = "vwap" in candles_df.columns
+        has_trades = "trades" in candles_df.columns
+
+        rows = []
         for _, row in candles_df.iterrows():
-            row_exchange = row.get("exchange", exchange) if "exchange" in row.index else exchange
-            row_time = row["time"]
+            r = {
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "time": row["time"],
+                "exchange": row["exchange"] if has_exchange_col else exchange,
+                "open": float(row["open"]),
+                "high": float(row["high"]),
+                "low": float(row["low"]),
+                "close": float(row["close"]),
+                "volume": float(row["volume"]),
+                "vwap": float(row["vwap"]) if has_vwap and pd.notna(row.get("vwap")) else None,
+                "trades": int(row["trades"]) if has_trades and pd.notna(row.get("trades")) else None,
+            }
+            rows.append(r)
 
-            # Check for existing candle (upsert by composite PK)
-            existing = await db.execute(
-                select(Candle).where(
-                    Candle.symbol == symbol,
-                    Candle.timeframe == timeframe,
-                    Candle.time == row_time,
-                    Candle.exchange == row_exchange,
-                )
-            )
-            candle = existing.scalar_one_or_none()
-
-            if candle:
-                candle.open = float(row["open"])
-                candle.high = float(row["high"])
-                candle.low = float(row["low"])
-                candle.close = float(row["close"])
-                candle.volume = float(row["volume"])
-                if "vwap" in row.index and pd.notna(row.get("vwap")):
-                    candle.vwap = float(row["vwap"])
-                if "trades" in row.index and pd.notna(row.get("trades")):
-                    candle.trades = int(row["trades"])
-            else:
-                candle = Candle(
-                    symbol=symbol,
-                    timeframe=timeframe,
-                    time=row_time,
-                    exchange=row_exchange,
-                    open=float(row["open"]),
-                    high=float(row["high"]),
-                    low=float(row["low"]),
-                    close=float(row["close"]),
-                    volume=float(row["volume"]),
-                    vwap=(
-                        float(row["vwap"])
-                        if "vwap" in row.index and pd.notna(row.get("vwap"))
-                        else None
-                    ),
-                    trades=(
-                        int(row["trades"])
-                        if "trades" in row.index and pd.notna(row.get("trades"))
-                        else None
-                    ),
-                )
-                db.add(candle)
-            count += 1
-
-        await db.flush()
-        return count
+        stmt = pg_insert(Candle).values(rows)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["time", "symbol", "exchange", "timeframe"],
+            set_={
+                "open": stmt.excluded.open,
+                "high": stmt.excluded.high,
+                "low": stmt.excluded.low,
+                "close": stmt.excluded.close,
+                "volume": stmt.excluded.volume,
+                "vwap": stmt.excluded.vwap,
+                "trades": stmt.excluded.trades,
+            },
+        )
+        await db.execute(stmt)
+        return len(rows)
 
     @staticmethod
     async def load_candles_db(

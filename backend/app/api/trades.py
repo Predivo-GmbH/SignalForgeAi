@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.models.signal import Signal
 from app.models.trade import Trade
 
 router = APIRouter(prefix="/trades", tags=["trades"])
@@ -94,20 +95,27 @@ def _trade_to_response(t: Trade) -> TradeResponse:
 async def trade_stats(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    strategy_id: uuid.UUID | None = Query(default=None),
 ):
     """Aggregate trade statistics for the authenticated user."""
     uid = uuid.UUID(user_id)
 
-    # Get all closed trades (those with pnl set)
-    result = await db.execute(
-        select(Trade).where(Trade.user_id == uid, Trade.pnl.isnot(None))
-    )
+    # Build base queries, optionally joining through Signal for strategy filtering
+    closed_q = select(Trade).where(Trade.user_id == uid, Trade.pnl.isnot(None))
+    count_q = select(func.count()).select_from(Trade).where(Trade.user_id == uid)
+
+    if strategy_id:
+        closed_q = closed_q.join(Signal, Trade.signal_id == Signal.id).where(
+            Signal.strategy_id == strategy_id
+        )
+        count_q = count_q.join(Signal, Trade.signal_id == Signal.id).where(
+            Signal.strategy_id == strategy_id
+        )
+
+    result = await db.execute(closed_q)
     closed_trades = result.scalars().all()
 
-    # Also count total trades (including open)
-    count_result = await db.execute(
-        select(func.count()).select_from(Trade).where(Trade.user_id == uid)
-    )
+    count_result = await db.execute(count_q)
     total = count_result.scalar() or 0
 
     if not closed_trades:
@@ -165,21 +173,27 @@ async def list_trades(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    strategy_id: uuid.UUID | None = Query(default=None),
 ):
     """List trades for the authenticated user with pagination."""
     uid = uuid.UUID(user_id)
 
-    count_result = await db.execute(
-        select(func.count()).select_from(Trade).where(Trade.user_id == uid)
-    )
+    count_q = select(func.count()).select_from(Trade).where(Trade.user_id == uid)
+    data_q = select(Trade).where(Trade.user_id == uid)
+
+    if strategy_id:
+        count_q = count_q.join(Signal, Trade.signal_id == Signal.id).where(
+            Signal.strategy_id == strategy_id
+        )
+        data_q = data_q.join(Signal, Trade.signal_id == Signal.id).where(
+            Signal.strategy_id == strategy_id
+        )
+
+    count_result = await db.execute(count_q)
     total = count_result.scalar() or 0
 
     result = await db.execute(
-        select(Trade)
-        .where(Trade.user_id == uid)
-        .order_by(Trade.created_at.desc())
-        .limit(limit)
-        .offset(offset)
+        data_q.order_by(Trade.created_at.desc()).limit(limit).offset(offset)
     )
     trades = result.scalars().all()
 

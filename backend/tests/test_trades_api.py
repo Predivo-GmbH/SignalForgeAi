@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import pytest
 
 from app.auth.jwt import create_access_token
+from app.models.signal import Signal
 from app.models.trade import Trade
 
 
@@ -155,3 +156,149 @@ class TestTradeStats:
     async def test_stats_requires_auth(self, client):
         response = await client.get("/api/trades/stats")
         assert response.status_code == 401
+
+
+class TestListTradesByStrategy:
+    @pytest.mark.asyncio
+    async def test_filter_trades_by_strategy_id(self, client, test_user):
+        """Trades linked to a strategy via signals should be filterable."""
+        user_id, headers = test_user
+
+        from app.core.database import get_db
+        from app.main import app as test_app
+
+        db_gen = test_app.dependency_overrides[get_db]()
+        db = await db_gen.__anext__()
+
+        strategy_id = uuid.uuid4()
+
+        # Create a signal linked to the strategy
+        signal = Signal(
+            strategy_id=strategy_id,
+            symbol="BTC/USDT",
+            timeframe="1h",
+            direction="BUY",
+            entry_price=50000.0,
+            stop_loss=49000.0,
+            take_profit_1=51000.0,
+            confluence_score=70,
+            regime="trending",
+            status="active",
+        )
+        db.add(signal)
+        await db.flush()
+
+        # Create a trade linked to that signal
+        trade1 = Trade(
+            user_id=uuid.UUID(user_id),
+            signal_id=signal.id,
+            symbol="BTC/USDT",
+            direction="BUY",
+            entry_price=50000.0,
+            exit_price=51000.0,
+            position_size=1.0,
+            stop_loss=49000.0,
+            take_profit=51000.0,
+            pnl=1000.0,
+            pnl_pct=2.0,
+            confluence_score=70,
+            exit_time=datetime.now(timezone.utc),
+        )
+        # Create a trade NOT linked to any signal
+        trade2 = Trade(
+            user_id=uuid.UUID(user_id),
+            symbol="ETH/USDT",
+            direction="SELL",
+            entry_price=2000.0,
+            position_size=0.5,
+            stop_loss=2100.0,
+            take_profit=1900.0,
+            confluence_score=60,
+        )
+        db.add_all([trade1, trade2])
+        await db.commit()
+
+        # Filter by strategy_id should return only the linked trade
+        response = await client.get(
+            "/api/trades",
+            params={"strategy_id": str(strategy_id)},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["trades"][0]["symbol"] == "BTC/USDT"
+
+        # Without filter should return both
+        response2 = await client.get("/api/trades", headers=headers)
+        assert response2.json()["total"] == 2
+
+    @pytest.mark.asyncio
+    async def test_stats_by_strategy_id(self, client, test_user):
+        """Trade stats should be filterable by strategy_id."""
+        user_id, headers = test_user
+
+        from app.core.database import get_db
+        from app.main import app as test_app
+
+        db_gen = test_app.dependency_overrides[get_db]()
+        db = await db_gen.__anext__()
+
+        strategy_id = uuid.uuid4()
+
+        signal = Signal(
+            strategy_id=strategy_id,
+            symbol="BTC/USDT",
+            timeframe="1h",
+            direction="BUY",
+            entry_price=50000.0,
+            stop_loss=49000.0,
+            take_profit_1=51000.0,
+            confluence_score=70,
+            regime="trending",
+            status="active",
+        )
+        db.add(signal)
+        await db.flush()
+
+        trade = Trade(
+            user_id=uuid.UUID(user_id),
+            signal_id=signal.id,
+            symbol="BTC/USDT",
+            direction="BUY",
+            entry_price=50000.0,
+            exit_price=51000.0,
+            position_size=1.0,
+            stop_loss=49000.0,
+            take_profit=51000.0,
+            pnl=1000.0,
+            pnl_pct=2.0,
+            confluence_score=70,
+            exit_time=datetime.now(timezone.utc),
+        )
+        db.add(trade)
+        await db.commit()
+
+        response = await client.get(
+            "/api/trades/stats",
+            params={"strategy_id": str(strategy_id)},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_trades"] == 1
+        assert data["total_pnl"] == 1000.0
+
+    @pytest.mark.asyncio
+    async def test_filter_nonexistent_strategy(self, client, auth_headers):
+        """Filtering by a nonexistent strategy_id should return empty."""
+        _user_id, headers = auth_headers
+        response = await client.get(
+            "/api/trades",
+            params={"strategy_id": str(uuid.uuid4())},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["trades"] == []

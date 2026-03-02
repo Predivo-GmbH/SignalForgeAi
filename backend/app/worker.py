@@ -34,6 +34,10 @@ celery_app.conf.include = [
     "app.tasks.hmm_train",
     "app.tasks.backtest_task",
     "app.tasks.check_correlations",
+    "app.tasks.risk_tuning",
+    "app.tasks.feedback_synthesis",
+    "app.tasks.pattern_analysis",
+    "app.tasks.flush_ai_usage",
 ]
 
 # ---------------------------------------------------------------------------
@@ -75,5 +79,21 @@ celery_app.conf.beat_schedule = {
     "check-correlations-5m": {
         "task": "check_correlations",
         "schedule": 300.0,
+    },
+    "pattern-analysis-daily": {
+        "task": "periodic_pattern_analysis",
+        "schedule": crontab(hour=2, minute=30),
+    },
+    "adaptive-risk-tuning-daily": {
+        "task": "adaptive_risk_tuning",
+        "schedule": crontab(hour=3, minute=0),
+    },
+    "feedback-synthesis-daily": {
+        "task": "synthesize_feedback_rules",
+        "schedule": crontab(hour=4, minute=0),
+    },
+    "flush-ai-usage-1m": {
+        "task": "flush_ai_usage",
+        "schedule": 60.0,
     },
 }

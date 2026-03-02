@@ -34,19 +34,24 @@ export interface TradeStats {
   worst_trade: number;
 }
 
-export function useTrades(limit = 20, offset = 0) {
+export function useTrades(limit = 20, offset = 0, strategyId?: string) {
   return useQuery({
-    queryKey: ["trades", limit, offset],
-    queryFn: () =>
-      api.get<{ trades: Trade[]; total: number }>(
-        `/trades?limit=${limit}&offset=${offset}`,
-      ),
+    queryKey: ["trades", limit, offset, strategyId],
+    queryFn: () => {
+      let url = `/trades?limit=${limit}&offset=${offset}`;
+      if (strategyId) url += `&strategy_id=${strategyId}`;
+      return api.get<{ trades: Trade[]; total: number }>(url);
+    },
   });
 }
 
-export function useTradeStats() {
+export function useTradeStats(strategyId?: string) {
   return useQuery({
-    queryKey: ["trades", "stats"],
-    queryFn: () => api.get<TradeStats>("/trades/stats"),
+    queryKey: ["trades", "stats", strategyId],
+    queryFn: () => {
+      let url = "/trades/stats";
+      if (strategyId) url += `?strategy_id=${strategyId}`;
+      return api.get<TradeStats>(url);
+    },
   });
 }

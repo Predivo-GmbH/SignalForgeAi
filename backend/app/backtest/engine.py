@@ -3,13 +3,18 @@ Backtest engine. Runs the full SignalPipeline (Layers 0-5) on historical
 data and simulates trades with proper position sizing and risk management.
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
 
 from app.engine.layers.risk import RiskConfig
 from app.engine.pipeline import SignalPipeline
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -22,6 +27,7 @@ class Trade:
     exit_idx: int | None = None
     exit_price: float | None = None
     pnl: float = 0.0
+    position_size_factor: float = 1.0
 
     @property
     def risk_reward(self) -> float:
@@ -49,11 +55,13 @@ class BacktestEngine:
         atr_sl_mult: float = 2.0,
         min_confluence: int = 50,
         risk_config: RiskConfig | None = None,
+        ai_enhanced: bool = False,
     ):
         self.lookback = lookback
         self.risk_pct = risk_pct
         self.atr_sl_mult = atr_sl_mult
         self.min_confluence = min_confluence
+        self.ai_enhanced = ai_enhanced
 
         # Build RiskConfig: use provided config, or create one from legacy params
         if risk_config is not None:
@@ -68,6 +76,15 @@ class BacktestEngine:
             risk_config=self._risk_config,
             min_confluence=min_confluence,
         )
+
+        # AI signal quality evaluator (lazy-loaded)
+        self._evaluator = None
+        if ai_enhanced:
+            from app.advisor.signal_quality import SignalQualityEvaluator
+
+            self._evaluator = SignalQualityEvaluator()
+        self._ai_calls = 0
+        self._ai_rejections = 0
 
     def run(
         self,
@@ -102,7 +119,7 @@ class BacktestEngine:
                     open_trade.exit_price = open_trade.stop_loss
                     risk_dist = abs(open_trade.entry_price - open_trade.stop_loss)
                     if risk_dist > 0:
-                        position_size = capital * self.risk_pct / risk_dist
+                        position_size = capital * self.risk_pct / risk_dist * open_trade.position_size_factor
                         if open_trade.direction == "BUY":
                             open_trade.pnl = (
                                 open_trade.exit_price - open_trade.entry_price
@@ -119,7 +136,7 @@ class BacktestEngine:
                     open_trade.exit_price = open_trade.take_profit
                     risk_dist = abs(open_trade.entry_price - open_trade.stop_loss)
                     if risk_dist > 0:
-                        position_size = capital * self.risk_pct / risk_dist
+                        position_size = capital * self.risk_pct / risk_dist * open_trade.position_size_factor
                         if open_trade.direction == "BUY":
                             open_trade.pnl = (
                                 open_trade.exit_price - open_trade.entry_price
@@ -144,12 +161,25 @@ class BacktestEngine:
             )
 
             if signal.action in ("BUY", "SELL") and signal.stop_loss and signal.take_profit_1:
+                size_factor = 1.0
+
+                if self.ai_enhanced and self._evaluator:
+                    ai_result = self._evaluate_signal_ai(signal, window)
+                    if ai_result["recommendation"] == "reject":
+                        self._ai_rejections += 1
+                        equity_curve.append(capital)
+                        continue
+                    size_factor = ai_result.get("risk_adjustments", {}).get(
+                        "position_size_factor", 1.0,
+                    )
+
                 open_trade = Trade(
                     entry_idx=i,
                     entry_price=float(current["close"]),
                     direction=signal.action,
                     stop_loss=signal.stop_loss,
                     take_profit=signal.take_profit_1,
+                    position_size_factor=size_factor,
                 )
 
             equity_curve.append(capital)
@@ -160,7 +190,7 @@ class BacktestEngine:
             open_trade.exit_price = float(candles["close"].iloc[-1])
             risk_dist = abs(open_trade.entry_price - open_trade.stop_loss)
             if risk_dist > 0:
-                position_size = capital * self.risk_pct / risk_dist
+                position_size = capital * self.risk_pct / risk_dist * open_trade.position_size_factor
                 if open_trade.direction == "BUY":
                     open_trade.pnl = (
                         open_trade.exit_price - open_trade.entry_price
@@ -174,7 +204,44 @@ class BacktestEngine:
             equity_curve[-1] = capital
 
         metrics = self._calculate_metrics(trades, equity_curve, initial_capital)
+
+        if self.ai_enhanced:
+            metrics["ai_calls"] = self._ai_calls
+            metrics["ai_rejections"] = self._ai_rejections
+
         return BacktestResult(trades=trades, equity_curve=equity_curve, metrics=metrics)
+
+    def _evaluate_signal_ai(self, signal, candles_window: pd.DataFrame) -> dict:
+        """Run synchronous AI quality evaluation on a signal."""
+        self._ai_calls += 1
+
+        signal_data = {
+            "action": signal.action,
+            "symbol": signal.symbol,
+            "timeframe": signal.timeframe,
+            "regime": signal.regime,
+            "trend_direction": signal.trend_direction,
+            "trend_strength": signal.trend_strength,
+            "confluence_score": signal.confluence_score,
+            "triggers": signal.triggers,
+            "risk_reward": signal.risk_reward,
+        }
+
+        candle_summary = []
+        for _, row in candles_window.tail(5).iloc[::-1].iterrows():
+            candle_summary.append({
+                "open": float(row["open"]),
+                "high": float(row["high"]),
+                "low": float(row["low"]),
+                "close": float(row["close"]),
+                "volume": float(row["volume"]),
+            })
+
+        confluence_details = signal.confluence_details or {}
+
+        return self._evaluator.evaluate_sync(
+            signal_data, confluence_details, candle_summary,
+        )
 
     def _calculate_metrics(
         self,

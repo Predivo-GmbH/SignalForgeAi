@@ -52,3 +52,28 @@ class TestTriggerDetector:
         result = td.check(make_macd_cross_up_candles(), zone, trend)
         for c in result.confirmations:
             assert isinstance(c, str)
+
+    def test_single_confirmation_sufficient_when_configured(self):
+        from app.engine.layers.trend import Trend, TrendResult
+        from app.engine.layers.triggers import TriggerDetector
+        from app.engine.layers.zones import EntryZone
+        td = TriggerDetector(min_confirmations=1, lookback=5)
+        zone = EntryZone(zone_type="fibonacci_golden", upper=200, lower=0, strength=0.7)
+        trend = TrendResult(direction=Trend.BULLISH, strength=0.01)
+        result = td.check(make_macd_cross_up_candles(), zone, trend)
+        if result.confirmed:
+            assert len(result.confirmations) >= 1
+
+    def test_wider_lookback_finds_more_triggers(self):
+        from app.engine.layers.trend import Trend, TrendResult
+        from app.engine.layers.triggers import TriggerDetector
+        from app.engine.layers.zones import EntryZone
+        zone = EntryZone(zone_type="fibonacci_golden", upper=200, lower=0, strength=0.7)
+        trend = TrendResult(direction=Trend.BULLISH, strength=0.01)
+        candles = make_macd_cross_up_candles()
+        strict = TriggerDetector(min_confirmations=1, lookback=1)
+        loose = TriggerDetector(min_confirmations=1, lookback=5)
+        r_strict = strict.check(candles, zone, trend)
+        r_loose = loose.check(candles, zone, trend)
+        # Wider lookback should find at least as many confirmations
+        assert len(r_loose.confirmations) >= len(r_strict.confirmations)

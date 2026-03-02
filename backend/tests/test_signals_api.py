@@ -5,6 +5,7 @@ import uuid
 import pytest
 
 from app.auth.jwt import create_access_token
+from app.models.signal import Signal
 
 
 @pytest.fixture
@@ -98,3 +99,74 @@ class TestGetSignal:
         fake_id = str(uuid.uuid4())
         response = await client.get(f"/api/signals/{fake_id}")
         assert response.status_code == 401
+
+
+class TestListSignalsByStrategy:
+    @pytest.mark.asyncio
+    async def test_filter_by_strategy_id(self, client, auth_headers):
+        """Signals should be filterable by strategy_id."""
+        from app.core.database import get_db
+        from app.main import app as test_app
+
+        db_gen = test_app.dependency_overrides[get_db]()
+        db = await db_gen.__anext__()
+
+        strategy_id = uuid.uuid4()
+        # Insert a signal WITH strategy_id
+        sig1 = Signal(
+            strategy_id=strategy_id,
+            symbol="BTC/USDT",
+            timeframe="1h",
+            direction="BUY",
+            entry_price=50000.0,
+            stop_loss=49000.0,
+            take_profit_1=51000.0,
+            confluence_score=70,
+            regime="trending",
+            status="active",
+        )
+        # Insert a signal WITHOUT strategy_id
+        sig2 = Signal(
+            symbol="ETH/USDT",
+            timeframe="1h",
+            direction="SELL",
+            entry_price=2000.0,
+            stop_loss=2100.0,
+            take_profit_1=1900.0,
+            confluence_score=60,
+            regime="ranging",
+            status="active",
+        )
+        db.add_all([sig1, sig2])
+        await db.commit()
+
+        # Filter by strategy_id should return only the matching signal
+        response = await client.get(
+            "/api/signals",
+            params={"strategy_id": str(strategy_id)},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["signals"][0]["symbol"] == "BTC/USDT"
+        assert data["signals"][0]["strategy_id"] == str(strategy_id)
+
+    @pytest.mark.asyncio
+    async def test_no_filter_returns_all(self, client, auth_headers):
+        """Without strategy_id filter, all signals should be returned."""
+        response = await client.get("/api/signals", headers=auth_headers)
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_filter_nonexistent_strategy(self, client, auth_headers):
+        """Filtering by a nonexistent strategy_id should return empty."""
+        response = await client.get(
+            "/api/signals",
+            params={"strategy_id": str(uuid.uuid4())},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["signals"] == []

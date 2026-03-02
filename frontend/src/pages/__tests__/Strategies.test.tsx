@@ -1,10 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { SignalsPage } from "../Signals";
-import type { ReactNode } from "react";
+import { StrategiesPage } from "../Strategies";
 
-const wrapper = ({ children }: { children: ReactNode }) => (
+const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider
     client={
       new QueryClient({
@@ -16,16 +15,16 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   </QueryClientProvider>
 );
 
-describe("SignalsPage", () => {
+describe("StrategiesPage", () => {
   test("renders page heading", () => {
-    render(<SignalsPage />, { wrapper });
-    expect(screen.getByText("Signals")).toBeInTheDocument();
+    render(<StrategiesPage />, { wrapper });
+    expect(screen.getByText("Strategies")).toBeInTheDocument();
   });
 
-  test("renders generate signal button", () => {
-    render(<SignalsPage />, { wrapper });
+  test("renders page description", () => {
+    render(<StrategiesPage />, { wrapper });
     expect(
-      screen.getByRole("button", { name: /generate/i }),
+      screen.getByText("Monitor and manage your active trading strategies")
     ).toBeInTheDocument();
   });
 });

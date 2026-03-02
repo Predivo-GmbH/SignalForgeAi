@@ -339,9 +339,10 @@ Historical trade log:
 
 ### Backtest Lab (`/backtest`)
 
-Strategy backtesting with two modes:
+Strategy backtesting with three modes:
 - **Single Backtest**: Choose symbol, timeframe, and lookback period. Returns metrics + equity curve.
 - **Walk-Forward Optimization**: Cross-validated parameter optimization with k-fold splits. Tests strategy robustness across different time periods.
+- **Strategy Validation**: Backtest an entire AI Advisor strategy against historical data. Select a deployed strategy or an AI Advisor plan (pre-deployment), and test all selected symbols with the strategy's exact risk configuration (confluence threshold, ATR multiplier, risk per trade). Shows portfolio-level metrics and per-symbol breakdown. Also accessible via the "Validate Historically" button on the AI Advisor page after generating a plan.
 
 ### Journal (`/journal`)
 

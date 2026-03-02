@@ -1,43 +1,46 @@
 # SignalForge
 
-Multi-layer automated trading platform with confluence scoring.
+Multi-layer automated trading platform with AI-powered confluence scoring and adaptive risk management.
 
 ## Status
 
-**Phases 1–6 complete.**
+**Phases 1–7 complete** (Phase 7 uncommitted). **AI Usage & Cost Tracking complete.**
 
-- 89 commits on `main`, 296 backend tests, 41 frontend tests, 0 lint errors
-- Backend: 11 API routers, 33 endpoints, 3 WebSocket routes, 6-layer signal pipeline, HMM regime, AI journal, WFO
-- Frontend: 9 pages, 14 hooks, 14 components, WebSocket integration, dark/light theme
-- Phase 6 added: broker adapters (Alpaca/CCXT/Paper), DB-backed execution, Celery Beat (8 tasks), circuit breakers, rate limiting, structured logging, production Docker
+- 88 commits on `main` + extensive uncommitted Phase 7 work + AI cost tracking
+- Backend: 14 API routers, ~42 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 12 Celery Beat tasks, 11 DB models
+- Frontend: 8 pages, 18 hooks, ~21 components, dark/light theme
+- Phase 7 added: AI Advisor (Claude-powered planner, signal quality, risk tuner, feedback loop), 8 configurable risk management features, portfolio backtester, frontend restructure
+- AI cost tracking: Local token-based cost computation, Anthropic Admin API integration (dormant until admin key available), prepaid credit management, daily cost charts
 
 ## Project Structure
-- `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0 (83 source files, 45 test files)
+- `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0 (~100 source files, ~50 test files)
 - `/frontend` — React 19 + Vite 7 + TypeScript + Tailwind 4
 - `/docs/PROJECT-STATUS.md` — **Full project documentation (read this first)**
-- `/docs/plans/` — Implementation plans for all 6 phases
+- `/docs/SESSION-CHANGELOG-2026-03-02.md` — Detailed session changelog
+- `/docs/plans/` — Implementation plans
 
 ## Commands
 ```bash
-# Backend (use venv Python on Windows)
-cd backend && docker compose up -d                     # Start TimescaleDB + Redis
-cd backend && .venv/Scripts/python.exe -m pytest -q     # 296 tests
-cd backend && .venv/Scripts/python.exe -m ruff check .  # Lint
-cd backend && .venv/Scripts/python.exe -m uvicorn app.main:app --reload  # Dev server :8000
+# Development (Docker — starts all 5 services: db, redis, api, worker, beat)
+cd backend && docker.exe compose up -d
+cd backend && docker.exe compose logs worker --tail=30  # Check pipeline/ingestion
+cd backend && docker.exe compose restart worker beat     # After code changes
 
-# Celery (Phase 6)
-cd backend && celery -A app.worker worker --loglevel=info   # Worker
-cd backend && celery -A app.worker beat --loglevel=info      # Beat scheduler
+# Testing & Linting
+cd backend && .venv/Scripts/python.exe -m pytest -q
+cd backend && .venv/Scripts/python.exe -m ruff check .
 
 # Frontend
 cd frontend && npm run dev       # Dev server :5173 (password: signalforge)
-cd frontend && npx vitest run    # 41 tests
-cd frontend && npm run lint      # ESLint
-cd frontend && npm run build     # Production build (558KB JS)
+cd frontend && npx vitest run
+cd frontend && npm run lint
+cd frontend && npm run build
 
 # Production Docker
-docker compose -f docker-compose.prod.yml up -d  # All 5 services
+docker compose -f docker-compose.prod.yml up -d
 ```
+
+> **Note:** Use `docker.exe` (not `docker`) on WSL2 with Docker Desktop for Windows.
 
 ## Rules
 - NO hardcoded hex values in frontend components — use CSS custom property tokens (e.g. `bg-(--color-accent)`)
@@ -49,9 +52,22 @@ docker compose -f docker-compose.prod.yml up -d  # All 5 services
 - Commit frequently, one logical change per commit
 - Always check existing code before modifying — read first
 
+## Frontend Pages & Navigation
+Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics → Settings
+
+| Route | Page | Key Feature |
+|-------|------|-------------|
+| `/` | Dashboard | PriceChart (6 TFs), StatsCards, PositionsTable |
+| `/advisor` | AI Advisor | 3-step: Scan → Plan → Deploy. Master-detail with scan history sidebar |
+| `/strategies` | Strategies | List deployed strategies with P&L, win rate, Sharpe |
+| `/strategies/:id` | Strategy Detail | Signals tab + Validation/backtest tab |
+| `/backtest` | Backtest | Standalone strategy validation tool |
+| `/trades` | Trades | Trade history + stats |
+| `/analytics` | Analytics | Equity curve, metrics grid, correlation matrix |
+| `/settings` | Settings | Connections (broker keys), Alerts (email), AI Usage (cost tracking) |
+
 ## Design Reference
 - **Inspiration**: Kraken Pro trading UI (screenshots in `kraken-reference/`)
-- **Design doc**: `docs/plans/2026-02-28-signalforge-design.md`
 - **Theme**: Dark default (user-toggleable), purple accent `#7B61FF`
 - **Typography**: Inter (UI), JetBrains Mono (prices/numbers)
 - **CSS tokens**: Defined in `frontend/src/index.css` (:root and .dark)
@@ -59,15 +75,21 @@ docker compose -f docker-compose.prod.yml up -d  # All 5 services
 ## Config
 - All backend env vars use `SF_` prefix (e.g. `SF_DATABASE_URL`, `SF_JWT_SECRET`)
 - Frontend uses `VITE_API_URL` (defaults to `http://localhost:8000/api`)
-- `SF_ENCRYPTION_KEY` — Fernet key for broker credential encryption
+- AI feature flags: `ai_signal_quality_enabled`, `ai_risk_tuning_enabled`, `ai_feedback_loop_enabled`, etc.
+- `SF_ANTHROPIC_API_KEY` — required for Claude calls (set in `backend/.env`)
+- `SF_ANTHROPIC_ADMIN_API_KEY` — optional, for Anthropic Admin API cost reports (not available on individual plans)
 - See `docs/PROJECT-STATUS.md` for full env var table
 
 ## Test Account
 - Email: `roger@signalforge.dev` / Password: `SignalForge2026`
 - Frontend password gate: `signalforge`
 
-## Agent Team Pattern
-Each phase uses **Cloud Agent Teams** — named agents dispatched via Task tool with `isolation: "worktree"`, working in dependency-ordered waves. Merge to main after each wave passes all quality gates.
+## Current System State (2026-03-02)
+- 5 Docker services running (db, redis, api, worker, beat)
+- 1 active strategy: "AI Advisor — Conservative Swing" (15 symbols, 4h, min_confluence: 70)
+- All symbols currently blocked (chaotic_regime / no_trend / low_confluence)
+- Candle data: 6 timeframes × 15+ symbols, ingested every 60s
+- Broker connections stored but NOT wired to execution (PaperAdapter always used)
 
 ## Pipeline Checkpoint Rule
 Before declaring any phase/step complete, re-read the plan to verify ALL deliverables are done. If anything is missing, continue working — do not skip ahead.

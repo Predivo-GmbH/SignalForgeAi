@@ -1,11 +1,16 @@
 """Backtest API endpoints."""
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+import uuid as _uuid
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["backtests"])
 
@@ -29,6 +34,20 @@ class WFORequest(BaseModel):
             "min_confluence": [40, 50, 60],
         }
     )
+
+
+class StrategyBacktestRequest(BaseModel):
+    """Backtest an entire AI Advisor strategy (all symbols + risk config)."""
+    strategy_id: str | None = None
+    plan: dict | None = None
+    days: int = Field(default=90, ge=7, le=365)
+    ai_enhanced: bool = False
+
+    @model_validator(mode="after")
+    def require_source(self):
+        if not self.strategy_id and not self.plan:
+            raise ValueError("Provide either strategy_id or plan")
+        return self
 
 
 @router.post("/backtests")
@@ -133,3 +152,81 @@ async def run_walk_forward(body: WFORequest):
             for fr in result.fold_results
         ],
     }
+
+
+@router.post("/backtests/strategy")
+async def run_strategy_backtest(
+    body: StrategyBacktestRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Backtest an entire AI Advisor strategy against historical data.
+
+    Accepts either a deployed strategy_id or a raw plan (pre-deployment).
+    Runs the signal pipeline on every symbol in the strategy with its
+    exact risk configuration, then aggregates into portfolio-level metrics.
+    """
+    from app.api.strategies import STRATEGY_PRESETS
+    from app.backtest.portfolio_runner import run_portfolio_backtest
+
+    config: dict = {}
+    strategy_name = "Strategy"
+
+    if body.strategy_id:
+        from app.models.strategy import Strategy
+        from sqlalchemy import select
+
+        uid = _uuid.UUID(user_id)
+        sid = _uuid.UUID(body.strategy_id)
+        result = await db.execute(
+            select(Strategy).where(Strategy.id == sid, Strategy.user_id == uid)
+        )
+        strategy = result.scalar_one_or_none()
+        if not strategy:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Strategy not found",
+            )
+        config = strategy.config or {}
+        strategy_name = strategy.name
+
+    elif body.plan:
+        plan = body.plan
+        selected_cryptos = plan.get("selected_cryptos", [])
+        if not selected_cryptos:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Plan has no selected cryptos",
+            )
+
+        # Support both new (strategy_config) and legacy (risk_config) plan formats
+        strategy_config = plan.get("strategy_config", plan.get("risk_config", {}))
+        symbols = [c["symbol"] for c in selected_cryptos]
+
+        config = {**strategy_config}
+        config["symbols"] = symbols
+        config.setdefault("timeframes", ["1h"])
+        config.setdefault("account_equity", 10000)
+        config.setdefault("min_confluence", 50)
+        config.setdefault("max_risk_per_trade", 0.02)
+        config.setdefault("max_daily_loss", 0.06)
+        config.setdefault("atr_sl_multiplier", 2.0)
+        config.setdefault("min_risk_reward", 1.5)
+
+        strategy_name = "AI Advisor — Optimal"
+
+    try:
+        result = run_portfolio_backtest(
+            config=config,
+            days=body.days,
+            strategy_name=strategy_name,
+            ai_enhanced=body.ai_enhanced,
+        )
+    except Exception as e:
+        logger.exception("Strategy backtest failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Strategy backtest failed: {e}",
+        )
+
+    return result

@@ -271,74 +271,34 @@ class TechnicalAnalyzer:
         results.sort(key=lambda x: x["score"], reverse=True)
         return results
 
-    def compute_market_recommendation(self, scored: list[dict]) -> dict:
-        """Aggregate scored results and recommend a risk tolerance preset.
+    def compute_market_profile(self, scored: list[dict]) -> dict:
+        """Aggregate scored results into a market profile for the AI advisor.
 
-        Returns:
-            {
-                "preset": "conservative" | "balanced" | "aggressive",
-                "reason": str,
-                "market_summary": {
-                    "trending_pct": float,
-                    "bullish_pct": float,
-                    "avg_score": float,
-                    "avg_adx": float,
-                    "avg_volatility": float,
-                }
-            }
+        Returns raw metrics — the AI advisor uses these to determine
+        optimal strategy parameters autonomously.
         """
         if not scored:
             return {
-                "preset": "conservative",
-                "reason": "No market data available. Conservative approach recommended.",
-                "market_summary": {
-                    "trending_pct": 0, "bullish_pct": 0,
-                    "avg_score": 0, "avg_adx": 0, "avg_volatility": 0,
-                },
+                "trending_pct": 0, "bullish_pct": 0, "chaotic_pct": 0,
+                "avg_score": 0, "avg_adx": 0, "avg_volatility": 0,
+                "avg_rsi": 50, "total_scanned": 0,
             }
 
         total = len(scored)
         trending_count = sum(
             1 for s in scored
-            if s.get("regime") in ("trending", "trending_bull", "trending_bear")
+            if s.get("regime", "").startswith("trending")
         )
         bullish_count = sum(1 for s in scored if s.get("trend_direction") == "bullish")
-        avg_score = np.mean([s.get("score", 0) for s in scored])
-        avg_adx = np.mean([s.get("adx", 0) for s in scored])
-        avg_volatility = np.mean([s.get("atr_pct", 0) for s in scored])
+        chaotic_count = sum(1 for s in scored if s.get("regime") == "chaotic")
 
-        trending_pct = round(trending_count / total * 100, 1)
-        bullish_pct = round(bullish_count / total * 100, 1)
-
-        summary = {
-            "trending_pct": trending_pct,
-            "bullish_pct": bullish_pct,
-            "avg_score": round(float(avg_score), 1),
-            "avg_adx": round(float(avg_adx), 1),
-            "avg_volatility": round(float(avg_volatility), 2),
+        return {
+            "trending_pct": round(trending_count / total * 100, 1),
+            "bullish_pct": round(bullish_count / total * 100, 1),
+            "chaotic_pct": round(chaotic_count / total * 100, 1),
+            "avg_score": round(float(np.mean([s.get("score", 0) for s in scored])), 1),
+            "avg_adx": round(float(np.mean([s.get("adx", 0) for s in scored])), 1),
+            "avg_volatility": round(float(np.mean([s.get("atr_pct", 0) for s in scored])), 2),
+            "avg_rsi": round(float(np.mean([s.get("rsi", 50) for s in scored])), 1),
+            "total_scanned": total,
         }
-
-        # Decision logic
-        if avg_score >= 55 and trending_pct > 60 and bullish_pct > 50:
-            preset = "aggressive"
-            reason = (
-                f"Strong market momentum detected: {trending_pct}% of pairs are trending, "
-                f"{bullish_pct}% bullish, avg score {summary['avg_score']}. "
-                f"Conditions favor aggressive scalping with multi-timeframe scanning."
-            )
-        elif avg_score >= 40 and trending_pct > 40:
-            preset = "balanced"
-            reason = (
-                f"Decent market conditions: {trending_pct}% of pairs are trending, "
-                f"avg score {summary['avg_score']}. "
-                f"A balanced momentum approach should capture opportunities with controlled risk."
-            )
-        else:
-            preset = "conservative"
-            reason = (
-                f"Market is weak or chaotic: only {trending_pct}% trending, "
-                f"avg score {summary['avg_score']}. "
-                f"Conservative swing trading recommended to protect capital."
-            )
-
-        return {"preset": preset, "reason": reason, "market_summary": summary}

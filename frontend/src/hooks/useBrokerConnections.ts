@@ -10,8 +10,8 @@ export interface BrokerConnection {
 
 export interface ConnectBrokerRequest {
   broker: string;
-  api_key: string;
-  api_secret: string;
+  api_key?: string;
+  api_secret?: string;
   is_paper: boolean;
 }
 

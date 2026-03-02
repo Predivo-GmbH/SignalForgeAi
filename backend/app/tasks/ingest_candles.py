@@ -7,7 +7,7 @@ from app.worker import celery_app
 logger = logging.getLogger(__name__)
 
 DEFAULT_SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
-DEFAULT_TIMEFRAMES = ["1h", "4h"]
+DEFAULT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
 MIN_CANDLES_FOR_PIPELINE = 300
 BACKFILL_LIMIT = 500
@@ -82,7 +82,7 @@ def backfill_symbols(symbols: list[str], timeframes: list[str] | None = None):
     """One-time backfill for a list of symbols (triggered by advisor deploy)."""
     import asyncio
 
-    asyncio.run(_backfill_async(symbols, timeframes or ["1h", "4h"]))
+    asyncio.run(_backfill_async(symbols, timeframes or DEFAULT_TIMEFRAMES))
 
 
 async def _backfill_async(symbols: list[str], timeframes: list[str]):

@@ -29,6 +29,14 @@ export function useStrategies() {
   });
 }
 
+export function useStrategy(id: string) {
+  return useQuery({
+    queryKey: ["strategies", id],
+    queryFn: () => api.get<Strategy>(`/strategies/${id}`),
+    enabled: !!id,
+  });
+}
+
 export function useStrategyPresets() {
   return useQuery({
     queryKey: ["strategy-presets"],

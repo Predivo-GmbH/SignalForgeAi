@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useAuth } from "@/lib/auth";
-import type { ScoredCrypto, MarketRecommendation, InvestmentPlan } from "@/hooks/useAdvisor";
+import type { ScoredCrypto, MarketProfile, InvestmentPlan } from "@/hooks/useAdvisor";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
@@ -12,7 +12,7 @@ export interface ScanHistoryEntry {
   pairs_scanned: number;
   pairs_scored: number;
   results: ScoredCrypto[];
-  recommendation: MarketRecommendation | null;
+  market_profile: MarketProfile | null;
   error?: string;
   plan?: InvestmentPlan;
   planAmount?: number;
@@ -56,7 +56,7 @@ export const useAdvisorStore = create<AdvisorState>()(
           pairs_scanned: 0,
           pairs_scored: 0,
           results: [],
-          recommendation: null,
+          market_profile: null,
         };
 
         set((s) => ({
@@ -103,7 +103,7 @@ export const useAdvisorStore = create<AdvisorState>()(
                       pairs_scanned: data.pairs_scanned,
                       pairs_scored: data.pairs_scored,
                       results: data.results,
-                      recommendation: data.recommendation ?? null,
+                      market_profile: data.market_profile ?? null,
                     }
                   : h,
               ),

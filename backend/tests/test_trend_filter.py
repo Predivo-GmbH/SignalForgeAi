@@ -83,3 +83,23 @@ class TestTrendFilter:
         result = tf.evaluate(make_bullish_candles())
         # For a bullish trend, vwap_aligned should be a boolean
         assert isinstance(result.vwap_aligned, bool)
+
+    def test_lower_slope_threshold_more_permissive(self):
+        from app.engine.layers.trend import Trend, TrendFilter
+        strict = TrendFilter(slope_threshold=0.01)
+        loose = TrendFilter(slope_threshold=0.0001)
+        candles = make_bullish_candles()
+        r_strict = strict.evaluate(candles)
+        r_loose = loose.evaluate(candles)
+        # Loose threshold should still detect the trend
+        assert r_loose.direction == Trend.BULLISH
+        # If strict fails to detect, that confirms the threshold matters
+        if r_strict.direction == Trend.UNDETERMINED:
+            assert r_loose.direction != Trend.UNDETERMINED
+
+    def test_impossible_slope_threshold_rejects(self):
+        from app.engine.layers.trend import Trend, TrendFilter
+        # A slope threshold of 10.0 (1000%) should be impossible to meet
+        tf = TrendFilter(slope_threshold=10.0)
+        result = tf.evaluate(make_bullish_candles())
+        assert result.direction == Trend.UNDETERMINED

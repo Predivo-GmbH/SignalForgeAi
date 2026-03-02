@@ -1,93 +1,39 @@
-import { useState } from "react";
-import { Info } from "lucide-react";
-import { BacktestForm } from "@/components/backtest/BacktestForm";
-import { BacktestResults } from "@/components/backtest/BacktestResults";
-import { WalkForwardForm } from "@/components/backtest/WalkForwardForm";
-import { WalkForwardResults } from "@/components/backtest/WalkForwardResults";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { useRunBacktest } from "@/hooks/useBacktest";
-import { useRunWalkForward } from "@/hooks/useWalkForward";
-import type { BacktestResult } from "@/hooks/useBacktest";
-import type { WFOResult } from "@/hooks/useWalkForward";
-import { cn } from "@/lib/cn";
-
-type Tab = "backtest" | "walkforward";
-
-const TABS: { key: Tab; label: string; tip: string }[] = [
-  { key: "backtest", label: "Single Backtest", tip: "Run the signal pipeline on historical data to see how it would have performed. Good for quick testing of a symbol and timeframe." },
-  { key: "walkforward", label: "Walk-Forward", tip: "Advanced optimization that splits data into training/testing folds, finds the best parameters on training data, then validates on unseen test data. Prevents overfitting and gives more realistic performance estimates." },
-];
+import { useSearchParams } from "react-router-dom";
+import { useRunStrategyBacktest } from "@/hooks/useStrategyBacktest";
+import { StrategyBacktestForm } from "@/components/backtest/StrategyBacktestForm";
+import { StrategyBacktestResults } from "@/components/backtest/StrategyBacktestResults";
+import type { StrategyBacktestResult } from "@/hooks/useStrategyBacktest";
 
 export function BacktestPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("backtest");
+  const [searchParams] = useSearchParams();
+  const validatePlan = searchParams.get("validate") === "plan";
 
-  const backtestMutation = useRunBacktest();
-  const backtestResult: BacktestResult | null =
-    (backtestMutation.data as BacktestResult) ?? null;
-
-  const wfoMutation = useRunWalkForward();
-  const wfoResult: WFOResult | null =
-    (wfoMutation.data as WFOResult) ?? null;
+  const strategyBtMutation = useRunStrategyBacktest();
+  const strategyBtResult = (strategyBtMutation.data as StrategyBacktestResult) ?? null;
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-(--color-text-primary)">
-          Backtest Lab
+          Strategy Validation
         </h1>
         <p className="text-sm text-(--color-text-secondary) mt-1">
-          Simulate strategy performance on historical data
+          Test how a strategy or AI Advisor plan would have performed on historical data
         </p>
       </div>
 
-      {/* Tab bar */}
-      <div className="border-b border-(--color-border)">
-        <div className="flex gap-6">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
-                activeTab === tab.key
-                  ? "border-(--color-accent) text-(--color-accent)"
-                  : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)"
-              )}
-            >
-              {tab.label}
-              <Tooltip icon text={tab.tip} />
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,35%)_1fr] gap-6">
+        <StrategyBacktestForm
+          onSubmit={(req) => strategyBtMutation.mutate(req)}
+          isLoading={strategyBtMutation.isPending}
+          prefillPlan={validatePlan}
+        />
+        <StrategyBacktestResults
+          result={strategyBtResult}
+          isLoading={strategyBtMutation.isPending}
+          error={strategyBtMutation.error}
+        />
       </div>
-
-      {/* Tab content */}
-      {activeTab === "backtest" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,35%)_1fr] gap-6">
-          <BacktestForm
-            onSubmit={(req) => backtestMutation.mutate(req)}
-            isLoading={backtestMutation.isPending}
-          />
-          <BacktestResults
-            result={backtestResult}
-            isLoading={backtestMutation.isPending}
-            error={backtestMutation.error}
-          />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,35%)_1fr] gap-6">
-          <WalkForwardForm
-            onSubmit={(req) => wfoMutation.mutate(req)}
-            isLoading={wfoMutation.isPending}
-          />
-          <WalkForwardResults
-            result={wfoResult}
-            isLoading={wfoMutation.isPending}
-            error={wfoMutation.error}
-          />
-        </div>
-      )}
     </div>
   );
 }

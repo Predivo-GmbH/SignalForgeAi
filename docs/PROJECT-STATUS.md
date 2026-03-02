@@ -1,10 +1,10 @@
-# SignalForge — Project Status (Phases 1–6 Complete)
+# SignalForge — Project Status (Phases 1–7 Complete)
 
 > **For Claude:** Use this document as the single source of truth for the project.
 
-**Last updated:** 2026-02-28
-**Current commit:** `79baeb3` on `main` (88 commits total)
-**Quality gates:** 296 backend tests, 41 frontend tests, 0 lint errors (ruff + eslint), TypeScript clean, build succeeds (558KB JS, 30KB CSS)
+**Last updated:** 2026-03-02
+**Last committed:** `79baeb3` on `main` (88 commits) — extensive uncommitted work beyond this
+**Quality gates:** 296 backend tests, 41 frontend tests (at last commit; new tests added since)
 
 ---
 
@@ -19,13 +19,13 @@
 | Routing | React Router DOM | 7.13 |
 | Charts | lightweight-charts | 5.1 |
 | Icons | lucide-react | 0.575 |
-| Backend | Python + FastAPI | 3.12 / 0.115 |
+| Backend | Python 3.12 + FastAPI | 0.115 |
 | ORM | SQLAlchemy 2.0 (async) + Alembic | 2.0.36 |
 | Database | PostgreSQL 16 + TimescaleDB | via Docker |
 | Cache/Broker | Redis 7 | via Docker |
-| Task Queue | Celery 5.4 | redis broker |
+| Task Queue | Celery 5.6 | redis broker |
 | ML | hmmlearn (HMM), numpy, pandas | 0.3+ |
-| AI | Anthropic SDK (Claude Haiku 4.5) | 0.52+ |
+| AI | Anthropic SDK (Claude Haiku 4.5 / Sonnet) | 0.52+ |
 | Email | Resend | 2.0+ |
 | Market Data | CCXT 4.4 | exchange connectors |
 | Broker (Stocks) | alpaca-py 0.30+ | Alpaca Markets SDK |
@@ -44,49 +44,61 @@
 day-trading/
 ├── .github/workflows/ci.yml     # Backend lint+test, frontend build
 ├── backend/
-│   ├── app/                     # FastAPI application (83 .py files)
-│   │   ├── api/                 # REST endpoints (11 routers)
+│   ├── app/                     # FastAPI application (~100 .py files)
+│   │   ├── advisor/             # AI Advisor: Claude client, planner, signal quality, risk tuner, feedback
+│   │   ├── api/                 # REST endpoints (13 routers)
 │   │   ├── auth/                # JWT auth (register, login, refresh)
-│   │   ├── backtest/            # Engine + optimizer
+│   │   ├── backtest/            # Engine + optimizer + portfolio runner
 │   │   ├── core/                # Database, Redis, pub/sub, email, circuit breaker, logging, encryption
-│   │   ├── data/                # CCXT ingestion, DB-backed candle storage
+│   │   ├── data/                # CCXT ingestion, DB-backed candle storage (bulk upsert)
 │   │   ├── engine/              # 6-layer signal pipeline
-│   │   │   └── layers/          # regime, trend, zones, confluence, triggers, risk, hmm_regime
+│   │   │   └── layers/          # regime, trend, zones, confluence, triggers, risk, hmm_regime, feedback_filter
 │   │   ├── execution/           # DB-backed executor, position manager, risk checks
 │   │   │   └── adapters/        # BrokerAdapter ABC, Paper, Alpaca, CCXT, BrokerRouter
-│   │   ├── models/              # SQLAlchemy models (user, signal, trade, candle, strategy, order, position, backtest_result)
-│   │   ├── tasks/               # Celery tasks + Beat schedule (8 periodic tasks)
+│   │   ├── models/              # SQLAlchemy models (11 models)
+│   │   ├── tasks/               # Celery tasks + Beat schedule (12 periodic tasks)
 │   │   ├── ws/                  # WebSocket hub (signals + prices + trades)
-│   │   ├── config.py            # Settings with SF_ env prefix
-│   │   ├── main.py              # FastAPI app with middleware + all routers
-│   │   └── worker.py            # Celery worker + Beat schedule
-│   ├── tests/                   # 45 test files, 296 tests
-│   ├── scripts/                 # run_backtests.py
-│   ├── docker-compose.yml       # TimescaleDB + Redis (dev)
+│   │   ├── config.py            # Settings with SF_ env prefix + AI feature flags
+│   │   ├── main.py              # FastAPI app with middleware + 13 routers
+│   │   └── worker.py            # Celery worker + Beat schedule (12 tasks)
+│   ├── tests/                   # ~50 test files
+│   ├── scripts/                 # run_backtests.py, init-db.sql
+│   ├── alembic/                 # 5 migration files
+│   ├── docker-compose.yml       # Dev: 5 services (db, redis, api, worker, beat)
 │   ├── Dockerfile               # Dev Dockerfile
 │   ├── Dockerfile.prod          # Multi-stage production Dockerfile
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
-│   │   ├── components/          # Reusable UI (14 components)
+│   │   ├── components/          # Reusable UI (~20 components)
 │   │   │   ├── analytics/       # EquityCurve, MetricsGrid, CorrelationMatrix
-│   │   │   ├── backtest/        # BacktestForm, BacktestResults, WalkForwardForm, WalkForwardResults
+│   │   │   ├── backtest/        # BacktestForm, BacktestResults, StrategyBacktestForm, StrategyBacktestResults, WalkForwardForm, WalkForwardResults
 │   │   │   ├── dashboard/       # PriceChart, StatsCards, SignalFeed, PositionsTable, RegimeWidget
-│   │   │   ├── layout/          # AppLayout, Sidebar, Topbar
+│   │   │   ├── layout/          # AppLayout, Sidebar, Topbar, HelpDrawer
+│   │   │   ├── settings/        # AiUsageTab
 │   │   │   └── ui/              # Badge, DataTable, Pagination
-│   │   ├── hooks/               # 14 data hooks (+ useBrokerConnections, useTradeStream)
+│   │   ├── hooks/               # 17 data hooks
 │   │   ├── lib/                 # api, auth, cn, colors, query, sidebar, theme, ws
-│   │   ├── pages/               # 9 pages + tests
+│   │   ├── pages/               # 8 pages (+ Login/Register)
 │   │   ├── App.tsx              # Router configuration
 │   │   ├── main.tsx             # Entry point
 │   │   └── index.css            # Theme tokens (dark/light)
 │   ├── package.json
 │   └── tsconfig.app.json
-├── docs/plans/                  # 6 plan documents
+├── docs/
+│   ├── PROJECT-STATUS.md        # This file
+│   ├── SESSION-CHANGELOG-2026-03-02.md  # Detailed session changelog
+│   ├── DEPLOYMENT-GUIDE.md
+│   ├── SETUP-GUIDE.md
+│   ├── TEAM-HANDOFF.md
+│   ├── USER-GUIDE.md
+│   ├── WORKFLOW-GITHUB-AND-DEPLOYMENT.md
+│   ├── backtest-results-phase2.md
+│   ├── trading-risk-management.md
+│   └── plans/                   # Implementation plans
 ├── docker-compose.prod.yml      # Production Docker Compose (5 services)
 ├── CLAUDE.md                    # Project rules
-├── SignalForge-Technical-Plan.md # Original design spec
-└── kraken-reference/            # UI inspiration screenshots
+└── SignalForge-Technical-Plan.md # Original design spec
 ```
 
 ---
@@ -109,13 +121,6 @@ day-trading/
 - Backtest engine + CLI runner + data pipeline
 - Password gate (frontend) + login page placeholder
 
-**Key files:**
-- `backend/app/auth/` — JWT auth system
-- `backend/app/data/` — CCXT ingestion + candle storage
-- `backend/app/engine/indicators.py` — 8 technical indicators
-- `backend/app/backtest/engine.py` — BacktestEngine with full metrics
-- `frontend/src/components/PasswordGate.tsx` — Password: `signalforge`
-
 ### Phase 2: Signal Engine (Commits `e7f23d2` → `86bb184`)
 
 **What was built:**
@@ -123,69 +128,43 @@ day-trading/
   - **Layer 0 — RegimeDetector**: ADX + ATR percentile → Regime enum (TRENDING, RANGING, TRANSITIONING, CHAOTIC). CHAOTIC blocks all trades.
   - **Layer 1 — TrendFilter**: Multi-timeframe EMA + ADX + Ichimoku → Trend direction + strength
   - **Layer 2 — ZoneIdentifier**: Fibonacci retracements, S/R from swing pivots, VWAP zones → EntryZone list
-  - **Layer 3 — ConfluenceScorer**: 9 weighted factors (trend alignment, zone strength, momentum, etc.) → 0-100 score. Threshold: 40
+  - **Layer 3 — ConfluenceScorer**: 9 weighted factors → 0-100 score. Threshold: configurable (default 40)
   - **Layer 4 — TriggerDetector**: 5 trigger types (EMA crossover, RSI reversal, MACD cross, Bollinger bounce, volume spike). Needs 2+ confirmations.
   - **Layer 5 — RiskManager**: ATR-based stops, Fibonacci targets (TP1/TP2/TP3), Kelly-criterion position sizing
-- **Layer 6 — ReversalMonitor**: 4 severity levels (caution, warning, critical, exit), actions from tighten_stop to close_position
-- **SignalPipeline orchestrator** (`engine/pipeline.py`): Chains all 6 layers, early-exits on blocks, picks best zone by confluence
-- **Signal + Trade DB models** with SQLAlchemy
-- **Walk-Forward Optimizer** (`backtest/optimizer.py`): Grid search with k-fold train/test splits, WFOResult
-- **Backtest results**: EUR/USD, BTC/USDT, SPY tested (documented in `docs/plans/`)
+- **Layer 6 — ReversalMonitor**: 4 severity levels, actions from tighten_stop to close_position
+- **SignalPipeline orchestrator** (`engine/pipeline.py`): Chains all 6 layers, early-exits on blocks with `block_reason`, picks best zone by confluence
+- **Walk-Forward Optimizer**: Grid search with k-fold train/test splits
 
 **Pipeline flow:**
 ```
-Candles → Regime (block if CHAOTIC)
-       → Trend (block if neutral)
-       → Zones (skip if none)
-       → Confluence (skip if < 40)
-       → Triggers (skip if < 2 confirmations)
-       → Risk (position sizing, stops, targets)
-       → Signal
+Candles → Regime (block if CHAOTIC → block_reason: chaotic_regime)
+       → Trend (block if neutral → block_reason: no_trend)
+       → Zones (skip if none → block_reason: no_zones)
+       → Confluence (skip if < threshold → block_reason: low_confluence)
+       → Triggers (skip if < 2 confirmations → block_reason: no_trigger)
+       → Risk (sizing, stops, targets → block_reason: risk_rejected:*)
+       → Signal with confluence_details
 ```
 
 ### Phase 3: API & Paper Trading (Commits `6b39c7f` → `d02d6b9`)
 
 **What was built:**
-- **10 API routers** all under `/api` prefix:
-  - `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`
-  - `GET /api/signals`, `GET /api/signals/{id}`, `POST /api/signals/generate`
-  - `GET /api/trades`, `GET /api/trades/{id}`, `GET /api/trades/stats`
-  - `GET|POST|PUT|DELETE /api/strategies`, `PUT /api/strategies/{id}/activate`
-  - `GET /api/market/symbols`, `GET /api/engine/status`
-  - `POST /api/backtests`, `GET /api/backtests`
-  - `GET /api/positions`, `POST /api/positions/{id}/close`
-- **Auth dependency**: `get_current_user` extracts user_id from JWT Bearer token
-- **Order Executor**: Pre-trade risk checks (daily loss limit, max positions, cooldown) + paper mode via Alpaca SDK
-- **PositionManager**: Track open positions, trail stops, close with PnL calculation
-- **Redis pub/sub**: Signal and price channels for real-time broadcasting
-- **Celery setup**: Async backtest tasks, Redis broker
-- **WebSocket hub**: `/ws/signals` and `/ws/prices` for real-time streaming
-- **Strategies CRUD API**: Full CRUD with activate/deactivate toggle
-
-**Auth flow:**
-1. `POST /api/auth/register` → creates user, returns tokens
-2. `POST /api/auth/login` → validates credentials, returns `{ access_token, refresh_token }`
-3. All protected endpoints require `Authorization: Bearer <token>` header
-4. `get_current_user` dependency extracts and validates JWT → returns `user_id: str`
+- 10 API routers all under `/api` prefix
+- Auth dependency: `get_current_user` extracts user_id from JWT Bearer token
+- Order Executor with pre-trade risk checks + paper mode
+- PositionManager: Track open positions, trail stops, close with PnL
+- Redis pub/sub: Signal and price channels for real-time broadcasting
+- Celery setup: Async backtest tasks, Redis broker
+- WebSocket hub: `/ws/signals` and `/ws/prices` for real-time streaming
+- Strategies CRUD API with activate/deactivate toggle
 
 ### Phase 4: Frontend Dashboard (Commits `540ca66` → `91b3377`)
 
 **What was built:**
-- **Router + Auth**: React Router DOM with protected routes, Zustand auth store (persisted to `sf-auth` localStorage), login/register pages
-- **Layout shell**: Collapsible sidebar (8 nav items), topbar with theme toggle + logout
-- **9 pages**:
-  1. **Dashboard** (`/`) — StatsCards (4 metrics), PriceChart (lightweight-charts candlestick), RegimeWidget, SignalFeed, PositionsTable
-  2. **Signals** (`/signals`) — DataTable with 9 columns, Generate Signal button, confluence progress bars, pagination
-  3. **Trades** (`/trades`) — Stats summary (4 cards) + trade history table (11 columns), P&L coloring
-  4. **Backtest Lab** (`/backtest`) — Split layout: BacktestForm (left) + BacktestResults (right)
-  5. **Journal** (`/journal`) — Was placeholder, now real (see Phase 5)
-  6. **Strategy Config** (`/config`) — Strategy cards with CRUD, activate toggle
-  7. **API Keys** (`/keys`) — Broker connection cards (Alpaca, Binance)
-  8. **Analytics** (`/analytics`) — Added in Phase 5
-  9. **Login/Register** (`/login`, `/register`)
-- **12 hooks**: useSignals, useTrades, useTradeStats, usePositions, useAccountState, useEngineStatus, useBacktest, useStrategies, useSymbols, useSignalStream, usePriceStream, useWebSocket
-- **WebSocket manager** (`lib/ws.ts`): Auto-reconnect, subscribe/unsubscribe pattern
-- **API client** (`lib/api.ts`): Typed fetch wrapper with Bearer auth, 401 auto-logout
+- Router + Auth: React Router DOM with protected routes, Zustand auth store
+- Layout shell: Collapsible sidebar, topbar with theme toggle + logout
+- 9 pages (many since replaced — see Phase 7)
+- 12 hooks, WebSocket manager, API client with Bearer auth
 
 **Theme system** (CSS custom properties in `index.css`):
 ```
@@ -194,132 +173,181 @@ Dark:  bg-base=#0B0B14, bg-surface=#141420, accent=#7B61FF, text=#F0F0F5
 Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
 ```
 
-**Sidebar navigation order:**
-Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → Strategy → API Keys
-
 ### Phase 5: Advanced Features (Commits `5eede6a` → `f144c59`)
 
 **What was built:**
-
-#### Backend (6 commits)
-1. **Sortino + Calmar ratios** in `backtest/engine.py` — added `_sortino()` and `_calmar()` methods to BacktestEngine metrics
-2. **HMM Regime Detection** (`engine/layers/hmm_regime.py`):
-   - `HMMRegimeModel` class with 3 states: `low_vol`, `trending`, `high_vol`
-   - Features: log returns + ATR/price ratio + ADX
-   - `fit()`, `predict_current()`, `state_probabilities()`, `serialize()`/`deserialize()`
-   - Celery training task (`tasks/hmm_train.py`): trains on synthetic data, caches in Redis (7-day TTL)
-3. **Trade Journal AI** (`api/journal.py`):
-   - `POST /api/journal/analyze` — sends trade data to Claude Haiku 4.5, returns analysis/patterns/recommendations
-   - `GET /api/journal/patterns` — aggregate pattern analysis from last 50 trades (rule-based: low confluence losses, tight stops, low R:R wins)
-   - Gracefully degrades if `SF_ANTHROPIC_API_KEY` not set
-4. **Email Alerts** (`api/alerts.py` + `core/email.py`):
-   - `GET /api/alerts/config` + `PUT /api/alerts/config` — in-memory alert configuration
-   - `build_signal_email()` + `build_daily_summary_email()` + `send_email()` via Resend API
-   - Requires `SF_RESEND_API_KEY` and `SF_RESEND_DOMAIN`
-5. **Analytics API** (`api/analytics.py`):
-   - `GET /api/analytics/equity` — equity curve from closed trades with Sharpe/Sortino/Calmar ratios
-   - `GET /api/analytics/correlation?symbol_a=X&symbol_b=Y` — Pearson return correlation (synthetic data for now)
-6. **Walk-Forward Optimization endpoint** (`api/backtests.py`):
-   - `POST /api/backtests/optimize` — WFORequest with param_grid, n_folds, train_pct → WFOResult with best_params, fold_results, out_of_sample_metrics
-
-#### Frontend (3 commits)
-1. **Journal page** — replaced placeholder with full AI journal:
-   - Pattern Summary card (summary, top patterns as badges, areas to improve)
-   - Recent Trades section with trade cards + per-trade "Analyze" button
-   - Inline AI analysis display (analysis text, pattern badges, recommendation bullets)
-   - Hooks: `useAnalyzeTrade()` mutation, `usePatternSummary()` query
-2. **Walk-Forward UI** in Backtest Lab:
-   - Tab toggle: "Single Backtest" / "Walk-Forward"
-   - `WalkForwardForm.tsx`: symbol, timeframe, days, n-folds slider, train % slider
-   - `WalkForwardResults.tsx`: best params card, OOS metrics, fold results table
-   - Hook: `useRunWalkForward()` mutation
-3. **Analytics page** (`/analytics`):
-   - `EquityCurve.tsx` — lightweight-charts line chart, theme-aware
-   - `MetricsGrid.tsx` — 6 metric cards (Total Return, Max Drawdown, Sharpe, Sortino, Calmar, data points)
-   - `CorrelationMatrix.tsx` — two symbol dropdowns, correlation value with interpretation
-   - Hook: `useEquityHistory()`, `useCorrelation()`
-   - Added to Sidebar (BarChart2 icon) and App.tsx router
+- Sortino + Calmar ratios in backtest engine
+- HMM Regime Detection with 3 states (low_vol, trending, high_vol)
+- Trade Journal AI (Claude Haiku analysis)
+- Email Alerts via Resend API
+- Analytics API (equity curve, correlation)
+- Walk-Forward Optimization endpoint + frontend UI
+- Analytics page (EquityCurve, MetricsGrid, CorrelationMatrix)
 
 ### Phase 6: Live Trading & Hardening (Commits `2bd97d6` → `79baeb3`)
 
 **What was built:**
+- **DB Models**: Order (17 cols), Position (14 cols), BacktestResult (13 cols)
+- **Broker Adapters**: BrokerAdapter ABC, PaperAdapter, AlpacaAdapter, CCXTAdapter, BrokerRouter
+- **Encryption + Broker API**: Fernet encryption for credentials, CRUD endpoints
+- **DB-Backed Execution**: PositionManager, OrderExecutor, CandleStorage all async SQLAlchemy
+- **Celery Tasks**: Ingestion, pipeline, execution, polling, position management, alerts
+- **Real-Time**: Redis subscriber + WebSocket broadcasting for signals/prices/trades
+- **Hardening**: Circuit breaker, rate limiting, structured logging, request IDs
+- **Production Docker**: Multi-stage Dockerfile, 5-service docker-compose.prod.yml
 
-#### Wave 1: Foundation (3 agents)
-1. **DB Models** (`models/order.py`, `models/position.py`, `models/backtest_result.py`):
-   - **Order model**: 17 columns, FKs to users/signals, tracks broker_order_id, filled_price, status lifecycle
-   - **Position model**: 14 columns, FKs to users/orders, tracks entry/current price, SL/TP, unrealized PnL
-   - **BacktestResult model**: 13 columns, FKs to users/strategies, stores metrics JSON + trade_count
-   - User model extended with `alert_config: JSON` column
-2. **Broker Adapter Layer** (`execution/adapters/`):
-   - `BrokerAdapter` ABC with submit_order, cancel_order, get_order, list_positions, get_balance
-   - `PaperAdapter` — in-memory simulation with configurable slippage
-   - `AlpacaAdapter` — Alpaca Markets SDK integration for stocks
-   - `CCXTAdapter` — CCXT exchange adapter for crypto (Binance default)
-   - `BrokerRouter` — dispatches to correct adapter by symbol class (is_crypto_symbol helper)
-   - Shared types: OrderSide, OrderType, OrderStatus enums + BrokerOrder, BrokerPosition, AccountBalance dataclasses
-3. **Encryption + Broker API** (`core/encryption.py`, `api/broker.py`):
-   - Fernet symmetric encryption for broker API credentials
-   - `POST /api/broker` — store encrypted broker connection
-   - `GET /api/broker` — list connections (credentials masked)
-   - `DELETE /api/broker/{id}` — remove connection
+### Phase 7: AI Advisor & Risk Management (Post-commit, uncommitted)
 
-#### Wave 2: Core Wiring (3 agents)
-4. **DB-Backed PositionManager** (`execution/position_manager.py`):
-   - Complete rewrite from in-memory to async SQLAlchemy
-   - Static methods: open_position, close_position, trail_stop, update_price, list_open, get_position
-   - Automatically creates Trade rows on position close (journal stays in sync)
-   - Positions API (`api/positions.py`) rewritten for DB queries
-5. **DB-Backed OrderExecutor** (`execution/executor.py`):
-   - Dual-mode: async `execute_signal()` (uses BrokerRouter + DB Order persistence) + legacy sync `place_order()`
-   - Creates Order row → submits via adapter → updates with broker response
-6. **DB-Backed CandleStorage** (`data/storage.py`):
-   - `save_candles_db()`, `load_candles_db()`, `load_close_prices()` — async TimescaleDB methods
-   - Market API candles endpoint wired to real DB data
-   - Analytics correlation endpoint tries real data, falls back to synthetic
+> This phase represents all work done after Phase 6 was committed. All changes are currently uncommitted.
 
-#### Wave 3: Celery Tasks (3 agents)
-7. **Ingestion Tasks** (`tasks/ingest_candles.py`, `tasks/run_pipeline.py`):
-   - `ingest_candles`: Fetches OHLCV for 3 symbols × 2 timeframes via CCXT, stores in DB
-   - `run_signal_pipeline`: Runs SignalPipeline per symbol, persists actionable signals
-   - Celery Beat schedule: ingest every 5 min, pipeline every 5 min (offset)
-8. **Execution Tasks** (`tasks/execute_signals.py`, `tasks/poll_orders.py`, `tasks/manage_positions.py`, `tasks/reconcile.py`):
-   - `execute_pending_signals`: Picks up pending signals, executes via BrokerRouter
-   - `poll_open_orders`: Checks order status, opens positions on fill
-   - `manage_open_positions`: Checks SL/TP, closes positions when hit
-   - `reconcile_broker`: Placeholder for broker state reconciliation
-   - Beat schedule: every 30s (execute), every 1min (poll/manage), daily (reconcile)
-9. **Alert Tasks** (`tasks/send_alerts.py`, modified `api/alerts.py`):
-   - Alert config persisted to User.alert_config JSON column
-   - `send_daily_summary`: Aggregates daily trades, sends email via Resend
-   - Backtest results persisted to BacktestResult model
-   - HMM training tries real candle data before synthetic fallback
+#### 7a. AI Advisor System (`app/advisor/`)
 
-#### Wave 4: Real-Time + Hardening (2 agents)
-10. **Redis Subscriber + WebSocket Broadcasting** (`core/redis_subscriber.py`, `ws/hub.py`):
-    - `RedisSubscriber`: Subscribes to `signalforge:*` channels, routes to ConnectionManager.broadcast()
-    - `TradePublisher`: Publishes to `signalforge:trades` channel
-    - New `/ws/trades` WebSocket endpoint
-    - Startup/shutdown lifecycle wired in main.py
-11. **Hardening** (`core/circuit_breaker.py`, `core/logging_config.py`, modified `main.py`):
-    - `CircuitBreaker`: Per-broker CLOSED→OPEN→HALF_OPEN state machine (configurable failure threshold, recovery timeout)
-    - `structlog` configuration: JSON renderer for production, console for development
-    - `slowapi` rate limiting with `get_remote_address` key function
-    - `RequestIDMiddleware`: UUID per request in X-Request-ID header
-    - Enhanced `/health` endpoint: checks DB connectivity + Redis ping
-    - JWT safety check: blocks startup if default secret used in production
+**New module** — Complete AI-powered trading advisor:
 
-#### Wave 5: Production + Frontend (2 agents)
-12. **Production Docker** (`Dockerfile.prod`, `docker-compose.prod.yml`, `.env.prod.example`):
-    - Multi-stage Dockerfile: builder stage compiles TA-Lib C library, slim runtime image
-    - 5-service docker-compose.prod.yml: timescaledb, redis, api (uvicorn workers), worker, beat
-    - Environment template with all SF_ variables
-13. **Frontend Wiring** (`hooks/useBrokerConnections.ts`, `hooks/useTradeStream.ts`, `pages/ApiKeys.tsx`):
-    - `useBrokerConnections`: TanStack Query hooks for broker CRUD (list, create, delete)
-    - `useTradeStream`: WebSocket hook for real-time trade stream via /ws/trades
-    - ApiKeys page rewritten: connection cards with status badges, connect form, real API integration
+1. **Claude Client** (`advisor/claude_client.py`):
+   - Centralized client with 3 model tiers: FAST (Haiku), DEEP (Sonnet), EXPERT (Opus)
+   - Built-in response caching (Redis, configurable TTL)
+   - Daily API call limits via Redis counter
+   - Automatic usage metering — all calls record tokens + cost to DB
+   - Sync and async paths
 
-**Test count progression:** 197 → 232 (Wave 1) → 262 (Wave 2) → 278 (Wave 3) → 296 (Wave 4+5)
-**Frontend tests:** 37 → 41 (Wave 5)
+2. **AI Planner** (`advisor/planner.py`):
+   - Generates investment allocation plans matching user risk tolerance to strategy presets
+   - Selects 5–15 crypto pairs from scored candidates via Claude
+   - Configures risk parameters per preset (Conservative/Balanced/Aggressive)
+   - Algorithmic fallback when Claude unavailable
+
+3. **Signal Quality Evaluator** (`advisor/signal_quality.py`):
+   - Claude-powered second-opinion on every signal
+   - Assesses 14 confluence factors, candle patterns, multi-timeframe alignment
+   - Returns quality score (0–100), recommendation (strong_confirm/confirm/caution/reject)
+   - Position size adjustment factor
+
+4. **Multi-Timeframe Analyzer** (`advisor/multi_tf_analyzer.py`):
+   - Synthesizes 1h + 4h + 1d data for timeframe alignment
+   - Returns confidence score + alignment classification (aligned/mixed/conflicting)
+
+5. **Risk Tuner** (`advisor/risk_tuner.py`):
+   - Analyzes recent trades, recommends parameter adjustments
+   - Conservative: max 20% change per parameter per cycle
+   - Tunes: min_confluence, max_risk_per_trade, max_daily_loss, atr_sl_multiplier, min_risk_reward
+   - Algorithmic fallback rules
+
+6. **Feedback Synthesizer** (`advisor/feedback_synthesizer.py`):
+   - Analyzes last 50 trades for recurring patterns (symbol losses, low-confluence failures)
+   - Generates FeedbackRule objects via Claude (or algorithmic fallback)
+   - Rules expire after 30 days
+
+7. **Pattern Analyzer** (`advisor/pattern_analyzer.py`):
+   - Deep trade history analysis via Claude
+   - Returns metrics, patterns, strengths, weaknesses, prioritized recommendations
+
+8. **Cost Tracking** (`advisor/pricing.py`, `advisor/anthropic_admin.py`):
+   - Static pricing lookup for Haiku ($1/$5), Sonnet ($3/$15), Opus ($5/$25) per million tokens
+   - Dual-source architecture: Anthropic Admin API for real billing data (when admin key available), local `ai_insights` table as fallback
+   - Prepaid credit management via Redis (manual entry from Anthropic console)
+   - Daily cost histogram chart, model/feature breakdown, recent call log
+   - Admin API requires `sk-ant-admin-...` key (not available on individual Anthropic plans; code is dormant until key is configured)
+
+#### 7b. Advanced Risk Management
+
+**8 configurable risk features** added to strategy config:
+
+| # | Feature | Config Keys | Description |
+|---|---------|-------------|-------------|
+| 1 | Trailing Stop | `trailing_stop_enabled`, `atr_trail_multiplier` | ATR-based trailing stop-loss |
+| 2 | Drawdown Breaker | `drawdown_breaker_enabled`, `max_drawdown_pct` | Circuit breaker halts trading at drawdown limit |
+| 3 | Kelly Criterion | `kelly_enabled`, `kelly_fraction`, `kelly_min_trades`, `kelly_lookback` | Dynamic position sizing from win/loss history |
+| 4 | Break-Even Stop | `break_even_enabled`, `break_even_r_multiple` | Moves SL to entry after reaching R-multiple |
+| 5 | Time Stop | `max_hold_hours`, `time_stop_profit_threshold_pct` | Closes positions after max hold time |
+| 6 | CPPI | `cppi_enabled`, `cppi_multiplier`, `cppi_max_drawdown_pct` | Portfolio insurance — scales exposure based on drawdown cushion |
+| 7 | Correlation Monitor | `correlation_monitor_enabled`, `correlation_threshold`, `correlation_auto_reduce` | Reduces correlated positions automatically |
+
+**Three built-in strategy presets:**
+- **Conservative Swing** — min_confluence: 70, max_risk: 1%, CPPI enabled, break-even at 1.5R
+- **Balanced Momentum** — min_confluence: 55, max_risk: 2%, Kelly enabled, trailing stops
+- **Aggressive Scalper** — min_confluence: 40, max_risk: 3%, all features enabled
+
+#### 7c. Feedback Filter Layer (`engine/layers/feedback_filter.py`)
+
+New pipeline layer that applies learned FeedbackRule objects as pre/post-filter:
+- Checks rules for symbol/regime match
+- Applies skip actions (`avoid_pattern`) or confluence overrides (`adjust_param`)
+- Creates a learning loop: Trade analysis → Rule synthesis → Filter → Better signals
+
+#### 7d. AI Enrichment in Pipeline (`tasks/run_pipeline.py`)
+
+The signal pipeline now enriches every trade signal with AI analysis (non-blocking):
+1. Multi-timeframe confidence + alignment check
+2. Signal quality score (0–100) + recommendation
+3. Position size adjustment factor from AI
+
+New columns on Signal model: `ai_quality_score`, `ai_reasoning`, `ai_recommendation`, `mtf_confidence`, `mtf_alignment`
+
+#### 7e. Execution Risk Checks (`tasks/execute_signals.py`)
+
+Pre-execution checks added:
+- **Drawdown breaker**: Queries DrawdownBreaker, reduces or blocks sizing
+- **Correlation penalty**: Reduces position size for correlated holdings
+- Both are config-driven (opt-in per strategy)
+
+#### 7f. Portfolio Backtester (`backtest/portfolio_runner.py`)
+
+Runs portfolio-level backtests across all symbols in a strategy:
+- Divides capital equally across symbols
+- Runs engine per symbol, aggregates equity curves
+- Returns per-symbol + portfolio-level metrics (return, Sharpe, Sortino, max drawdown)
+
+#### 7g. Data Models (`models/ai_insight.py`)
+
+Two new SQLAlchemy models:
+- **AIInsight**: Audit trail for all AI API calls (type, model, tokens, latency, cost_usd, reasoning, result_json)
+- **FeedbackRule**: Auto-generated trading rules (type, conditions, confidence, is_active, expires_at)
+
+#### 7h. Frontend Restructure
+
+**Major UI overhaul** — consolidated from 9 pages to 8 workflow-oriented pages:
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Dashboard | StatsCards, PriceChart (6 timeframes), RegimeWidget, SignalFeed, PositionsTable |
+| `/advisor` | AI Advisor | 3-step workflow: Scan Market → Generate Plan → Deploy Strategy. Master-detail layout with scan history sidebar |
+| `/strategies` | Strategies | List deployed strategies with performance metrics (P&L, win rate, Sharpe). Activate/deactivate/delete |
+| `/strategies/:id` | Strategy Detail | Signals tab (paginated signal table) + Validation tab (integrated backtest) |
+| `/backtest` | Backtest | Standalone strategy validation — test deployed strategies or AI plans |
+| `/trades` | Trades | Trade history with P&L, stats summary |
+| `/analytics` | Analytics | Equity curve, metrics grid, correlation matrix |
+| `/settings` | Settings | 3 tabs: Connections (broker API keys), Alerts (email config), AI Usage (cost tracking) |
+
+**Sidebar navigation:** Dashboard → AI Advisor → Strategies → Trades → Analytics → Settings
+
+**Pages removed** (redirected to new locations):
+- `/signals` → `/strategies`
+- `/config` → `/strategies`
+- `/journal` → `/trades`
+- `/keys` → `/settings`
+- `/guide` → `/` (HelpDrawer in layout header)
+
+**New components:**
+- `StrategyBacktestForm` / `StrategyBacktestResults` — Strategy-aware backtest UI
+- `HelpDrawer` — Slide-out markdown user guide
+- `AiUsageTab` — Claude API cost dashboard with daily charts, credit management, call logs
+
+**New hooks:**
+- `useAiUsage` — AI cost/usage data
+- `useAlertConfig` — Alert preferences CRUD
+- `useStrategyBacktest` — Run strategy backtests
+
+#### 7i. Infrastructure & Bug Fixes (2026-03-02)
+
+See `docs/SESSION-CHANGELOG-2026-03-02.md` for full details:
+
+- **Docker Compose**: Added `worker` and `beat` services to dev compose (5 services total)
+- **Ingestion**: Expanded from 2 to 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d)
+- **Candle Storage**: Replaced row-by-row upsert with bulk PostgreSQL `ON CONFLICT DO UPDATE` — concurrent-safe and faster
+- **Pipeline Logging**: Added `block_reason` to all pipeline output for debugging
+- **Broker UI**: Removed non-functional paper mode from Settings connect form — live-only
+- **DB Migrations**: 3 new Alembic migrations (AI columns, AI insights table, cost_usd column)
 
 ---
 
@@ -327,7 +355,7 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/health` | No | Health check |
+| GET | `/health` | No | Health check (DB + Redis) |
 | POST | `/api/auth/register` | No | Create user account |
 | POST | `/api/auth/login` | No | Login, returns JWT tokens |
 | POST | `/api/auth/refresh` | No | Refresh access token |
@@ -338,16 +366,22 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
 | GET | `/api/trades/{id}` | Yes | Get trade by ID |
 | GET | `/api/trades/stats` | Yes | Trade statistics summary |
 | GET | `/api/strategies` | Yes | List strategies |
+| GET | `/api/strategies/presets` | Yes | List strategy presets |
 | POST | `/api/strategies` | Yes | Create strategy |
 | PUT | `/api/strategies/{id}` | Yes | Update strategy |
 | DELETE | `/api/strategies/{id}` | Yes | Delete strategy |
 | PUT | `/api/strategies/{id}/activate` | Yes | Toggle strategy active state |
+| POST | `/api/strategies/{id}/tune` | Yes | AI risk tuning |
+| GET | `/api/strategies/{id}/feedback-rules` | Yes | List feedback rules |
+| POST | `/api/strategies/{id}/feedback-rules/{rule_id}/toggle` | Yes | Toggle feedback rule |
+| POST | `/api/strategies/{id}/synthesize-feedback` | Yes | Generate feedback rules |
 | GET | `/api/market/symbols` | No | Available trading symbols |
 | GET | `/api/market/candles/{symbol}/{tf}` | Yes | Candle data from DB |
 | GET | `/api/engine/status` | No | Engine running status |
 | POST | `/api/backtests` | Yes | Run single backtest (persisted) |
 | GET | `/api/backtests` | Yes | List past backtests from DB |
 | POST | `/api/backtests/optimize` | Yes | Run walk-forward optimization |
+| POST | `/api/backtests/strategy` | Yes | Portfolio backtest (all symbols) |
 | GET | `/api/positions` | Yes | List open positions (DB-backed) |
 | GET | `/api/positions/account` | Yes | Account state (equity, PnL, open count) |
 | POST | `/api/positions/{id}/close` | Yes | Close a position (creates Trade row) |
@@ -360,6 +394,11 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
 | PUT | `/api/alerts/config` | Yes | Update alert configuration |
 | GET | `/api/analytics/equity` | Yes | Equity curve + risk metrics |
 | GET | `/api/analytics/correlation` | Yes | Symbol pair correlation |
+| GET | `/api/advisor/scan` | Yes | AI market scan |
+| POST | `/api/advisor/plan` | Yes | Generate investment plan |
+| POST | `/api/advisor/deploy` | Yes | Deploy plan as strategy |
+| GET | `/api/ai-usage` | Yes | AI usage & cost summary (dual-source: Anthropic Admin API or local) |
+| PUT | `/api/ai-usage/credit` | Yes | Update prepaid credit amount |
 | WS | `/ws/signals` | No | Real-time signal stream |
 | WS | `/ws/prices` | No | Real-time price stream |
 | WS | `/ws/trades` | No | Real-time trade stream |
@@ -373,13 +412,33 @@ Dashboard → Signals → Trades → Backtest Lab → Journal → Analytics → 
 | `/login` | Login | `LoginPage` |
 | `/register` | Register | `RegisterPage` |
 | `/` | Dashboard | `DashboardPage` |
-| `/signals` | Signals | `SignalsPage` |
+| `/advisor` | AI Advisor | `AdvisorPage` |
+| `/strategies` | Strategies | `StrategiesPage` |
+| `/strategies/:id` | Strategy Detail | `StrategyDetailPage` |
+| `/backtest` | Backtest | `BacktestPage` |
 | `/trades` | Trades | `TradesPage` |
-| `/backtest` | Backtest Lab | `BacktestPage` (tabs: Single / Walk-Forward) |
-| `/journal` | Trade Journal | `JournalPage` |
 | `/analytics` | Analytics | `AnalyticsPage` |
-| `/config` | Strategy Config | `StrategyConfigPage` |
-| `/keys` | API Keys | `ApiKeysPage` |
+| `/settings` | Settings | `SettingsPage` |
+
+---
+
+## Database Models (11 total)
+
+| Model | Table | Key Columns |
+|-------|-------|-------------|
+| User | users | id, email, hashed_password, alert_config (JSON) |
+| Signal | signals | id, strategy_id, symbol, timeframe, direction, entry/SL/TP, confluence_score, regime, status, ai_quality_score, ai_reasoning, ai_recommendation, mtf_confidence, mtf_alignment |
+| Trade | trades | id, user_id, symbol, side, entry_price, exit_price, pnl, position_size |
+| Strategy | strategies | id, user_id, name, config (JSON), is_active |
+| Order | orders | id, user_id, signal_id, broker_order_id, status, filled_price |
+| Position | positions | id, user_id, order_id, entry_price, current_price, sl, tp, unrealized_pnl |
+| Candle | candles | time, symbol, exchange, timeframe, OHLCV (composite PK) |
+| BrokerConnection | broker_connections | id, user_id, broker, api_key_enc, api_secret_enc, is_paper |
+| BacktestResult | backtest_results | id, user_id, strategy_id, metrics (JSON), trade_count |
+| AIInsight | ai_insights | id, insight_type, signal_id, strategy_id, model, tokens_in, tokens_out, latency_ms, cost_usd, reasoning, result_json |
+| FeedbackRule | feedback_rules | id, strategy_id, rule_type, description, conditions (JSON), confidence, is_active, expires_at |
+
+**Alembic migration chain:** `23e8e2f4176c` → `a1b2c3d4e5f6` → `b2c3d4e5f6a7` → `c3d4e5f6a7b8` → `d4e5f6a7b8c9`
 
 ---
 
@@ -391,8 +450,8 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 |----------|---------|-------------|
 | `SF_DATABASE_URL` | `postgresql+asyncpg://signalforge:signalforge@localhost:5432/signalforge` | PostgreSQL connection |
 | `SF_REDIS_URL` | `redis://localhost:6379/0` | Redis connection |
-| `SF_CELERY_BROKER_URL` | `redis://localhost:6379/1` | Celery broker |
-| `SF_CELERY_RESULT_BACKEND` | `redis://localhost:6379/2` | Celery results |
+| `SF_CELERY_BROKER_URL` | `redis://redis:6379/1` | Celery broker |
+| `SF_CELERY_RESULT_BACKEND` | `redis://redis:6379/2` | Celery results |
 | `SF_JWT_SECRET` | `dev-secret-change-in-production` | JWT signing secret |
 | `SF_JWT_ALGORITHM` | `HS256` | JWT algorithm |
 | `SF_JWT_EXPIRY_MINUTES` | `30` | Access token expiry |
@@ -400,7 +459,8 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | `SF_ALPACA_API_KEY` | `` | Alpaca broker API key |
 | `SF_ALPACA_API_SECRET` | `` | Alpaca broker secret |
 | `SF_ALPACA_PAPER` | `True` | Use paper trading |
-| `SF_ANTHROPIC_API_KEY` | `` | Claude API key (journal AI) |
+| `SF_ANTHROPIC_API_KEY` | `` | Claude API key (advisor + journal) |
+| `SF_ANTHROPIC_ADMIN_API_KEY` | `` | Anthropic Admin API (cost tracking) |
 | `SF_RESEND_API_KEY` | `` | Resend email API key |
 | `SF_RESEND_DOMAIN` | `signalforge.dev` | Email sender domain |
 | `SF_APP_NAME` | `SignalForge` | App display name |
@@ -409,201 +469,128 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | `SF_CORS_ORIGINS` | `["http://localhost:5173"]` | CORS allowed origins |
 | `VITE_API_URL` | `http://localhost:8000/api` | Frontend API base URL |
 
+**AI Feature Flags** (all in config.py):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ai_signal_quality_enabled` | `True` | Enable AI signal quality evaluation |
+| `ai_risk_tuning_enabled` | `False` | Enable adaptive risk parameter tuning |
+| `ai_feedback_loop_enabled` | `False` | Enable feedback rule synthesis |
+| `ai_multi_timeframe_enabled` | `True` | Enable multi-timeframe analysis |
+| `ai_pattern_analysis_enabled` | `True` | Enable pattern analysis in journal |
+| `ai_signal_quality_cache_ttl` | `300` | Signal quality cache TTL (seconds) |
+| `ai_risk_tuning_interval_hours` | `24` | Hours between risk tuning runs |
+| `ai_max_daily_api_calls` | `500` | Max Claude API calls per day |
+| `ai_prepaid_credit_usd` | `0.0` | Prepaid AI credit balance |
+
+---
+
+## Celery Beat Schedule (12 tasks)
+
+| Task | Schedule | Description |
+|------|----------|-------------|
+| `ingest_candles` | Every 60s | Fetch OHLCV for all symbols × 6 timeframes (1m, 5m, 15m, 1h, 4h, 1d) |
+| `run_signal_pipeline` | Every 5 min | Run 6-layer pipeline + AI enrichment per symbol |
+| `execute_pending_signals` | Every 30s | Execute pending signals with risk checks via PaperAdapter |
+| `poll_order_status` | Every 15s | Check order status, open positions on fill |
+| `manage_positions` | Every 60s | Monitor SL/TP/trailing/time-stop, close positions |
+| `reconcile_broker_state` | Every 5 min | Reconcile broker state (no-op in paper mode) |
+| `check_correlations` | Every 5 min | Check cross-symbol correlations |
+| `flush_ai_usage` | Every 60s | Flush AI usage metrics from Redis to DB |
+| `send_daily_summary` | Daily 17:00 UTC | Aggregate trades, send email summary |
+| `train_hmm_regime` | Sundays 02:00 UTC | Retrain HMM regime models |
+| `adaptive_risk_tuning` | Daily 03:00 UTC | AI-driven risk parameter adjustment |
+| `synthesize_feedback_rules` | Wednesdays 04:00 UTC | Generate feedback rules from trade patterns |
+
 ---
 
 ## Development Commands
 
 ```bash
-# Backend
+# Backend — Docker (recommended for development)
 cd backend
-docker compose up -d                        # Start TimescaleDB + Redis
-.venv/Scripts/python.exe -m pytest -q        # Run 296 tests
-.venv/Scripts/python.exe -m ruff check .     # Lint (0 errors)
-.venv/Scripts/python.exe -m uvicorn app.main:app --reload  # Dev server :8000
-python -m app.cli backtest --symbol BTC/USDT --timeframe 1h --days 30  # CLI
+docker.exe compose up -d                   # Start all 5 services (db, redis, api, worker, beat)
+docker.exe compose logs worker --tail=30   # Check worker logs
+docker.exe compose logs beat --tail=20     # Check beat logs
+docker.exe compose restart worker beat     # Restart after code changes
 
-# Celery Worker + Beat (Phase 6)
-celery -A app.worker worker --loglevel=info     # Worker
-celery -A app.worker beat --loglevel=info        # Beat scheduler
-
-# Production Docker (Phase 6)
-docker compose -f docker-compose.prod.yml up -d  # All 5 services
+# Backend — Local (testing/linting)
+cd backend
+.venv/Scripts/python.exe -m pytest -q        # Run tests
+.venv/Scripts/python.exe -m ruff check .     # Lint
 
 # Frontend
 cd frontend
 npm run dev          # Dev server :5173 (password gate: "signalforge")
-npx vitest run       # Run 41 tests
-npm run lint         # ESLint (0 errors)
+npx vitest run       # Tests
+npm run lint         # ESLint
 npx tsc -b --noEmit  # TypeScript check
-npm run build        # Production build (558KB JS, 30KB CSS)
+npm run build        # Production build
 
-# Full CI check
-cd backend && .venv/Scripts/python.exe -m pytest -q && .venv/Scripts/python.exe -m ruff check .
-cd ../frontend && npx vitest run && npm run lint && npx tsc -b --noEmit && npm run build
+# Production Docker
+docker compose -f docker-compose.prod.yml up -d  # All 5 services
+
+# Check candle data
+docker.exe compose exec db psql -U signalforge -c \
+  "SELECT timeframe, COUNT(*) FROM candles WHERE symbol='BTC/USDT' GROUP BY timeframe ORDER BY timeframe;"
 ```
 
----
-
-## Commit History (88 commits)
-
-### Phase 1: Foundation
-| Hash | Message |
-|------|---------|
-| `d872185` | chore: init repo with monorepo scaffold |
-| `471ba78` | feat(frontend): Vite + React + TypeScript + Tailwind 4 scaffold with theme tokens |
-| `8240a51` | feat(frontend): theme system, password gate, login page placeholder |
-| `bb88915` | chore(frontend): add frontend .gitignore |
-| `2d99433` | docs: add agent team handoff for Phase 1 |
-| `05a6ebe` | infra: Docker Compose with TimescaleDB, Redis, and FastAPI |
-| `abecce2` | ci: GitHub Actions for backend lint+test and frontend build |
-| `ace1434` | feat(backend): FastAPI skeleton with health endpoint, config, and test setup |
-| `3a339ee` | feat(backend): SQLAlchemy models and Alembic migrations setup |
-| `154e0c2` | feat(backend): JWT auth with register, login, refresh endpoints |
-| `8eb0681` | feat(backend): candle storage + CCXT ingestion pipeline |
-| `8e1e30e` | feat(backend): indicator library + Layer 1 (TrendFilter) + Layer 2 (ZoneIdentifier) |
-| `d310e8f` | feat(backend): backtest engine + CLI + data pipeline |
-| `4b45991` | docs: add original technical plan |
-| `e35b07a` | Merge branch 'worktree-agent-a751c186' |
-
-### Phase 2: Signal Engine
-| Hash | Message |
-|------|---------|
-| `e7f23d2` | docs: Phase 2 signal engine implementation plan |
-| `feb2f42` | feat(backend): Layer 0 — RegimeDetector with ADX + ATR percentile consensus |
-| `4252900` | feat(backend): Layer 3 — ConfluenceScorer with 9 weighted factors |
-| `a5bb08d` | feat(backend): Layer 4 — TriggerDetector with 5 trigger types, 2+ confirmation rule |
-| `7296cb6` | feat(backend): Layer 5 — RiskManager with ATR stops, Fib targets, position sizing |
-| `9556673` | feat(backend): Layer 6 — ReversalMonitor with severity-based exit actions |
-| `a869eb0` | feat(backend): SignalPipeline orchestrator + session/timing filters |
-| `466e5be` | feat(backend): Signal + Trade DB models |
-| `4864427` | feat(backend): full pipeline backtest + walk-forward optimization |
-| `4c6ce07` | docs: Phase 2 backtest results across EUR/USD, BTC/USDT, SPY |
-| `86bb184` | fix(backend): sort imports and remove unused import (ruff) |
-
-### Phase 3: API & Paper Trading
-| Hash | Message |
-|------|---------|
-| `6b39c7f` | docs: Phase 3 API & paper trading implementation plan |
-| `432b2e8` | feat(backend): auth dependency (get_current_user) + Alpaca/Celery config |
-| `a24083f` | feat(backend): Order Executor with pre-trade risk checks + paper mode |
-| `edb5233` | feat(backend): Market data + engine status endpoints |
-| `e717387` | feat(backend): Signals REST API — list, get, generate endpoints |
-| `492d39f` | feat(backend): PositionManager — track, trail, close positions with PnL |
-| `6fc2751` | feat(backend): Trades REST API — list, get, stats endpoints |
-| `8f863f2` | feat(backend): Celery setup + async backtest task |
-| `44e6ac1` | fix(backend): sanitise inf/NaN in backtest metrics for JSON serialization |
-| `8fd2e8c` | feat(backend): Redis connection + signal/price pub/sub channels |
-| `d672d35` | feat(backend): Strategies CRUD API with activate/deactivate |
-| `2f186b2` | merge: resolve main.py conflict — register all API routers |
-| `ccd58a6` | feat(backend): WebSocket hub — real-time signal and price streaming |
-| `007ed54` | feat(backend): Phase 3 integration — positions API + full pipeline E2E test |
-| `d02d6b9` | fix(backend): remove duplicate Celery config entries |
-
-### Phase 4: Frontend Dashboard
-| Hash | Message |
-|------|---------|
-| `540ca66` | docs: add Phase 4 frontend dashboard implementation plan |
-| `7cf1952` | feat(frontend): install react-router-dom, @tanstack/react-query, lightweight-charts |
-| `4dacac3` | feat(frontend): add API client, auth store, and query client |
-| `14788a0` | feat(frontend): add router, auth pages, and protected routes |
-| `bd249f5` | feat(frontend): add layout shell with sidebar, topbar, and app layout |
-| `a436d3b` | feat(frontend): add all 7 pages — Dashboard, Signals, Trades, Backtest, Strategy, Keys, Journal |
-| `e746d87` | feat(frontend): add WebSocket manager with signal and price stream hooks |
-| `91b3377` | feat(frontend): wire all 7 real pages into router, remove PlaceholderPage |
-
-### Phase 5: Advanced Features
-| Hash | Message |
-|------|---------|
-| `5eede6a` | docs: add Phase 5 advanced features implementation plan |
-| `74707c2` | feat(api): add Trade Journal AI endpoints with Claude Haiku analysis |
-| `91c0b35` | feat(api): add email alerts via Resend with signal and daily summary emails |
-| `631601f` | feat(api): add analytics endpoints with equity curve and correlation |
-| `751842e` | feat(api): add walk-forward optimization endpoint to backtests |
-| `0bcaaae` | feat(backtest): add Sortino and Calmar ratios to backtest metrics |
-| `2eca352` | feat(engine): add HMM-based regime detection layer |
-| `dfa1fda` | feat(frontend): add Trade Journal page and Walk-Forward Optimization tab |
-| `7c1522c` | feat(frontend): add Analytics page with equity curve, metrics grid, and correlation analysis |
-| `df9dc1b` | Merge branch 'worktree-agent-a435410d' |
-| `f144c59` | fix: resolve all ruff lint errors — unused imports and line length |
+> **Note:** Use `docker.exe` (not `docker`) on WSL2 with Docker Desktop for Windows.
 
 ---
 
-### Phase 6: Commit History
+## Current System State (as of 2026-03-02)
 
-| Hash | Message |
-|------|---------|
-| `a37c55c` | docs: comprehensive project status for Phases 1-5 |
-| `561e4d1` | docs: Phase 6 live trading & hardening design document |
-| `525b8c7` | docs: Phase 6 implementation plan — 13 tasks across 5 waves |
-| `31ea041` | docs: update CLAUDE.md and PROJECT-STATUS.md for Phase 6 planning complete |
-| `f1ec2f2` | docs: add Phase 6 handoff prompt for new session |
-| `7196ac9` | chore: remove PHASE6-HANDOFF.md — prompt moved inline |
-| `2bd97d6` | feat(backend): Fernet encryption + broker connection CRUD API |
-| `83a6d98` | feat(backend): broker adapter layer — ABC + Paper + Alpaca + CCXT + Router |
-| `a014ac6` | feat(backend): add Order, Position, BacktestResult models + user alert_config |
-| `b492c0e` | Merge branch 'worktree-agent-add0ef19' |
-| `c6918ef` | Merge branch 'worktree-agent-a31125f7' |
-| `29a4a13` | feat(backend): rewrite OrderExecutor with BrokerRouter + DB Order persistence |
-| `49f570c` | feat(backend): DB-backed CandleStorage + real candle/correlation endpoints |
-| `db43d62` | feat(backend): DB-backed PositionManager replacing in-memory |
-| `67b5074` | Merge branch 'worktree-agent-a23468bc' |
-| `9b54a2f` | fix(tests): update tests for DB-backed position manager + auth-required candles |
-| `6459e9d` | feat(backend): Celery Beat schedule + candle ingestion + signal pipeline tasks |
-| `3440464` | feat(backend): execution tasks — signal execution, order polling, position management |
-| `28c7ed6` | feat(backend): alert persistence, email wiring, backtest DB storage, HMM real data |
-| `843fac6` | Merge branch 'worktree-agent-a6d9edf7' |
-| `7ea1241` | Merge branch 'worktree-agent-a70d34de' |
-| `b0bef20` | fix(tests): add auth headers to backtest API tests |
-| `99f6c49` | feat(backend): Redis subscriber + WebSocket broadcasting for signals/prices/trades |
-| `e4f42f0` | feat(backend): circuit breaker, rate limiting, structured logging, health checks |
-| `8f52658` | merge: resolve main.py conflict — combine Redis subscriber + hardening features |
-| `c1e8992` | infra: production Docker Compose + multi-stage Dockerfile |
-| `bb67ba1` | feat(frontend): wire API Keys page to broker API + useTradeStream hook |
-| `79baeb3` | Merge branch 'worktree-agent-a08648ab' |
+### Running Services
+| Service | Status | Port |
+|---------|--------|------|
+| db (TimescaleDB) | Healthy | 5432 |
+| redis | Healthy | 6379 |
+| api (FastAPI) | Running | 8000 |
+| worker (Celery) | Running | — |
+| beat (Celery) | Running | — |
+
+### Active Strategy
+- **Name:** AI Advisor — Conservative Swing
+- **Symbols:** 15 (NEAR, MORPHO, AIXBT, ZRO, ENSO, FORM, SUN, BTC, DOGE, JUP, ALICE, XRP, SAHARA, OG, 1000SATS — all `/USDT`)
+- **Timeframe:** 4h
+- **min_confluence:** 70
+- **Status:** Active, no trades yet — all symbols blocked by chaotic_regime / no_trend / low_confluence
+
+### Database
+- **Candles:** ~55,000+ rows (15+ symbols × 6 timeframes × ~500 each)
+- **Signals:** Growing (all NO_TRADE currently)
+- **Strategies:** 1 active
+- **Orders/Positions/Trades:** 0 (conditions not yet met)
 
 ---
 
-## Agent Team Pattern Used
+## Known Issues & Future Work
 
-Each phase was built using **Cloud Agent Teams** — named agents dispatched via Task tool with `isolation: "worktree"`, working in dependency-ordered waves:
-
-- **Phase 1**: 3 agents (infra, backend, frontend) in 2 waves
-- **Phase 2**: 2 agents (layers, pipeline) in 2 waves
-- **Phase 3**: 3 agents (auth+execution, APIs, integration) in 3 waves
-- **Phase 4**: 4 agents (@frontend-scaffold, @page-builder-a, @page-builder-b, @ws-integrator) in 3 waves
-- **Phase 5**: 4 agents (@ml-engineer, @api-builder, @frontend-journal, @frontend-analytics) in 2 waves
-- **Phase 6**: 13 agents in 5 waves — @db-models, @broker-adapters, @crypto-api, @position-manager, @order-executor, @candle-storage, @ingestion-tasks, @execution-tasks, @alert-tasks, @realtime, @hardening, @docker-prod, @frontend-wiring
-
-Each wave was merged to main after verification. All worktree branches have been cleaned up.
+1. **Broker connections not wired to execution** — `execute_signals.py` always creates a fresh PaperAdapter. Stored broker connections are never read. Needs wiring for live trading.
+2. **HMM convergence warnings** — Some symbols show `Model is not converging` for HMM regime detection. May need more training data or parameter adjustment.
+3. **WSL2 clock drift** — Beat logs show 1-hour drift between WSL2 and Windows Docker. Does not affect functionality.
+4. **All changes uncommitted** — 90+ modified files, 30+ new files accumulated since Phase 6 commit `79baeb3`. Should be committed when ready.
 
 ---
 
-## Celery Beat Schedule (Phase 6)
+## Commit History (88 committed + uncommitted Phase 7)
 
-| Task | Schedule | Description |
-|------|----------|-------------|
-| `ingest_candles` | Every 5 min | Fetch OHLCV for BTC/USDT, ETH/USDT, SOL/USDT × 1h, 4h |
-| `run_signal_pipeline` | Every 5 min | Run 6-layer pipeline per symbol, persist signals |
-| `execute_pending_signals` | Every 30 sec | Execute pending signals via BrokerRouter |
-| `poll_open_orders` | Every 1 min | Check order status, open positions on fill |
-| `manage_open_positions` | Every 1 min | Check SL/TP, close positions when hit |
-| `send_daily_summary` | Daily 20:00 UTC | Aggregate daily trades, send email summary |
-| `retrain_hmm_models` | Daily 03:00 UTC | Retrain HMM regime models per symbol |
-| `reconcile_broker` | Daily 04:00 UTC | Reconcile broker state (placeholder) |
+### Phase 1–6: See git log (88 commits from `d872185` to `79baeb3`)
 
----
-
-## Production Docker (Phase 6)
-
-```bash
-# Generate encryption key
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-
-# Copy and configure environment
-cp backend/.env.prod.example backend/.env.prod
-
-# Start all services
-docker compose -f docker-compose.prod.yml up -d
-
-# Services: timescaledb (5432), redis (6379), api (8000), worker, beat
-```
+### Phase 7: Uncommitted (accumulated work)
+- AI Advisor module (9 files: claude_client, planner, signal_quality, risk_tuner, feedback_synthesizer, multi_tf_analyzer, pattern_analyzer, pricing, anthropic_admin)
+- AI Usage & Cost Tracking: dual-source API (`GET /api/ai-usage`, `PUT /api/ai-usage/credit`), frontend dashboard with daily cost chart, model/feature breakdown, credit management
+- `flush_ai_usage` Celery task: flushes sync-path usage records from Redis queue to DB every 60s
+- Advanced risk management (8 configurable features)
+- Feedback filter pipeline layer
+- Portfolio backtester
+- AIInsight + FeedbackRule models + 3 Alembic migrations
+- Frontend restructure (5 pages removed, 4 new pages, 3 new components, 3 new hooks)
+- Strategy presets (Conservative/Balanced/Aggressive)
+- Docker Compose worker + beat services
+- Candle ingestion expanded to 6 timeframes
+- Bulk upsert storage optimization
+- Pipeline block_reason logging
+- Broker connect form cleanup (paper mode removed)
+- 4 new test files (test_backtest_strategy, test_claude_client, test_risk_tuner, test_signal_quality)

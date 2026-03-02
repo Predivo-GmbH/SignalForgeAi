@@ -44,10 +44,10 @@ def run_backtest_task(
 
     if loop is None:
         # No event loop — safe to use asyncio.run() (Celery worker context)
-        candles = asyncio.run(_load_candles(symbol, timeframe, n))
+        candles = asyncio.run(load_candles(symbol, timeframe, n))
     else:
         # Already inside an event loop (FastAPI) — use sync CCXT fetch
-        candles = _load_candles_sync(symbol, timeframe, n)
+        candles = load_candles_sync(symbol, timeframe, n)
 
     if candles is None or len(candles) < 300:
         logger.warning(
@@ -124,7 +124,7 @@ def run_backtest_task(
     }
 
 
-def _load_candles_sync(symbol: str, timeframe: str, limit: int):
+def load_candles_sync(symbol: str, timeframe: str, limit: int):
     """Sync fallback: fetch candles directly from CCXT (no DB)."""
     try:
         from app.data.ingestion import CCXTIngestion
@@ -139,7 +139,7 @@ def _load_candles_sync(symbol: str, timeframe: str, limit: int):
     return None
 
 
-async def _load_candles(symbol: str, timeframe: str, limit: int):
+async def load_candles(symbol: str, timeframe: str, limit: int):
     """Try to load real candles from DB, then CCXT, return DataFrame or None."""
     import pandas as pd
 

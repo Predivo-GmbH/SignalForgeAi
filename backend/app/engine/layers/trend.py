@@ -32,6 +32,9 @@ class TrendFilter:
     Uses 200 EMA as primary, 50/100 EMA alignment, and slope for strength.
     """
 
+    def __init__(self, slope_threshold: float = 0.001):
+        self.slope_threshold = slope_threshold
+
     def evaluate(self, candles: pd.DataFrame) -> TrendResult:
         close = candles["close"]
 
@@ -57,13 +60,13 @@ class TrendFilter:
         vwap = compute_vwap(candles)
         above_vwap = bool(close.iloc[-1] > vwap.iloc[-1])
 
-        if ema_aligned_bull and ema_slope > 0.001:
+        if ema_aligned_bull and ema_slope > self.slope_threshold:
             return TrendResult(
                 direction=Trend.BULLISH,
                 strength=float(abs(ema_slope)),
                 vwap_aligned=above_vwap,
             )
-        elif ema_aligned_bear and ema_slope < -0.001:
+        elif ema_aligned_bear and ema_slope < -self.slope_threshold:
             return TrendResult(
                 direction=Trend.BEARISH,
                 strength=float(abs(ema_slope)),

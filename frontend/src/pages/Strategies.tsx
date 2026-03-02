@@ -10,6 +10,7 @@ import {
   BarChart3,
   Target,
   Activity,
+  ChevronRight,
 } from "lucide-react";
 import {
   useStrategies,
@@ -35,6 +36,7 @@ function StrategyCard({
   metrics,
   onToggle,
   onDelete,
+  onClick,
   isToggling,
   isDeleting,
 }: {
@@ -42,6 +44,7 @@ function StrategyCard({
   metrics?: StrategyMetrics;
   onToggle: () => void;
   onDelete: () => void;
+  onClick: () => void;
   isToggling: boolean;
   isDeleting: boolean;
 }) {
@@ -53,11 +56,12 @@ function StrategyCard({
   return (
     <div
       className={cn(
-        "bg-(--color-bg-surface) border rounded-xl p-5 transition-all",
+        "bg-(--color-bg-surface) border rounded-xl p-5 transition-all cursor-pointer hover:border-(--color-accent)/60",
         strategy.is_active
           ? "border-(--color-accent)/40 shadow-[0_0_12px_rgba(123,97,255,0.08)]"
           : "border-(--color-border)"
       )}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -94,7 +98,10 @@ function StrategyCard({
 
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={onToggle}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
             disabled={isToggling}
             className={cn(
               "p-1.5 rounded-lg transition-colors",
@@ -107,7 +114,10 @@ function StrategyCard({
             <Power className="w-3.5 h-3.5" />
           </button>
           {showConfirm ? (
-            <div className="flex items-center gap-1 ml-1">
+            <div
+              className="flex items-center gap-1 ml-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => {
                   onDelete();
@@ -127,13 +137,17 @@ function StrategyCard({
             </div>
           ) : (
             <button
-              onClick={() => setShowConfirm(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowConfirm(true);
+              }}
               className="p-1.5 rounded-lg hover:bg-(--color-negative)/10 transition-colors"
               title="Delete strategy"
             >
               <Trash2 className="w-3.5 h-3.5 text-(--color-text-secondary)" />
             </button>
           )}
+          <ChevronRight className="w-4 h-4 text-(--color-text-secondary)/50 ml-1" />
         </div>
       </div>
 
@@ -164,33 +178,43 @@ function StrategyCard({
             Performance
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {/* Total P&L */}
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-(--color-text-secondary)">Total P&L</p>
-              <p className={cn(
-                "text-sm font-semibold font-mono",
-                metrics.total_pnl >= 0 ? "text-(--color-positive)" : "text-(--color-negative)"
-              )}>
-                {metrics.total_pnl >= 0 ? "+" : ""}{metrics.total_pnl < 1000 ? `$${metrics.total_pnl.toFixed(2)}` : `$${(metrics.total_pnl / 1000).toFixed(1)}k`}
+              <p
+                className={cn(
+                  "text-sm font-semibold font-mono",
+                  metrics.total_pnl >= 0
+                    ? "text-(--color-positive)"
+                    : "text-(--color-negative)"
+                )}
+              >
+                {metrics.total_pnl >= 0 ? "+" : ""}
+                {metrics.total_pnl < 1000
+                  ? `$${metrics.total_pnl.toFixed(2)}`
+                  : `$${(metrics.total_pnl / 1000).toFixed(1)}k`}
               </p>
             </div>
-            {/* Return % */}
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-(--color-text-secondary)">Return</p>
               <div className="flex items-center gap-1">
-                {metrics.total_return_pct >= 0
-                  ? <TrendingUp className="w-3 h-3 text-(--color-positive)" />
-                  : <TrendingDown className="w-3 h-3 text-(--color-negative)" />
-                }
-                <p className={cn(
-                  "text-sm font-semibold font-mono",
-                  metrics.total_return_pct >= 0 ? "text-(--color-positive)" : "text-(--color-negative)"
-                )}>
-                  {metrics.total_return_pct >= 0 ? "+" : ""}{metrics.total_return_pct.toFixed(1)}%
+                {metrics.total_return_pct >= 0 ? (
+                  <TrendingUp className="w-3 h-3 text-(--color-positive)" />
+                ) : (
+                  <TrendingDown className="w-3 h-3 text-(--color-negative)" />
+                )}
+                <p
+                  className={cn(
+                    "text-sm font-semibold font-mono",
+                    metrics.total_return_pct >= 0
+                      ? "text-(--color-positive)"
+                      : "text-(--color-negative)"
+                  )}
+                >
+                  {metrics.total_return_pct >= 0 ? "+" : ""}
+                  {metrics.total_return_pct.toFixed(1)}%
                 </p>
               </div>
             </div>
-            {/* Win Rate */}
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-(--color-text-secondary)">Win Rate</p>
               <div className="flex items-center gap-1">
@@ -200,7 +224,6 @@ function StrategyCard({
                 </p>
               </div>
             </div>
-            {/* Total Trades */}
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
               <p className="text-[10px] text-(--color-text-secondary)">Trades</p>
               <p className="text-sm font-semibold font-mono text-(--color-text-primary)">
@@ -211,39 +234,44 @@ function StrategyCard({
               </p>
             </div>
           </div>
-          {/* Secondary metrics row */}
           <div className="flex flex-wrap gap-3 text-xs">
             {equity > 0 && (
               <span className="text-(--color-text-secondary)">
-                Capital: <span className="font-mono font-semibold text-(--color-text-primary)">${equity.toLocaleString()}</span>
+                Capital:{" "}
+                <span className="font-mono font-semibold text-(--color-text-primary)">
+                  ${equity.toLocaleString()}
+                </span>
               </span>
             )}
             {metrics.profit_factor != null && (
               <span className="text-(--color-text-secondary)">
-                Profit Factor: <span className="font-mono font-semibold text-(--color-text-primary)">{metrics.profit_factor.toFixed(2)}</span>
+                Profit Factor:{" "}
+                <span className="font-mono font-semibold text-(--color-text-primary)">
+                  {metrics.profit_factor.toFixed(2)}
+                </span>
               </span>
             )}
             {metrics.sharpe_ratio != null && (
               <span className="text-(--color-text-secondary)">
-                Sharpe: <span className="font-mono font-semibold text-(--color-text-primary)">{metrics.sharpe_ratio.toFixed(2)}</span>
+                Sharpe:{" "}
+                <span className="font-mono font-semibold text-(--color-text-primary)">
+                  {metrics.sharpe_ratio.toFixed(2)}
+                </span>
               </span>
             )}
             {metrics.max_drawdown_pct > 0 && (
               <span className="text-(--color-text-secondary)">
-                Max DD: <span className="font-mono font-semibold text-(--color-negative)">{metrics.max_drawdown_pct.toFixed(1)}%</span>
-              </span>
-            )}
-            {metrics.avg_pnl_per_trade !== 0 && (
-              <span className="text-(--color-text-secondary)">
-                Avg Trade: <span className={cn("font-mono font-semibold", metrics.avg_pnl_per_trade >= 0 ? "text-(--color-positive)" : "text-(--color-negative)")}>
-                  {metrics.avg_pnl_per_trade >= 0 ? "+" : ""}${metrics.avg_pnl_per_trade.toFixed(2)}
+                Max DD:{" "}
+                <span className="font-mono font-semibold text-(--color-negative)">
+                  {metrics.max_drawdown_pct.toFixed(1)}%
                 </span>
               </span>
             )}
             {metrics.active_signals > 0 && (
               <span className="flex items-center gap-1 text-(--color-text-secondary)">
                 <Activity className="w-3 h-3 text-(--color-warning)" />
-                {metrics.active_signals} active signal{metrics.active_signals > 1 ? "s" : ""}
+                {metrics.active_signals} active signal
+                {metrics.active_signals > 1 ? "s" : ""}
               </span>
             )}
           </div>
@@ -251,40 +279,19 @@ function StrategyCard({
       ) : metrics && metrics.total_trades === 0 ? (
         <div className="mt-3 border-t border-(--color-border)/50 pt-3">
           <p className="text-xs text-(--color-text-secondary) italic">
-            No trades executed yet{metrics.active_signals > 0 ? ` — ${metrics.active_signals} signal${metrics.active_signals > 1 ? "s" : ""} pending` : ""}
+            No trades executed yet
+            {metrics.active_signals > 0
+              ? ` — ${metrics.active_signals} signal${metrics.active_signals > 1 ? "s" : ""} pending`
+              : ""}
           </p>
         </div>
       ) : null}
-
-      {/* Config preview */}
-      {Object.keys(config).length > 0 && (
-        <div className="mt-3 bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {Object.entries(config)
-              .filter(([key]) => key !== "symbols" && key !== "account_equity")
-              .slice(0, 8)
-              .map(([key, val]) => (
-                <span key={key} className="text-xs">
-                  <span className="text-(--color-text-secondary)">{key}:</span>{" "}
-                  <span className="font-mono text-(--color-text-primary)">
-                    {String(val)}
-                  </span>
-                </span>
-              ))}
-            {Object.keys(config).filter(k => k !== "symbols" && k !== "account_equity").length > 8 && (
-              <span className="text-xs text-(--color-text-secondary)">
-                +{Object.keys(config).filter(k => k !== "symbols" && k !== "account_equity").length - 8} more
-              </span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 /* ----- Main Page ----- */
-export function StrategyConfigPage() {
+export function StrategiesPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useStrategies();
   const { data: comparison } = useStrategyComparison();
@@ -293,7 +300,7 @@ export function StrategyConfigPage() {
 
   const strategies = data?.strategies ?? [];
   const metricsMap = new Map(
-    (comparison?.strategies ?? []).map((m) => [m.strategy_id, m])
+    (comparison?.strategies ?? []).map((m) => [m.strategy_id, m]),
   );
 
   return (
@@ -340,13 +347,14 @@ export function StrategyConfigPage() {
         <div className="grid gap-4">
           {strategies
             .sort((a, b) =>
-              a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1
+              a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1,
             )
             .map((strategy) => (
               <StrategyCard
                 key={strategy.id}
                 strategy={strategy}
                 metrics={metricsMap.get(strategy.id)}
+                onClick={() => navigate(`/strategies/${strategy.id}`)}
                 onToggle={() => toggleMutation.mutate(strategy.id)}
                 onDelete={() => deleteMutation.mutate(strategy.id)}
                 isToggling={

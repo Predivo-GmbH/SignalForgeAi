@@ -52,12 +52,20 @@ class StrategyConfig(BaseModel):
     correlation_monitor_enabled: bool = Field(default=False)
     correlation_threshold: float = Field(default=0.7, ge=0.3, le=0.95)
     correlation_auto_reduce: bool = Field(default=False)
+    # -- Pipeline Sensitivity (AI-controlled) --
+    min_trigger_count: int = Field(default=2, ge=1, le=5)
+    trigger_lookback_candles: int = Field(default=1, ge=1, le=10)
+    ema_slope_threshold: float = Field(default=0.001, ge=0.0001, le=0.01)
 
 
 STRATEGY_PRESETS: dict[str, dict] = {
     "conservative_swing": {
         "name": "Conservative Swing",
-        "description": "Low risk, high confluence required. Fewer trades, larger moves. Best for patient traders who want high-probability setups only.",
+        "description": (
+            "Low risk, high confluence required. Fewer trades, "
+            "larger moves. Best for patient traders who want "
+            "high-probability setups only."
+        ),
         "config": {
             "symbols": ["BTC/USDT", "ETH/USDT"],
             "timeframes": ["4h"],
@@ -84,7 +92,11 @@ STRATEGY_PRESETS: dict[str, dict] = {
     },
     "balanced_momentum": {
         "name": "Balanced Momentum",
-        "description": "Default balanced approach with moderate risk. Good starting point for most traders. Trades the top 3 cryptos on 1-hour timeframe.",
+        "description": (
+            "Default balanced approach with moderate risk. "
+            "Good starting point for most traders. "
+            "Trades the top 3 cryptos on 1-hour timeframe."
+        ),
         "config": {
             "symbols": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
             "timeframes": ["1h"],
@@ -106,7 +118,11 @@ STRATEGY_PRESETS: dict[str, dict] = {
     },
     "aggressive_scalper": {
         "name": "Aggressive Scalper",
-        "description": "More trades, higher risk per trade. Scans multiple timeframes for opportunities. For experienced traders comfortable with higher drawdowns.",
+        "description": (
+            "More trades, higher risk per trade. Scans multiple "
+            "timeframes for opportunities. For experienced traders "
+            "comfortable with higher drawdowns."
+        ),
         "config": {
             "symbols": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
             "timeframes": ["1h", "4h"],
@@ -297,6 +313,116 @@ async def activate_strategy(
     await db.commit()
     await db.refresh(strategy)
     return _strategy_to_response(strategy)
+
+
+@router.post("/{strategy_id}/tune")
+async def tune_strategy_risk(
+    strategy_id: uuid.UUID,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger on-demand AI risk tuning for a strategy."""
+    strategy = await _get_user_strategy(strategy_id, user_id, db)
+
+    from app.advisor.risk_tuner import RiskTuner
+
+    tuner = RiskTuner()
+    result = await tuner.tune(strategy, db)
+    adjustments = result.get("adjustments", {})
+
+    if adjustments:
+        cfg = dict(strategy.config or {})
+        cfg.update(adjustments)
+        strategy.config = cfg
+        await db.commit()
+        await db.refresh(strategy)
+
+    return {
+        "adjustments": adjustments,
+        "reasoning": result.get("reasoning", ""),
+        "metrics_snapshot": result.get("metrics_snapshot", {}),
+        "strategy": _strategy_to_response(strategy),
+    }
+
+
+@router.get("/{strategy_id}/feedback-rules")
+async def list_feedback_rules(
+    strategy_id: uuid.UUID,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List active feedback rules for a strategy."""
+    from app.models.ai_insight import FeedbackRule
+
+    _ = await _get_user_strategy(strategy_id, user_id, db)
+
+    result = await db.execute(
+        select(FeedbackRule)
+        .where(FeedbackRule.strategy_id == strategy_id)
+        .order_by(FeedbackRule.created_at.desc())
+    )
+    rules = result.scalars().all()
+    return {
+        "rules": [
+            {
+                "id": str(r.id),
+                "rule_type": r.rule_type,
+                "description": r.description,
+                "conditions": r.conditions_json,
+                "confidence": r.confidence,
+                "is_active": r.is_active,
+                "expires_at": r.expires_at.isoformat() if r.expires_at else None,
+                "created_at": r.created_at.isoformat() if r.created_at else "",
+            }
+            for r in rules
+        ],
+    }
+
+
+@router.post("/{strategy_id}/feedback-rules/{rule_id}/toggle")
+async def toggle_feedback_rule(
+    strategy_id: uuid.UUID,
+    rule_id: uuid.UUID,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Enable or disable a feedback rule."""
+    from app.models.ai_insight import FeedbackRule
+
+    _ = await _get_user_strategy(strategy_id, user_id, db)
+
+    result = await db.execute(
+        select(FeedbackRule).where(
+            FeedbackRule.id == rule_id,
+            FeedbackRule.strategy_id == strategy_id,
+        )
+    )
+    rule = result.scalar_one_or_none()
+    if not rule:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found")
+
+    rule.is_active = not rule.is_active
+    await db.commit()
+    return {"id": str(rule.id), "is_active": rule.is_active}
+
+
+@router.post("/{strategy_id}/synthesize-feedback")
+async def synthesize_feedback(
+    strategy_id: uuid.UUID,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger on-demand feedback rule synthesis."""
+    strategy = await _get_user_strategy(strategy_id, user_id, db)
+
+    from app.advisor.feedback_synthesizer import FeedbackSynthesizer
+
+    synthesizer = FeedbackSynthesizer()
+    new_rules = await synthesizer.synthesize(
+        str(strategy.id), str(strategy.user_id), db,
+    )
+    await db.commit()
+    return {"new_rules_count": len(new_rules), "rules": new_rules}
 
 
 @router.delete("/{strategy_id}", status_code=status.HTTP_204_NO_CONTENT)

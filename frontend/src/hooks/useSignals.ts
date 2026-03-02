@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 
 export interface Signal {
   id: string;
+  strategy_id: string | null;
   symbol: string;
   timeframe: string;
   direction: string;
@@ -25,12 +26,13 @@ interface SignalListResponse {
   offset: number;
 }
 
-export function useSignals(limit = 20, offset = 0) {
+export function useSignals(limit = 20, offset = 0, strategyId?: string) {
   return useQuery({
-    queryKey: ["signals", limit, offset],
-    queryFn: () =>
-      api.get<SignalListResponse>(
-        `/signals?limit=${limit}&offset=${offset}`,
-      ),
+    queryKey: ["signals", limit, offset, strategyId],
+    queryFn: () => {
+      let url = `/signals?limit=${limit}&offset=${offset}`;
+      if (strategyId) url += `&strategy_id=${strategyId}`;
+      return api.get<SignalListResponse>(url);
+    },
   });
 }

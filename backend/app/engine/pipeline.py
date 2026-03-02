@@ -44,6 +44,7 @@ class Signal:
     risk_reward: float | None
     block_reason: str | None
     timestamp: str  # ISO format
+    confluence_details: dict | None = None
 
 
 class SignalPipeline:
@@ -56,12 +57,18 @@ class SignalPipeline:
         self,
         risk_config: RiskConfig | None = None,
         min_confluence: int = 50,
+        min_trigger_count: int = 2,
+        trigger_lookback_candles: int = 1,
+        ema_slope_threshold: float = 0.001,
     ):
         self.regime_detector = RegimeDetector()
-        self.trend_filter = TrendFilter()
+        self.trend_filter = TrendFilter(slope_threshold=ema_slope_threshold)
         self.zone_identifier = ZoneIdentifier()
         self.confluence_scorer = ConfluenceScorer()
-        self.trigger_detector = TriggerDetector()
+        self.trigger_detector = TriggerDetector(
+            min_confirmations=min_trigger_count,
+            lookback=trigger_lookback_candles,
+        )
         self.risk_manager = RiskManager(config=risk_config)
         self.min_confluence = min_confluence
 
@@ -118,7 +125,9 @@ class SignalPipeline:
 
         for zone in zones:
             # Layer 3: Confluence scoring
-            confluence_score = self.confluence_scorer.score(zone, candles, trend)
+            confluence_score, details = self.confluence_scorer.score_with_details(
+                zone, candles, trend,
+            )
             if confluence_score < self.min_confluence:
                 last_block_reason = "low_confluence"
                 continue
@@ -158,6 +167,7 @@ class SignalPipeline:
                     risk_reward=risk.risk_reward,
                     block_reason=None,
                     timestamp=now,
+                    confluence_details=details,
                 )
 
         if best_signal is not None:

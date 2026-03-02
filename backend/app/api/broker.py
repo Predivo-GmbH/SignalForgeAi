@@ -17,8 +17,8 @@ router = APIRouter(prefix="/broker", tags=["broker"])
 
 class BrokerConnectRequest(BaseModel):
     broker: str  # "alpaca" or "binance"
-    api_key: str
-    api_secret: str
+    api_key: str = ""
+    api_secret: str = ""
     is_paper: bool = True
 
 
@@ -44,12 +44,25 @@ async def create_broker_connection(
     db: AsyncSession = Depends(get_db),
 ):
     """Store encrypted broker credentials."""
+    if not body.is_paper and (not body.api_key or not body.api_secret):
+        raise HTTPException(
+            status_code=422,
+            detail="API key and secret are required for live trading",
+        )
+    # Paper mode doesn't need credentials — skip encryption
+    if body.is_paper:
+        api_key_enc = b""
+        api_secret_enc = b""
+    else:
+        api_key_enc = encrypt_value(body.api_key)
+        api_secret_enc = encrypt_value(body.api_secret)
+
     conn = BrokerConnection(
         id=uuid.uuid4(),
         user_id=uuid.UUID(user_id),
         broker=body.broker,
-        api_key_enc=encrypt_value(body.api_key),
-        api_secret_enc=encrypt_value(body.api_secret),
+        api_key_enc=api_key_enc,
+        api_secret_enc=api_secret_enc,
         is_paper=body.is_paper,
     )
     db.add(conn)
@@ -58,7 +71,7 @@ async def create_broker_connection(
     return BrokerConnectionResponse(
         id=str(conn.id),
         broker=conn.broker,
-        api_key_masked=_mask_key(body.api_key),
+        api_key_masked="Paper" if body.is_paper else _mask_key(body.api_key),
         is_paper=conn.is_paper,
     )
 
@@ -75,11 +88,14 @@ async def list_broker_connections(
     connections = result.scalars().all()
     out = []
     for c in connections:
-        try:
-            raw_key = decrypt_value(c.api_key_enc)
-            masked = _mask_key(raw_key)
-        except Exception:
-            masked = "****error"
+        if c.is_paper:
+            masked = "Paper"
+        else:
+            try:
+                raw_key = decrypt_value(c.api_key_enc)
+                masked = _mask_key(raw_key)
+            except Exception:
+                masked = "****error"
         out.append(
             BrokerConnectionResponse(
                 id=str(c.id),

@@ -15,19 +15,19 @@ import {
   DollarSign,
   Trash2,
   X,
-  Clock,
   Sparkles,
   Info,
   RotateCcw,
   Power,
   ExternalLink,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/Badge";
 import { useGeneratePlan, useDeployPlan } from "@/hooks/useAdvisor";
 import { useStrategies, useToggleStrategy } from "@/hooks/useStrategies";
 import { useAdvisorStore } from "@/stores/advisorStore";
-import type { ScoredCrypto, InvestmentPlan, MarketRecommendation } from "@/hooks/useAdvisor";
+import type { ScoredCrypto, InvestmentPlan, MarketProfile } from "@/hooks/useAdvisor";
 import type { ScanHistoryEntry } from "@/stores/advisorStore";
 
 /* ---------- Helpers ---------- */
@@ -275,69 +275,53 @@ function ScanSidebar({
   );
 }
 
-/* ---------- Strategy description lookup ---------- */
-const STRATEGY_LABELS: Record<string, { label: string; detail: string }> = {
-  conservative: {
-    label: "Conservative Swing",
-    detail: "1% risk per trade, confluence 70+, 4h timeframe. Trailing stops, drawdown breaker, CPPI enabled.",
-  },
-  balanced: {
-    label: "Balanced Momentum",
-    detail: "2% risk per trade, confluence 50+, 1h timeframe. Drawdown breaker, break-even stops enabled.",
-  },
-  aggressive: {
-    label: "Aggressive Scalper",
-    detail: "3% risk per trade, confluence 35+, 1h+4h multi-timeframe. Trailing stops, fast exits.",
-  },
-};
-
-/* ---------- Market Recommendation Panel ---------- */
+/* ---------- Market Profile Panel ---------- */
 function MarketRecommendationPanel({
-  recommendation,
+  marketProfile,
   scanResults,
   amount,
   onAmountChange,
   onGeneratePlan,
   isPlanPending,
 }: {
-  recommendation: MarketRecommendation;
+  marketProfile: MarketProfile;
   scanResults: ScoredCrypto[];
   amount: number;
   onAmountChange: (val: number) => void;
   onGeneratePlan: () => void;
   isPlanPending: boolean;
 }) {
-  const { market_summary: ms } = recommendation;
-  const strategyInfo = STRATEGY_LABELS[recommendation.preset] ?? STRATEGY_LABELS.balanced;
-
   // Compute signal breakdown from scan results
   const strongBuys = scanResults.filter((c) => c.recommendation === "strong_buy");
   const buys = scanResults.filter((c) => c.recommendation === "buy");
   const neutrals = scanResults.filter((c) => c.recommendation === "neutral");
   const avoids = scanResults.filter((c) => c.recommendation === "avoid");
-  // The AI planner will pick score >= 40, not "avoid", max 15
-  const tradeable = scanResults.filter((c) => c.score >= 40 && c.recommendation !== "avoid");
+  // The AI planner will pick score >= 30, not "avoid", max 15
+  const tradeable = scanResults.filter((c) => c.score >= 30 && c.recommendation !== "avoid");
 
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
-      {/* AI Recommendation */}
+      {/* AI Market Profile */}
       <div className="bg-(--color-accent)/5 border border-(--color-accent)/20 rounded-xl p-4 space-y-4">
         <div className="flex items-start gap-2">
           <Sparkles className="w-4 h-4 text-(--color-accent) shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-(--color-text-primary) mb-1">AI Market Analysis</p>
-            <p className="text-sm text-(--color-text-secondary) leading-relaxed">{recommendation.reason}</p>
+            <p className="text-sm font-semibold text-(--color-text-primary) mb-1">AI Market Profile</p>
+            <p className="text-sm text-(--color-text-secondary) leading-relaxed">
+              The AI advisor will analyze these market conditions and autonomously determine the optimal strategy parameters.
+            </p>
           </div>
         </div>
 
         {/* Market stats */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: "Avg Score", value: ms.avg_score.toFixed(1) },
-            { label: "Trending", value: `${ms.trending_pct}%` },
-            { label: "Bullish", value: `${ms.bullish_pct}%` },
-            { label: "Avg ADX", value: ms.avg_adx.toFixed(1) },
-            { label: "Avg Volatility", value: `${ms.avg_volatility}%` },
+            { label: "Avg Score", value: marketProfile.avg_score.toFixed(1) },
+            { label: "Trending", value: `${marketProfile.trending_pct}%` },
+            { label: "Bullish", value: `${marketProfile.bullish_pct}%` },
+            { label: "Avg ADX", value: marketProfile.avg_adx.toFixed(1) },
+            { label: "Avg Volatility", value: `${marketProfile.avg_volatility}%` },
+            ...(marketProfile.chaotic_pct != null ? [{ label: "Chaotic", value: `${marketProfile.chaotic_pct}%` }] : []),
           ].map((chip) => (
             <span
               key={chip.label}
@@ -347,15 +331,6 @@ function MarketRecommendationPanel({
               <span className="font-mono font-semibold text-(--color-text-primary)">{chip.value}</span>
             </span>
           ))}
-        </div>
-
-        {/* Chosen strategy */}
-        <div className="border-t border-(--color-accent)/15 pt-4 space-y-1">
-          <p className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">Selected Strategy</p>
-          <p className="text-sm font-semibold text-(--color-text-primary)">
-            {strategyInfo.label}
-          </p>
-          <p className="text-xs text-(--color-text-secondary) mt-1">{strategyInfo.detail}</p>
         </div>
 
         {/* Signal breakdown */}
@@ -451,7 +426,7 @@ function MarketRecommendationPanel({
           ) : (
             <Brain className="w-4 h-4" />
           )}
-          {isPlanPending ? "Generating Plan..." : "Generate AI Plan"}
+          {isPlanPending ? "Generating Optimal Strategy..." : "Generate Optimal Strategy"}
         </button>
       </div>
     </div>
@@ -545,17 +520,28 @@ function PlanDisplay({ plan }: { plan: InvestmentPlan }) {
         </div>
       </div>
 
+      {plan.reasoning && (
+        <div className="bg-(--color-accent)/5 border border-(--color-accent)/20 rounded-lg p-3">
+          <p className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider mb-1">AI Reasoning</p>
+          <p className="text-sm text-(--color-text-primary) leading-relaxed">{plan.reasoning}</p>
+        </div>
+      )}
+
       <div>
         <h3 className="text-sm font-semibold text-(--color-text-primary) mb-2">Strategy Configuration</h3>
         <div className="flex flex-wrap gap-3">
-          {Object.entries(plan.risk_config).map(([key, val]) => (
+          {Object.entries(plan.strategy_config).map(([key, val]) => (
             <span key={key} className="text-xs bg-(--color-bg-elevated) rounded px-2 py-1">
               <span className="text-(--color-text-secondary)">{key.replace(/_/g, " ")}:</span>{" "}
               <span className="font-mono font-semibold text-(--color-text-primary)">
                 {typeof val === "number" && val < 1 && key !== "account_equity"
                   ? `${(val * 100).toFixed(1)}%`
                   : typeof val === "number" && key === "account_equity"
-                  ? `$${val.toLocaleString()}`
+                  ? `$${(val as number).toLocaleString()}`
+                  : typeof val === "boolean"
+                  ? val ? "Yes" : "No"
+                  : Array.isArray(val)
+                  ? val.join(", ")
                   : String(val)}
               </span>
             </span>
@@ -626,7 +612,7 @@ export function AdvisorPage() {
   // Derive state from store (plan & deploy are persisted per-scan)
   const selectedScan = scanHistory.find((h) => h.id === selectedScanId);
   const scanResults = selectedScan?.status === "completed" ? selectedScan.results : null;
-  const marketRec = selectedScan?.status === "completed" ? selectedScan.recommendation : null;
+  const marketProfile = selectedScan?.status === "completed" ? selectedScan.market_profile : null;
   const plan = selectedScan?.plan ?? null;
   const deployed = !!selectedScan?.deployedStrategyId;
   const deployedMessage = selectedScan?.deployedMessage ?? null;
@@ -656,9 +642,9 @@ export function AdvisorPage() {
   }
 
   function handleGeneratePlan() {
-    if (!scanResults || !marketRec || !selectedScanId) return;
+    if (!scanResults || !selectedScanId) return;
     planMutation.mutate(
-      { amount, risk_tolerance: marketRec.preset, scan_results: scanResults },
+      { amount, scan_results: scanResults },
       { onSuccess: (data) => storePlan(selectedScanId, data, amount) },
     );
   }
@@ -761,10 +747,10 @@ export function AdvisorPage() {
                 </div>
               )}
 
-              {/* AI Recommendation — only if no plan exists for this scan */}
-              {marketRec && !plan && !planMutation.isPending && (
+              {/* AI Market Profile — only if no plan exists for this scan */}
+              {marketProfile && !plan && !planMutation.isPending && (
                 <MarketRecommendationPanel
-                  recommendation={marketRec}
+                  marketProfile={marketProfile}
                   scanResults={scanResults}
                   amount={amount}
                   onAmountChange={setAmount}
@@ -882,7 +868,7 @@ export function AdvisorPage() {
                       Go to Dashboard
                     </button>
                     <button
-                      onClick={() => navigate("/config")}
+                      onClick={() => navigate("/strategies")}
                       className="flex items-center gap-2 text-sm font-medium text-(--color-text-secondary) hover:text-(--color-accent) transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -904,7 +890,7 @@ export function AdvisorPage() {
                 <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between px-5 py-3 border-b border-(--color-border)">
                     <h2 className="text-sm font-semibold text-(--color-text-primary)">
-                      Investment Plan — {plan.strategy_preset.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                      Investment Plan — AI Optimal Strategy
                     </h2>
                     <div className="flex items-center gap-3">
                       {!deployed && (
@@ -914,6 +900,15 @@ export function AdvisorPage() {
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           Regenerate
+                        </button>
+                      )}
+                      {!deployed && (
+                        <button
+                          onClick={() => navigate("/backtest?validate=plan")}
+                          className="flex items-center gap-1.5 text-xs text-(--color-text-secondary) hover:text-(--color-accent) transition-colors"
+                        >
+                          <FlaskConical className="w-3.5 h-3.5" />
+                          Validate Historically
                         </button>
                       )}
                       {!deployed && (

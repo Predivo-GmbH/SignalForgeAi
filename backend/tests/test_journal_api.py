@@ -1,7 +1,7 @@
-from app.api.journal import _build_trade_prompt
+from app.api.journal import _build_trade_user_message
 
 
-def test_build_trade_prompt_includes_trade_data():
+def test_build_trade_user_message_includes_trade_data():
     trade_data = {
         "symbol": "BTC/USDT",
         "direction": "BUY",
@@ -11,13 +11,13 @@ def test_build_trade_prompt_includes_trade_data():
         "confluence_score": 72,
         "exit_reason": "take_profit",
     }
-    prompt = _build_trade_prompt(trade_data)
+    prompt = _build_trade_user_message(trade_data)
     assert "BTC/USDT" in prompt
     assert "BUY" in prompt
     assert "200" in prompt
 
 
-def test_build_trade_prompt_handles_losing_trade():
+def test_build_trade_user_message_handles_losing_trade():
     trade_data = {
         "symbol": "EUR/USD",
         "direction": "SELL",
@@ -27,6 +27,6 @@ def test_build_trade_prompt_handles_losing_trade():
         "confluence_score": 45,
         "exit_reason": "stop_loss",
     }
-    prompt = _build_trade_prompt(trade_data)
+    prompt = _build_trade_user_message(trade_data)
     assert "stop_loss" in prompt
     assert "-150" in prompt

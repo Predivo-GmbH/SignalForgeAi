@@ -1,6 +1,5 @@
-"""Trade Journal AI — analyse trades with Claude Haiku."""
+"""Trade Journal AI — analyse trades with Claude."""
 
-import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,14 +7,20 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.advisor.claude_client import ModelTier, claude_client
 from app.auth.dependencies import get_current_user
-from app.config import settings
 from app.core.database import get_db
 from app.models.trade import Trade
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["journal"])
+
+JOURNAL_SYSTEM_PROMPT = (
+    "You are a professional trading coach. Analyse the trade provided and return "
+    "a JSON object with three keys: analysis (string), patterns (list of strings), "
+    "recommendations (list of strings). Respond ONLY with valid JSON."
+)
 
 
 # ---------------------------------------------------------------------------
@@ -42,12 +47,9 @@ class PatternSummary(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _build_trade_prompt(trade_data: dict) -> str:
-    """Build a prompt for Claude to analyse a single trade."""
+def _build_trade_user_message(trade_data: dict) -> str:
+    """Build the user message for trade analysis."""
     return (
-        "You are a professional trading coach. Analyse this trade and return "
-        "a JSON object with three keys: analysis (string), patterns (list of "
-        "strings), recommendations (list of strings).\n\n"
         f"Symbol: {trade_data.get('symbol')}\n"
         f"Direction: {trade_data.get('direction')}\n"
         f"Entry price: {trade_data.get('entry_price')}\n"
@@ -55,8 +57,7 @@ def _build_trade_prompt(trade_data: dict) -> str:
         f"PnL: {trade_data.get('pnl')}\n"
         f"Confluence score: {trade_data.get('confluence_score')}\n"
         f"Exit reason: {trade_data.get('exit_reason')}\n"
-        f"Risk/Reward: {trade_data.get('risk_reward')}\n\n"
-        "Respond ONLY with valid JSON."
+        f"Risk/Reward: {trade_data.get('risk_reward')}"
     )
 
 
@@ -70,7 +71,7 @@ async def analyze_trade(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Analyse a single trade with Claude Haiku."""
+    """Analyse a single trade with Claude."""
     # Fetch trade scoped to user
     result = await db.execute(
         select(Trade).where(Trade.id == body.trade_id, Trade.user_id == user_id)
@@ -90,36 +91,34 @@ async def analyze_trade(
         "risk_reward": trade.risk_reward,
     }
 
-    if not settings.anthropic_api_key:
+    parsed = await claude_client.ask_json(
+        ModelTier.FAST,
+        JOURNAL_SYSTEM_PROMPT,
+        _build_trade_user_message(trade_data),
+        max_tokens=500,
+        cache_ttl=0,
+        insight_type="trade_journal",
+    )
+
+    if parsed is not None:
+        return TradeAnalysis(
+            analysis=parsed.get("analysis", ""),
+            patterns=parsed.get("patterns", []),
+            recommendations=parsed.get("recommendations", []),
+        )
+
+    if not claude_client.available:
         return TradeAnalysis(
             analysis="AI analysis unavailable — no API key configured.",
             patterns=[],
             recommendations=["Configure ANTHROPIC_API_KEY to enable AI analysis."],
         )
 
-    try:
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=500,
-            messages=[{"role": "user", "content": _build_trade_prompt(trade_data)}],
-        )
-        raw = message.content[0].text
-        parsed = json.loads(raw)
-        return TradeAnalysis(
-            analysis=parsed.get("analysis", ""),
-            patterns=parsed.get("patterns", []),
-            recommendations=parsed.get("recommendations", []),
-        )
-    except Exception:
-        logger.exception("Claude analysis failed")
-        return TradeAnalysis(
-            analysis="AI analysis failed. Please try again later.",
-            patterns=[],
-            recommendations=[],
-        )
+    return TradeAnalysis(
+        analysis="AI analysis failed. Please try again later.",
+        patterns=[],
+        recommendations=[],
+    )
 
 
 @router.get("/journal/patterns", response_model=PatternSummary)
@@ -183,3 +182,45 @@ async def get_patterns(
         top_patterns=patterns,
         areas_to_improve=improvements,
     )
+
+
+class EnhancedPatternSummary(BaseModel):
+    summary: str
+    performance_metrics: dict = {}
+    patterns: list[dict] = []
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+    recommendations: list[dict] = []
+
+
+@router.get("/journal/patterns/deep", response_model=EnhancedPatternSummary)
+async def get_deep_patterns(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deep AI-powered pattern analysis from trade history (Sonnet)."""
+    from app.advisor.pattern_analyzer import PatternAnalyzer
+    from app.config import settings
+
+    if settings.ai_pattern_analysis_enabled and claude_client.available:
+        analyzer = PatternAnalyzer()
+        result = await analyzer.analyze_deep(user_id, db)
+        return EnhancedPatternSummary(**result)
+
+    # Fallback to basic algorithmic analysis
+    analyzer = PatternAnalyzer()
+    result = analyzer._algorithmic_fallback(
+        await _load_recent_trades(user_id, db),
+    )
+    return EnhancedPatternSummary(**result)
+
+
+async def _load_recent_trades(user_id: str, db: AsyncSession) -> list:
+    """Load recent closed trades for a user."""
+    result = await db.execute(
+        select(Trade)
+        .where(Trade.user_id == user_id, Trade.pnl.is_not(None))
+        .order_by(Trade.exit_time.desc())
+        .limit(100)
+    )
+    return list(result.scalars().all())

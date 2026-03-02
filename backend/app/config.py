@@ -26,8 +26,22 @@ class Settings(BaseSettings):
     alpaca_api_secret: str = ""
     alpaca_paper: bool = True
 
-    # AI (Trade Journal)
+    # AI
     anthropic_api_key: str = ""
+    anthropic_admin_api_key: str = ""  # sk-ant-admin... for Usage & Cost API
+
+    # AI feature flags
+    ai_signal_quality_enabled: bool = True
+    ai_risk_tuning_enabled: bool = True
+    ai_feedback_loop_enabled: bool = True
+    ai_multi_timeframe_enabled: bool = True
+    ai_pattern_analysis_enabled: bool = True
+
+    # AI cost control
+    ai_signal_quality_cache_ttl: int = 300
+    ai_risk_tuning_interval_hours: int = 24
+    ai_max_daily_api_calls: int = 500
+    ai_prepaid_credit_usd: float = 0.0
 
     # Email alerts
     resend_api_key: str = ""

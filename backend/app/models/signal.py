@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Uuid
+from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -28,3 +28,14 @@ class Signal(Base, UUIDMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(
         String(20), default="pending"
     )  # pending, active, closed, cancelled
+
+    # AI enrichment fields
+    ai_quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ai_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ai_recommendation: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # strong_confirm, confirm, caution, reject
+    mtf_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    mtf_alignment: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # aligned, mixed, conflicting

@@ -19,14 +19,9 @@ def run_signal_pipeline(self):
 
 
 async def _run_pipeline_async():
-    import pandas as pd
     from sqlalchemy import select
 
     from app.core.database import task_session
-    from app.data.storage import CandleStorage
-    from app.engine.layers.risk import RiskConfig
-    from app.engine.pipeline import SignalPipeline
-    from app.models.signal import Signal as SignalModel
     from app.models.strategy import Strategy
 
     async with task_session() as db:
@@ -55,6 +50,7 @@ async def _run_strategy_pipeline(db, active_strategy):
     import pandas as pd
 
     from app.data.storage import CandleStorage
+    from app.engine.layers.feedback_filter import FeedbackFilter
     from app.engine.layers.risk import RiskConfig
     from app.engine.pipeline import SignalPipeline
     from app.models.signal import Signal as SignalModel
@@ -89,7 +85,13 @@ async def _run_strategy_pipeline(db, active_strategy):
         min_risk_reward=cfg.get("min_risk_reward", 1.5),
     )
 
-    pipeline = SignalPipeline(risk_config=risk_config, min_confluence=min_confluence)
+    pipeline = SignalPipeline(
+        risk_config=risk_config,
+        min_confluence=min_confluence,
+        min_trigger_count=cfg.get("min_trigger_count", 2),
+        trigger_lookback_candles=cfg.get("trigger_lookback_candles", 1),
+        ema_slope_threshold=cfg.get("ema_slope_threshold", 0.001),
+    )
 
     # --- CPPI exposure scaling (Feature 6) ---
     cppi_exposure = 1.0
@@ -106,6 +108,8 @@ async def _run_strategy_pipeline(db, active_strategy):
             )
         except Exception as e:
             logger.warning("CPPI calculation failed for strategy %s: %s", active_strategy.id, e)
+
+    feedback_filter = FeedbackFilter()
 
     logger.info(
         "Strategy '%s' (id=%s): processing %d symbols × %d timeframes "
@@ -133,13 +137,42 @@ async def _run_strategy_pipeline(db, active_strategy):
                     symbol, timeframe, df, account_equity=account_equity,
                 )
                 logger.info(
-                    "Strategy '%s' | %s %s: action=%s, confluence=%s",
+                    "Strategy '%s' | %s %s: action=%s, confluence=%s, block=%s",
                     active_strategy.name, symbol, timeframe,
-                    signal.action, signal.confluence_score,
+                    signal.action, signal.confluence_score, signal.block_reason,
                 )
 
                 # Persist actionable signals (BUY/SELL) to DB
                 if signal.action in ("BUY", "SELL"):
+                    # --- Feedback Filter: apply learned rules ---
+                    skip, skip_reason = await feedback_filter.should_skip(
+                        symbol=symbol,
+                        regime=signal.regime,
+                        db=db,
+                        strategy_id=str(active_strategy.id),
+                    )
+                    if skip:
+                        logger.info(
+                            "FeedbackFilter SKIP: %s %s %s — %s (strategy=%s)",
+                            signal.action, symbol, timeframe,
+                            skip_reason, active_strategy.name,
+                        )
+                        continue
+
+                    confluence_override = await feedback_filter.get_confluence_override(
+                        symbol=symbol,
+                        regime=signal.regime,
+                        db=db,
+                        strategy_id=str(active_strategy.id),
+                    )
+                    if confluence_override and signal.confluence_score < confluence_override:
+                        logger.info(
+                            "FeedbackFilter: %s %s confluence %d < learned threshold %d — skipping (strategy=%s)",
+                            symbol, timeframe, signal.confluence_score,
+                            confluence_override, active_strategy.name,
+                        )
+                        continue
+
                     entry_price = float(df["close"].iloc[-1])
 
                     # Apply CPPI scaling to position size
@@ -169,10 +202,29 @@ async def _run_strategy_pipeline(db, active_strategy):
                     )
                     db.add(signal_row)
                     logger.info(
-                        "Persisted %s signal for %s %s (strategy=%s, confluence=%d, entry=%.2f, size=%.6f)",
-                        signal.action, symbol, timeframe, active_strategy.name,
-                        signal.confluence_score, entry_price, position_size,
+                        "Persisted %s signal for %s %s "
+                        "(strategy=%s, confluence=%d, "
+                        "entry=%.2f, size=%.6f)",
+                        signal.action, symbol, timeframe,
+                        active_strategy.name,
+                        signal.confluence_score,
+                        entry_price, position_size,
                     )
+
+                    # AI enrichment (non-blocking — failures don't block the signal)
+                    await _ai_enrich_signal(signal, signal_row, db, df)
+
+                    # Honor AI reject in live mode
+                    if signal_row.ai_recommendation == "reject":
+                        signal_row.status = "rejected"
+                        logger.info(
+                            "AI REJECT (live): %s %s %s (strategy=%s, quality=%s, reason=%s)",
+                            signal.action, symbol, timeframe,
+                            active_strategy.name,
+                            signal_row.ai_quality_score,
+                            (signal_row.ai_reasoning or "")[:100],
+                        )
+                        continue
 
                     # Publish to Redis for real-time WebSocket feed
                     try:
@@ -188,6 +240,8 @@ async def _run_strategy_pipeline(db, active_strategy):
                                 "confluence_score": signal.confluence_score,
                                 "entry_price": entry_price,
                                 "regime": signal.regime,
+                                "ai_quality_score": signal_row.ai_quality_score,
+                                "ai_recommendation": signal_row.ai_recommendation,
                             }),
                         )
                     except Exception:
@@ -198,3 +252,70 @@ async def _run_strategy_pipeline(db, active_strategy):
                     "Pipeline failed for %s %s (strategy=%s): %s",
                     symbol, timeframe, active_strategy.name, e,
                 )
+
+
+async def _ai_enrich_signal(signal, signal_row, db, df):
+    """Run AI enrichment on a BUY/SELL signal (non-blocking)."""
+    from app.config import settings
+
+    try:
+        signal_data = {
+            "action": signal.action,
+            "symbol": signal.symbol,
+            "timeframe": signal.timeframe,
+            "regime": signal.regime,
+            "trend_direction": signal.trend_direction,
+            "trend_strength": signal.trend_strength,
+            "confluence_score": signal.confluence_score,
+            "triggers": signal.triggers,
+            "risk_reward": signal.risk_reward,
+        }
+
+        candle_summary = []
+        for _, row in df.tail(5).iloc[::-1].iterrows():
+            candle_summary.append({
+                "open": float(row["open"]),
+                "high": float(row["high"]),
+                "low": float(row["low"]),
+                "close": float(row["close"]),
+                "volume": float(row["volume"]),
+            })
+
+        confluence_details = signal.confluence_details or {}
+
+        # Multi-timeframe analysis
+        mtf_data = None
+        if settings.ai_multi_timeframe_enabled:
+            from app.advisor.multi_tf_analyzer import MultiTimeframeAnalyzer
+
+            mtf_analyzer = MultiTimeframeAnalyzer()
+            mtf_data = await mtf_analyzer.analyze(signal.symbol, signal_data, db)
+            signal_row.mtf_confidence = mtf_data.get("mtf_confidence")
+            signal_row.mtf_alignment = mtf_data.get("timeframe_alignment")
+
+        # Signal quality evaluation
+        if settings.ai_signal_quality_enabled:
+            from app.advisor.signal_quality import SignalQualityEvaluator
+
+            evaluator = SignalQualityEvaluator()
+            quality = await evaluator.evaluate(
+                signal_data, confluence_details, candle_summary, mtf_data,
+            )
+            signal_row.ai_quality_score = quality["quality_score"]
+            signal_row.ai_reasoning = quality["reasoning"]
+            signal_row.ai_recommendation = quality["recommendation"]
+
+            # Apply position size adjustment if recommended
+            size_factor = quality.get("risk_adjustments", {}).get(
+                "position_size_factor", 1.0,
+            )
+            if size_factor != 1.0 and signal_row.position_size:
+                original = signal_row.position_size
+                signal_row.position_size *= size_factor
+                logger.info(
+                    "AI quality: adjusted position_size %.6f -> %.6f (factor=%.2f)",
+                    original, signal_row.position_size, size_factor,
+                )
+
+    except Exception:
+        logger.exception("AI enrichment failed for %s — signal proceeds without AI", signal.symbol)

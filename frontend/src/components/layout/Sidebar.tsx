@@ -1,15 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Zap,
   ArrowUpDown,
-  FlaskConical,
-  BookOpen,
   BarChart2,
-  Settings,
-  Key,
   Sparkles,
-  HelpCircle,
+  Target,
+  Settings,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -19,19 +15,16 @@ import { cn } from "@/lib/cn";
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
-  { to: "/signals", icon: Zap, label: "Signals" },
+  { to: "/strategies", icon: Target, label: "Strategies" },
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },
-  { to: "/backtest", icon: FlaskConical, label: "Backtest Lab" },
-  { to: "/journal", icon: BookOpen, label: "Journal" },
   { to: "/analytics", icon: BarChart2, label: "Analytics" },
-  { to: "/config", icon: Settings, label: "Strategies" },
-  { to: "/keys", icon: Key, label: "API Keys" },
-  { to: "/guide", icon: HelpCircle, label: "User Guide" },
+  { to: "/settings", icon: Settings, label: "Settings" },
 ] as const;
 
 export function Sidebar() {
   const collapsed = useSidebar((s) => s.collapsed);
   const toggle = useSidebar((s) => s.toggle);
+  const location = useLocation();
 
   return (
     <aside
@@ -60,15 +53,20 @@ export function Sidebar() {
               <NavLink
                 to={to}
                 end={to === "/"}
-                className={({ isActive }) =>
-                  cn(
+                className={({ isActive }) => {
+                  // For /strategies, also highlight on sub-routes like /strategies/:id
+                  const active =
+                    isActive ||
+                    (to === "/strategies" &&
+                      location.pathname.startsWith("/strategies/"));
+                  return cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     collapsed && "justify-center px-0",
-                    isActive
+                    active
                       ? "bg-(--color-accent-soft) text-(--color-accent)"
                       : "text-(--color-text-secondary) hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
-                  )
-                }
+                  );
+                }}
                 title={collapsed ? label : undefined}
               >
                 <Icon className="h-5 w-5 shrink-0" />

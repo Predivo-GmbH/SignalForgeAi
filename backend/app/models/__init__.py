@@ -1,3 +1,4 @@
+from app.models.ai_insight import AIInsight, FeedbackRule
 from app.models.backtest_result import BacktestResult
 from app.models.base import Base
 from app.models.candle import Candle
@@ -9,7 +10,9 @@ from app.models.trade import Trade
 from app.models.user import User
 
 __all__ = [
+    "AIInsight",
     "BacktestResult",
+    "FeedbackRule",
     "Base",
     "BrokerConnection",
     "Candle",
