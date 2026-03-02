@@ -17,10 +17,10 @@ class Signal(Base, UUIDMixin, TimestampMixin):
     )
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=True, index=True
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("strategies.id"), nullable=True
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
     )
     symbol: Mapped[str] = mapped_column(String(20))
     timeframe: Mapped[str] = mapped_column(String(10))
