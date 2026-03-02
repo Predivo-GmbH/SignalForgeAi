@@ -48,7 +48,7 @@ async def get_candles(
 
 
 @router.get("/engine/status")
-async def engine_status():
+async def engine_status(_user_id: str = Depends(get_current_user)):
     """Return current signal engine status."""
     return {
         "active": True,

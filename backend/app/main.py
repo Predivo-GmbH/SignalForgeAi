@@ -64,7 +64,14 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # Application
 # ---------------------------------------------------------------------------
-app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    debug=settings.debug,
+    lifespan=lifespan,
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
+)
 
 # ---------------------------------------------------------------------------
 # Rate limiting (slowapi)
@@ -179,12 +186,17 @@ async def health() -> Response:
         services["redis"] = "unavailable"
         services["status"] = "degraded"
 
-    # Check Celery worker
+    # Check Celery worker (run sync call in thread to avoid blocking event loop)
     try:
+        import asyncio
+
         from app.worker import celery_app
 
-        inspect = celery_app.control.inspect(timeout=2.0)
-        ping_result = inspect.ping()
+        def _check_celery():
+            insp = celery_app.control.inspect(timeout=2.0)
+            return insp.ping()
+
+        ping_result = await asyncio.to_thread(_check_celery)
         services["celery"] = "ok" if ping_result else "unavailable"
         if not ping_result:
             services["status"] = "degraded"
