@@ -67,18 +67,21 @@ class PositionManagerDB:
         position_id: str,
         exit_price: float,
         reason: str = "manual",
+        user_id: str | None = None,
     ) -> dict:
         """Close a position, update it, and create a Trade row.
 
         Returns a summary dict with position_id, pnl, and reason.
         Raises ``ValueError`` if no matching open position exists.
+        When *user_id* is provided, the query is scoped to that user.
         """
-        result = await db.execute(
-            select(Position).where(
-                Position.id == uuid.UUID(position_id),
-                Position.is_open == True,  # noqa: E712
-            )
-        )
+        filters = [
+            Position.id == uuid.UUID(position_id),
+            Position.is_open == True,  # noqa: E712
+        ]
+        if user_id:
+            filters.append(Position.user_id == uuid.UUID(user_id))
+        result = await db.execute(select(Position).where(*filters))
         pos = result.scalar_one_or_none()
         if not pos:
             raise ValueError(f"No open position found with id {position_id}")

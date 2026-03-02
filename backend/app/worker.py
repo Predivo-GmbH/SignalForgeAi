@@ -17,6 +17,12 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     enable_utc=True,
+    # Global task timeouts — override per-task for long-running ones
+    task_time_limit=600,        # 10 min hard kill
+    task_soft_time_limit=540,   # 9 min soft warning (raises SoftTimeLimitExceeded)
+    # Acknowledge tasks after they complete (not before)
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
 )
 
 # Auto-discover tasks in the app.tasks package

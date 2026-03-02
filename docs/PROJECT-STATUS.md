@@ -2,9 +2,9 @@
 
 > **For Claude:** Use this document as the single source of truth for the project.
 
-**Last updated:** 2026-03-02
-**Last committed:** `79baeb3` on `main` (88 commits) — extensive uncommitted work beyond this
-**Quality gates:** 296 backend tests, 41 frontend tests (at last commit; new tests added since)
+**Last updated:** 2026-03-03
+**Latest commit:** `17c5b28` on `main` (105 commits) — all committed and pushed
+**Quality gates:** 351 backend tests (2 pre-existing failures), 36 frontend tests
 
 ---
 
@@ -196,9 +196,9 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
 - **Hardening**: Circuit breaker, rate limiting, structured logging, request IDs
 - **Production Docker**: Multi-stage Dockerfile, 5-service docker-compose.prod.yml
 
-### Phase 7: AI Advisor & Risk Management (Post-commit, uncommitted)
+### Phase 7: AI Advisor & Risk Management (Committed)
 
-> This phase represents all work done after Phase 6 was committed. All changes are currently uncommitted.
+> Commits `033faa0` through `17c5b28`. All committed and pushed to `main`.
 
 #### 7a. AI Advisor System (`app/advisor/`)
 
@@ -594,11 +594,11 @@ docker.exe compose exec db psql -U signalforge -c \
 
 ---
 
-## Commit History (91 commits on main)
+## Commit History (105 commits on main)
 
 ### Phase 1–6: See git log (88 commits from `d872185` to `79baeb3`)
 
-### Phase 7+: Commits `033faa0` and `dc52284`
+### Phase 7+: Commits `033faa0` through `17c5b28`
 - AI Advisor module (9 files: claude_client, planner, signal_quality, risk_tuner, feedback_synthesizer, multi_tf_analyzer, pattern_analyzer, pricing, anthropic_admin)
 - AI Usage & Cost Tracking: dual-source API (`GET /api/ai-usage`, `PUT /api/ai-usage/credit`), frontend dashboard with daily cost chart, model/feature breakdown, credit management
 - `flush_ai_usage` Celery task: flushes sync-path usage records from Redis queue to DB every 60s
@@ -618,3 +618,11 @@ docker.exe compose exec db psql -U signalforge -c \
 - `periodic_pattern_analysis` Celery task: stores pattern insights in Redis for Risk Tuner consumption
 - 4 new test files (test_backtest_strategy, test_claude_client, test_risk_tuner, test_signal_quality)
 - **Alpaca broker removed** (`dc52284`): adapter deleted, `alpaca-py` dependency removed, config/env vars cleaned, all docs updated, Binance-only via CCXT
+- **No AI, No Trading enforced** (`dc52284`): all algorithmic fallbacks removed, every advisor component rejects/aborts when Claude unavailable
+- **All ruff lint errors fixed** (`dc52284`): E501, I001, F401, E741 across 11 files — CI passes clean
+- `.gitattributes` added (`da4ad28`): enforces LF line endings, prevents WSL2/Windows CRLF ghost diffs
+- `pnlColor` extracted to shared `frontend/src/lib/format.ts` utility (`da4ad28`)
+- Stale backtest files removed (`da4ad28`): BacktestForm, BacktestResults, WalkForwardForm, WalkForwardResults, useBacktest.ts
+- **JWT token refresh** (`23cea2b`): auto-refreshes access token on 401 before logging out
+- **WebSocket exponential backoff** (`448de29`): 3s–30s cap, max 5 retries per channel
+- Dead code cleanup (`17c5b28`): removed unused imports, preset labels, theme toggle

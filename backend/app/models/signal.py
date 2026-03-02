@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Float, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -10,7 +10,15 @@ from app.models.base import Base, TimestampMixin, UUIDMixin
 
 class Signal(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "signals"
+    __table_args__ = (
+        Index("ix_signals_user_id", "user_id"),
+        Index("ix_signals_strategy_id", "strategy_id"),
+        Index("ix_signals_status", "status"),
+    )
 
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=True, index=True
+    )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("strategies.id"), nullable=True
     )

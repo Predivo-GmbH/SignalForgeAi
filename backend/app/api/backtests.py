@@ -1,5 +1,6 @@
 """Backtest API endpoints."""
 
+import asyncio
 import logging
 import uuid as _uuid
 
@@ -58,10 +59,9 @@ async def run_backtest(
     """Run a backtest synchronously (Celery async dispatch when broker is available)."""
     from app.tasks.backtest_task import run_backtest_task
 
-    # Run synchronously for now -- when Celery broker is running,
-    # switch to: task = run_backtest_task.delay(...)
-    result = run_backtest_task(
-        body.symbol, body.timeframe, body.days, body.params, user_id=user_id,
+    # Run in thread pool to avoid blocking the event loop
+    result = await asyncio.to_thread(
+        run_backtest_task, body.symbol, body.timeframe, body.days, body.params, user_id=user_id,
     )
     return result
 
@@ -104,7 +104,10 @@ async def list_backtests(
 
 
 @router.post("/backtests/optimize")
-async def run_walk_forward(body: WFORequest):
+async def run_walk_forward(
+    body: WFORequest,
+    user_id: str = Depends(get_current_user),
+):
     """Run walk-forward optimization."""
     import numpy as np
     import pandas as pd
@@ -216,7 +219,8 @@ async def run_strategy_backtest(
         strategy_name = "AI Advisor — Optimal"
 
     try:
-        result = run_portfolio_backtest(
+        result = await asyncio.to_thread(
+            run_portfolio_backtest,
             config=config,
             days=body.days,
             strategy_name=strategy_name,

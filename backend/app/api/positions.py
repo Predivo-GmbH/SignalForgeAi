@@ -1,5 +1,7 @@
 """Positions API — DB-backed position listing, closing, and account state."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -10,6 +12,8 @@ from app.core.database import get_db
 from app.execution.position_manager import PositionManagerDB
 from app.models.position import Position
 from app.models.trade import Trade
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/positions", tags=["positions"])
 
@@ -42,10 +46,10 @@ async def close_position(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Close an open position at the given exit price."""
+    """Close an open position at the given exit price (scoped to user)."""
     try:
         result = await PositionManagerDB.close_position(
-            db, position_id, body.exit_price, body.reason,
+            db, position_id, body.exit_price, body.reason, user_id=user_id,
         )
         await db.commit()
         return result
@@ -79,7 +83,7 @@ async def get_correlations(
                 "exposure_penalty": result.exposure_penalty,
             }
     except Exception:
-        pass
+        logger.exception("Failed to compute correlations for user %s", user_id)
     return {"matrix": {}, "alerts": [], "max_correlation": 0, "exposure_penalty": 1.0}
 
 
@@ -104,7 +108,7 @@ async def get_drawdown_state(
                 ],
             }
     except Exception:
-        pass
+        logger.exception("Failed to compute drawdown state for user %s", user_id)
     return {
         "peak_equity": 0, "current_equity": 0,
         "drawdown_pct": 0, "level": 0, "level_name": "Normal",
@@ -131,7 +135,7 @@ async def get_cppi_state(
                 "max_drawdown_pct": round(state.max_drawdown_pct * 100, 2),
             }
     except Exception:
-        pass
+        logger.exception("Failed to compute CPPI state for user %s", user_id)
     return {
         "floor": 0, "peak_equity": 0, "exposure_pct": 100,
         "cushion": 0, "multiplier": 3.0, "max_drawdown_pct": 15,

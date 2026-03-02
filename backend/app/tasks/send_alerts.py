@@ -20,12 +20,12 @@ async def _send_summary_async():
 
     from sqlalchemy import select
 
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.core.email import build_daily_summary_email, send_email
     from app.models.trade import Trade
     from app.models.user import User
 
-    async with async_session() as db:
+    async with task_session() as db:
         # Get all active users
         result = await db.execute(select(User).where(User.is_active.is_(True)))
         users = result.scalars().all()

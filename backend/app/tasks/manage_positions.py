@@ -69,20 +69,37 @@ async def _manage_async():
                     for c in candles
                 ])
 
+        # Pre-load latest candle per symbol for price updates (avoids N+1)
+        all_symbols = {pos.symbol for pos in positions}
+        latest_prices: dict[str, Candle] = {}
+        if all_symbols:
+            from sqlalchemy import func
+
+            # Sub-query: max time per symbol
+            subq = (
+                select(Candle.symbol, func.max(Candle.time).label("max_time"))
+                .where(Candle.symbol.in_(all_symbols))
+                .group_by(Candle.symbol)
+                .subquery()
+            )
+            price_result = await db.execute(
+                select(Candle).join(
+                    subq,
+                    (Candle.symbol == subq.c.symbol)
+                    & (Candle.time == subq.c.max_time),
+                )
+            )
+            for c in price_result.scalars().all():
+                latest_prices[c.symbol] = c
+
         for pos in positions:
             try:
                 cfg = strategy_configs.get(pos.strategy_id, {})
 
                 # ----------------------------------------------------------
-                # 1. Update current_price from latest candle
+                # 1. Update current_price from latest candle (pre-loaded)
                 # ----------------------------------------------------------
-                candle_result = await db.execute(
-                    select(Candle)
-                    .where(Candle.symbol == pos.symbol)
-                    .order_by(Candle.time.desc())
-                    .limit(1)
-                )
-                latest_candle = candle_result.scalar_one_or_none()
+                latest_candle = latest_prices.get(pos.symbol)
                 if latest_candle:
                     pos.current_price = latest_candle.close
                     if pos.direction == "BUY":

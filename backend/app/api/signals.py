@@ -151,11 +151,14 @@ async def generate_signal(
 @router.get("/{signal_id}", response_model=SignalResponse)
 async def get_signal(
     signal_id: uuid.UUID,
-    _user_id: str = Depends(get_current_user),
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get a single signal by ID."""
-    result = await db.execute(select(Signal).where(Signal.id == signal_id))
+    """Get a single signal by ID (scoped to the authenticated user)."""
+    uid = uuid.UUID(user_id)
+    result = await db.execute(
+        select(Signal).where(Signal.id == signal_id, Signal.user_id == uid)
+    )
     signal = result.scalar_one_or_none()
     if not signal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found")
@@ -164,14 +167,15 @@ async def get_signal(
 
 @router.get("", response_model=SignalListResponse)
 async def list_signals(
-    _user_id: str = Depends(get_current_user),
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     strategy_id: uuid.UUID | None = Query(default=None),
 ):
-    """List signals with pagination, optionally filtered by strategy."""
-    filters = []
+    """List signals with pagination, scoped to the authenticated user."""
+    uid = uuid.UUID(user_id)
+    filters = [Signal.user_id == uid]
     if strategy_id:
         filters.append(Signal.strategy_id == strategy_id)
 

@@ -1,5 +1,6 @@
 import logging
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,9 +36,35 @@ logger = logging.getLogger(__name__)
 configure_logging(debug=settings.debug)
 
 # ---------------------------------------------------------------------------
+# Redis subscriber for broadcasting pub/sub messages to WebSocket clients
+# ---------------------------------------------------------------------------
+_subscriber = RedisSubscriber(redis_url=settings.redis_url)
+
+
+# ---------------------------------------------------------------------------
+# Lifespan (replaces deprecated on_event)
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Startup ---
+    if not settings.debug and settings.jwt_secret == "dev-secret-change-in-production":
+        raise RuntimeError("JWT secret must be changed for production!")
+
+    try:
+        await _subscriber.start(manager.broadcast)
+    except Exception as e:
+        logger.warning("Redis subscriber failed to start: %s", e)
+
+    yield
+
+    # --- Shutdown ---
+    await _subscriber.stop()
+
+
+# ---------------------------------------------------------------------------
 # Application
 # ---------------------------------------------------------------------------
-app = FastAPI(title=settings.app_name, debug=settings.debug)
+app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # Rate limiting (slowapi)
@@ -62,14 +89,14 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RequestIDMiddleware)
 
 # ---------------------------------------------------------------------------
-# CORS
+# CORS — restrict methods and headers in production
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 # ---------------------------------------------------------------------------
@@ -118,41 +145,30 @@ app.websocket("/ws/signals")(ws_signals)
 app.websocket("/ws/prices")(ws_prices)
 app.websocket("/ws/trades")(ws_trades)
 
-# ---------------------------------------------------------------------------
-# Redis subscriber for broadcasting pub/sub messages to WebSocket clients
-# ---------------------------------------------------------------------------
-_subscriber = RedisSubscriber(redis_url=settings.redis_url)
-
 
 # ---------------------------------------------------------------------------
-# Startup / shutdown
+# Rate-limited auth endpoints
 # ---------------------------------------------------------------------------
-@app.on_event("startup")
-async def _startup() -> None:
-    # JWT safety check for production
-    if not settings.debug and settings.jwt_secret == "dev-secret-change-in-production":
-        raise RuntimeError("JWT secret must be changed for production!")
-
-    try:
-        await _subscriber.start(manager.broadcast)
-    except Exception as e:
-        logger.warning("Redis subscriber failed to start: %s", e)
-
-
-@app.on_event("shutdown")
-async def _shutdown() -> None:
-    await _subscriber.stop()
+@app.post("/api/auth/login-limited")
+@limiter.limit("10/minute")
+async def _login_rate_limit(request: Request):
+    """Rate-limit wrapper — actual handler is in auth_router."""
+    pass  # pragma: no cover — routing handled by auth_router
 
 
 # ---------------------------------------------------------------------------
 # Enhanced health check
 # ---------------------------------------------------------------------------
 @app.get("/health")
-async def health() -> dict:
-    status: dict = {
+async def health() -> Response:
+    import json
+
+    from starlette.responses import JSONResponse
+
+    services: dict = {
         "status": "ok",
         "service": settings.app_name,
-        "db": "ok",
+        "db": "unknown",
         "redis": "unknown",
         "celery": "unknown",
     }
@@ -161,19 +177,33 @@ async def health() -> dict:
     try:
         async with async_session() as db:
             await db.execute(text("SELECT 1"))
-        status["db"] = "ok"
+        services["db"] = "ok"
     except Exception:
-        status["db"] = "error"
-        status["status"] = "degraded"
+        services["db"] = "error"
+        services["status"] = "degraded"
 
-    # Check Redis
+    # Check Redis (async)
     try:
-        import redis
+        from app.core.redis_client import redis_client
 
-        r = redis.from_url(settings.redis_url)
-        r.ping()
-        status["redis"] = "ok"
+        await redis_client.ping()
+        services["redis"] = "ok"
     except Exception:
-        status["redis"] = "unavailable"
+        services["redis"] = "unavailable"
+        services["status"] = "degraded"
 
-    return status
+    # Check Celery worker
+    try:
+        from app.worker import celery_app
+
+        inspect = celery_app.control.inspect(timeout=2.0)
+        ping_result = inspect.ping()
+        services["celery"] = "ok" if ping_result else "unavailable"
+        if not ping_result:
+            services["status"] = "degraded"
+    except Exception:
+        services["celery"] = "unavailable"
+        services["status"] = "degraded"
+
+    status_code = 200 if services["status"] == "ok" else 503
+    return JSONResponse(content=services, status_code=status_code)

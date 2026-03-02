@@ -50,13 +50,20 @@ async def _execute_async():
         )
         signals = result.scalars().all()
 
+        # Pre-load all needed strategies in a single query (avoids N+1)
+        strategy_ids = {sig.strategy_id for sig in signals if sig.strategy_id}
+        strategies_by_id: dict = {}
+        if strategy_ids:
+            strat_result = await db.execute(
+                select(Strategy).where(Strategy.id.in_(strategy_ids))
+            )
+            for strat in strat_result.scalars().all():
+                strategies_by_id[strat.id] = strat
+
         for sig in signals:
             try:
-                # Resolve user_id from the linked strategy
-                strat_result = await db.execute(
-                    select(Strategy).where(Strategy.id == sig.strategy_id)
-                )
-                strategy = strat_result.scalar_one_or_none()
+                # Resolve user_id from the pre-loaded strategy
+                strategy = strategies_by_id.get(sig.strategy_id)
                 if strategy is None:
                     logger.warning("Signal %s has no valid strategy, skipping", sig.id)
                     continue

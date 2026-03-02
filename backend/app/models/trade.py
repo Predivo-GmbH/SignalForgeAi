@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Uuid
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -11,6 +11,10 @@ from app.models.base import Base, TimestampMixin, UUIDMixin
 
 class Trade(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "trades"
+    __table_args__ = (
+        Index("ix_trades_user_id", "user_id"),
+        Index("ix_trades_exit_time", "exit_time"),
+    )
 
     signal_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("signals.id"), nullable=True

@@ -19,9 +19,14 @@ async def _analyze_async():
     from sqlalchemy import select
 
     from app.advisor.pattern_analyzer import PatternAnalyzer
+    from app.config import settings
     from app.core.database import task_session
     from app.core.redis_client import redis_client
     from app.models.strategy import Strategy
+
+    if not settings.ai_pattern_analysis_enabled:
+        logger.info("AI pattern analysis is disabled via feature flag")
+        return
 
     async with task_session() as db:
         result = await db.execute(

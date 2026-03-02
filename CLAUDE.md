@@ -4,9 +4,9 @@ Multi-layer automated trading platform with AI-powered confluence scoring and ad
 
 ## Status
 
-**Phases 1–7 complete** (Phase 7 uncommitted). **AI self-learning loop active.**
+**Phases 1–7 complete.** All committed and pushed. **AI self-learning loop active.**
 
-- 88 commits on `main` + extensive uncommitted Phase 7 work + AI cost tracking + self-learning loop
+- 105 commits on `main` (latest: `17c5b28`)
 - Backend: 12 API routers (journal removed), ~40 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 13 Celery Beat tasks, 11 DB models
 - Frontend: 8 pages, 16 hooks, ~21 components, dark/light theme
 - Phase 7 added: AI Advisor (autonomous planner, signal quality, risk tuner, feedback loop), 8 configurable risk management features, portfolio backtester, frontend restructure
@@ -104,12 +104,15 @@ Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics 
 - Email: `roger@signalforge.dev` / Password: `SignalForge2026`
 - Frontend password gate: `signalforge`
 
-## Current System State (2026-03-02)
+## Current System State (2026-03-03)
 - 5 Docker services running (db, redis, api, worker, beat)
 - 1 active strategy: "AI Advisor — Conservative Swing" (15 symbols, 4h, min_confluence: 70)
 - All symbols currently blocked (chaotic_regime / no_trend / low_confluence)
 - Candle data: 6 timeframes × 15+ symbols, ingested every 60s
 - Broker connections stored but NOT wired to execution (PaperAdapter always used)
+- `.gitattributes` enforces LF line endings (prevents WSL2/Windows CRLF ghost diffs)
+- JWT token refresh on 401 responses (auto-retry before logout)
+- WebSocket reconnect: exponential backoff (3s–30s cap), max 5 retries per channel
 
 ## Pipeline Checkpoint Rule
 Before declaring any phase/step complete, re-read the plan to verify ALL deliverables are done. If anything is missing, continue working — do not skip ahead.

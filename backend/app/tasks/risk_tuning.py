@@ -18,8 +18,13 @@ async def _tune_risk_async(strategy_id: str | None):
     from sqlalchemy import select
 
     from app.advisor.risk_tuner import RiskTuner
+    from app.config import settings
     from app.core.database import task_session
     from app.models.strategy import Strategy
+
+    if not settings.ai_risk_tuning_enabled:
+        logger.info("AI risk tuning is disabled via feature flag")
+        return
 
     async with task_session() as db:
         if strategy_id:

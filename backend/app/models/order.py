@@ -32,7 +32,7 @@ class Order(Base, UUIDMixin):
     stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
     take_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(
-        String(20), default="pending"
+        String(20), default="pending", index=True
     )  # pending / filled / partial / cancelled / rejected
     broker: Mapped[str] = mapped_column(
         String(20), nullable=False
