@@ -5,6 +5,8 @@ export class WebSocketManager {
   private connections = new Map<string, WebSocket>();
   private handlers = new Map<string, Set<MessageHandler>>();
   private reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private retryCount = new Map<string, number>();
+  private readonly MAX_RETRIES = 5;
 
   constructor(baseUrl?: string) {
     this.baseUrl =
@@ -20,13 +22,26 @@ export class WebSocketManager {
     if (this.connections.has(channel)) return;
     const url = this.getUrl(channel, token);
     const ws = new WebSocket(url);
+    ws.onopen = () => {
+      this.retryCount.set(channel, 0);
+    };
     ws.onmessage = (event: MessageEvent) => {
       const data: unknown = JSON.parse(event.data as string);
       this.handlers.get(channel)?.forEach((fn) => fn(data));
     };
+    ws.onerror = (event: Event) => {
+      console.error(`[ws] error on channel "${channel}"`, event);
+    };
     ws.onclose = () => {
       this.connections.delete(channel);
-      const timer = setTimeout(() => this.connect(channel, token), 3000);
+      const count = (this.retryCount.get(channel) ?? 0) + 1;
+      this.retryCount.set(channel, count);
+      if (count > this.MAX_RETRIES) {
+        console.warn(`[ws] channel "${channel}" exceeded ${this.MAX_RETRIES} retries, giving up`);
+        return;
+      }
+      const delay = Math.min(3000 * 2 ** (count - 1), 30000);
+      const timer = setTimeout(() => this.connect(channel, token), delay);
       this.reconnectTimers.set(channel, timer);
     };
     this.connections.set(channel, ws);
@@ -48,6 +63,7 @@ export class WebSocketManager {
     const timer = this.reconnectTimers.get(channel);
     if (timer) clearTimeout(timer);
     this.reconnectTimers.delete(channel);
+    this.retryCount.delete(channel);
   }
 
   disconnectAll(): void {
