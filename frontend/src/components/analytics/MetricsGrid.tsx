@@ -8,11 +8,7 @@ import {
 } from "lucide-react";
 import type { EquityHistory } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/cn";
-
-function pnlColor(value: number | null | undefined): string {
-  if (value == null) return "text-(--color-text-secondary)";
-  return value >= 0 ? "text-(--color-positive)" : "text-(--color-negative)";
-}
+import { pnlColor } from "@/lib/format";
 
 function MetricCard({
   label,

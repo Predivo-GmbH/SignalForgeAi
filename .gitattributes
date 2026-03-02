@@ -1,0 +1,11 @@
+# Enforce LF line endings for all text files (prevents WSL2/Windows CRLF ghost diffs)
+* text=auto eol=lf
+
+# Explicitly mark binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

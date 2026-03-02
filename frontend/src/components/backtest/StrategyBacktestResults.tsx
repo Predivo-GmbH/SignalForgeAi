@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
+import { pnlColor } from "@/lib/format";
 import type {
   StrategyBacktestResult,
   SymbolResult,
@@ -23,10 +24,6 @@ const PRESET_LABELS: Record<string, string> = {
   aggressive_scalper: "Aggressive Scalper",
 };
 
-function pnlColor(value: number | null | undefined): string {
-  if (value == null) return "text-(--color-text-secondary)";
-  return value >= 0 ? "text-(--color-positive)" : "text-(--color-negative)";
-}
 
 function MetricCard({
   label,

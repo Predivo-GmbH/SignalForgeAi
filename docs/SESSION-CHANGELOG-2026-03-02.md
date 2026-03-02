@@ -3,7 +3,7 @@
 > **Purpose:** Complete record of all changes made during the March 2 development session.
 > All changes are uncommitted and live in the working directory.
 
-**Session scope:** Celery infrastructure, pipeline debugging, broker UI cleanup, chart timeframe fix, storage optimization, AI enrichment pipeline (5 waves), AI Usage & Cost Tracking dashboard, AI autonomous self-learning loop redesign.
+**Session scope:** Celery infrastructure, pipeline debugging, broker UI cleanup, chart timeframe fix, storage optimization, AI enrichment pipeline (5 waves), AI Usage & Cost Tracking dashboard, AI autonomous self-learning loop redesign, Alpaca broker removal.
 
 ---
 
@@ -21,6 +21,7 @@
 10. [AI Enrichment Pipeline (5 Waves)](#10-ai-enrichment-pipeline-5-waves)
 11. [AI Usage & Cost Tracking Dashboard](#11-ai-usage--cost-tracking-dashboard)
 12. [AI Autonomous Self-Learning Loop — Redesign](#12-ai-autonomous-self-learning-loop--redesign)
+13. [Remove Alpaca Broker — Standardize on CCXT/Binance](#13-remove-alpaca-broker--standardize-on-ccxtbinance)
 
 ---
 
@@ -593,6 +594,75 @@ Removed `journal_router` import and `app.include_router()` call. Journal API end
 - **Reject only < 40 quality:** `caution` signals still execute with reduced size (existing behavior)
 - **Risk Tuner guardrails:** Max 20% change per cycle, hard parameter bounds
 - **Pattern context optional:** Redis unavailable → Risk Tuner proceeds without it
+
+---
+
+## 13. Remove Alpaca Broker — Standardize on CCXT/Binance
+
+### Context
+
+SignalForge trades crypto exclusively (15 USDT pairs). Alpaca is primarily a US stock/equities broker with limited crypto support. The system already had a fully built CCXT adapter that supports Binance and 100+ crypto exchanges. Alpaca had no practical use — removed entirely.
+
+### What Changed
+
+**Removed:**
+- `backend/app/execution/adapters/alpaca_adapter.py` — **DELETED** (146 lines)
+- `alpaca-py>=0.30.0` dependency from `backend/pyproject.toml`
+- Alpaca config settings from `backend/app/config.py` (`alpaca_api_key`, `alpaca_api_secret`, `alpaca_paper`)
+- `SF_ALPACA_*` env vars from `deploy/.env.prod.template`
+- Alpaca from frontend broker dropdown in `frontend/src/pages/Settings.tsx` (Binance is now the only option)
+
+**Updated code:**
+- `backend/app/api/broker.py` — comment: `"binance" or other CCXT-supported exchange`
+- `backend/app/execution/adapters/base.py` — docstring: `'ccxt', 'paper'`
+- `backend/app/models/order.py` — comment: `ccxt / paper`
+- `backend/tests/test_position_manager_db.py` — `broker="alpaca"` → `broker="ccxt"`
+- `backend/tests/test_models_phase6.py` — `broker="alpaca"` → `broker="ccxt"`, `broker_order_id="alp-123"` → `"ccxt-123"`
+
+**Updated documentation:**
+- `docs/PROJECT-STATUS.md` — tech stack (Broker row), architecture tree, phase summary, env vars table
+- `docs/DEPLOYMENT-GUIDE.md` — removed Alpaca env var line, fixed AI description
+- `docs/USER-GUIDE.md` — features list, supported markets (removed US Stocks/ETFs), settings, status table, limitations table, env vars table
+- `CLAUDE.md` — added "Questions → answer only" rule
+
+**Updated memory:**
+- `signalforge-state.md` — tech stack, broker line, env vars, broker architecture section, known issues
+- `MEMORY.md` — commit count, test counts, Alpaca removal note
+
+### CCXT Adapter (existing, unchanged)
+
+`backend/app/execution/adapters/ccxt_adapter.py` — already fully built:
+- Default: `exchange_id="binance"`, `testnet=True` (Binance sandbox mode)
+- Methods: `connect()`, `place_order()`, `cancel_order()`, `get_order_status()`, `get_positions()`, `get_balance()`
+- Credentials stored encrypted in DB via Settings > Connections page
+- **Not yet wired to execution** — `execute_signals.py` always creates PaperAdapter
+
+### Verification
+
+- **TypeScript:** `npx tsc --noEmit` — 0 errors
+- **Backend tests:** 351 passed, 2 failed (pre-existing, unrelated to Alpaca removal)
+  - `test_evaluate_sync_fallback_on_none` — AI evaluation edge case
+  - `test_strategy_backtest_conservative_preset` — `_make_sample_plan()` keyword mismatch
+- **Git:** Committed as `dc52284`, pushed to `origin/main`
+
+### Files Changed
+
+| File | Action |
+|------|--------|
+| `backend/app/execution/adapters/alpaca_adapter.py` | **DELETED** |
+| `backend/pyproject.toml` | Removed `alpaca-py` dependency |
+| `backend/app/config.py` | Removed Alpaca config block |
+| `backend/app/api/broker.py` | Updated comment |
+| `backend/app/execution/adapters/base.py` | Updated docstring |
+| `backend/app/models/order.py` | Updated comment |
+| `backend/tests/test_position_manager_db.py` | `alpaca` → `ccxt` |
+| `backend/tests/test_models_phase6.py` | `alpaca` → `ccxt` |
+| `frontend/src/pages/Settings.tsx` | Removed Alpaca from broker list |
+| `deploy/.env.prod.template` | Replaced Alpaca env vars with Binance testnet note |
+| `docs/PROJECT-STATUS.md` | 4 Alpaca references updated |
+| `docs/DEPLOYMENT-GUIDE.md` | 1 Alpaca reference updated |
+| `docs/USER-GUIDE.md` | 6 Alpaca references updated |
+| `CLAUDE.md` | Added "Questions → answer only" rule |
 
 ---
 

@@ -6,11 +6,7 @@ import { EquityCurve } from "@/components/analytics/EquityCurve";
 import { CorrelationMatrix } from "@/components/analytics/CorrelationMatrix";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
-
-function pnlColor(value: number | null | undefined): string {
-  if (value == null) return "text-(--color-text-secondary)";
-  return value >= 0 ? "text-(--color-positive)" : "text-(--color-negative)";
-}
+import { pnlColor } from "@/lib/format";
 
 function StrategyComparisonSection() {
   const { data, isLoading, error } = useStrategyComparison();

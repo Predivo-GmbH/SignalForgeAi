@@ -12,6 +12,7 @@ import {
 import { useTrades, useTradeStats } from "@/hooks/useTrades";
 import type { Trade } from "@/hooks/useTrades";
 import { cn } from "@/lib/cn";
+import { pnlColor } from "@/lib/format";
 
 const PAGE_SIZE = 20;
 
@@ -43,10 +44,6 @@ function formatTime(iso: string | null | undefined): string {
   });
 }
 
-function pnlColor(value: number | null | undefined): string {
-  if (value == null) return "text-(--color-text-secondary)";
-  return value >= 0 ? "text-(--color-positive)" : "text-(--color-negative)";
-}
 
 /* ----- Stat Card ----- */
 function StatCard({

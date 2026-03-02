@@ -590,15 +590,15 @@ docker.exe compose exec db psql -U signalforge -c \
 1. **Broker connections not wired to execution** — `execute_signals.py` always creates a fresh PaperAdapter. Stored broker connections are never read. Needs wiring for live trading.
 2. **HMM convergence warnings** — Some symbols show `Model is not converging` for HMM regime detection. May need more training data or parameter adjustment.
 3. **WSL2 clock drift** — Beat logs show 1-hour drift between WSL2 and Windows Docker. Does not affect functionality.
-4. **All changes uncommitted** — 90+ modified files, 30+ new files accumulated since Phase 6 commit `79baeb3`. Should be committed when ready.
+4. **2 pre-existing test failures** — `test_evaluate_sync_fallback_on_none` (AI evaluation edge case) and `test_strategy_backtest_conservative_preset` (`_make_sample_plan()` keyword mismatch). Not blocking.
 
 ---
 
-## Commit History (88 committed + uncommitted Phase 7)
+## Commit History (91 commits on main)
 
 ### Phase 1–6: See git log (88 commits from `d872185` to `79baeb3`)
 
-### Phase 7: Uncommitted (accumulated work)
+### Phase 7+: Commits `033faa0` and `dc52284`
 - AI Advisor module (9 files: claude_client, planner, signal_quality, risk_tuner, feedback_synthesizer, multi_tf_analyzer, pattern_analyzer, pricing, anthropic_admin)
 - AI Usage & Cost Tracking: dual-source API (`GET /api/ai-usage`, `PUT /api/ai-usage/credit`), frontend dashboard with daily cost chart, model/feature breakdown, credit management
 - `flush_ai_usage` Celery task: flushes sync-path usage records from Redis queue to DB every 60s
@@ -617,3 +617,4 @@ docker.exe compose exec db psql -U signalforge -c \
 - **Trade Journal deprecated:** Router removed from main.py, frontend cleaned, useJournal.ts deleted
 - `periodic_pattern_analysis` Celery task: stores pattern insights in Redis for Risk Tuner consumption
 - 4 new test files (test_backtest_strategy, test_claude_client, test_risk_tuner, test_signal_quality)
+- **Alpaca broker removed** (`dc52284`): adapter deleted, `alpaca-py` dependency removed, config/env vars cleaned, all docs updated, Binance-only via CCXT
