@@ -22,7 +22,7 @@ router = APIRouter(prefix="/advisor", tags=["advisor"])
 
 
 class ScanRequest(BaseModel):
-    top_n: int = Field(default=30, ge=10, le=100)
+    top_n: int = Field(default=100, ge=10, le=200)
 
 
 class PlanRequest(BaseModel):
@@ -50,9 +50,10 @@ async def scan_market(
     body: ScanRequest | None = None,
     _user_id: str = Depends(get_current_user),
 ):
-    """Scan Binance for top crypto pairs and score them technically.
+    """Scan Binance for all liquid crypto pairs and score them technically.
 
-    This may take 30-60 seconds as it fetches candles for analysis.
+    Scans up to 100+ USDT pairs with >$1M daily volume.
+    This may take 1-2 minutes as it fetches candles for each pair.
     """
     req = body or ScanRequest()
 
@@ -108,7 +109,7 @@ async def generate_plan(
 
         scanner = MarketScanner("binance")
         analyzer = TechnicalAnalyzer()
-        top_pairs = scanner.scan_top_pairs(top_n=30)
+        top_pairs = scanner.scan_top_pairs(top_n=100)
         volume_ranks = {p["symbol"]: p["rank"] for p in top_pairs}
         candles = scanner.fetch_candles_batch(
             [p["symbol"] for p in top_pairs], timeframe="1h", limit=200,

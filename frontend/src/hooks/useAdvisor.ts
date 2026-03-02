@@ -42,7 +42,7 @@ export interface DeployResponse {
 
 export function useScanMarket() {
   return useMutation({
-    mutationFn: (topN: number = 30) =>
+    mutationFn: (topN: number = 100) =>
       api.post<ScanResponse>("/advisor/scan", { top_n: topN }),
   });
 }

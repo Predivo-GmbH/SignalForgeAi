@@ -240,7 +240,7 @@ export function AdvisorPage() {
   const currentStep = deployed ? 3 : plan ? 2 : scanResults ? 1 : 0;
 
   function handleScan() {
-    scanMutation.mutate(30, {
+    scanMutation.mutate(100, {
       onSuccess: (data) => {
         setScanResults(data.results);
         setPlan(null);
@@ -334,7 +334,7 @@ export function AdvisorPage() {
         </div>
         {scanMutation.isPending && (
           <p className="mt-3 text-xs text-(--color-text-secondary)">
-            Fetching top 30 crypto pairs and running technical analysis... This may take 30-60 seconds.
+            Scanning all liquid crypto pairs on Binance and running technical analysis... This may take 1-2 minutes.
           </p>
         )}
       </div>

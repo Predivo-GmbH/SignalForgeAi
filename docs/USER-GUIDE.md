@@ -199,7 +199,7 @@ Calculates position sizing, stop-loss, and take-profit levels:
 
 The AI Advisor is SignalForge's flagship feature for new users. It automates the entire process of:
 
-1. **Scanning** the top 30-50 cryptocurrencies on Binance by 24-hour trading volume
+1. **Scanning** up to 100+ cryptocurrencies on Binance that have sufficient trading volume (>$1M/day)
 2. **Analyzing** each one through the signal pipeline layers (regime, trend, momentum, volatility)
 3. **Scoring** and ranking them (0-100) with recommendations (strong_buy, buy, neutral, avoid)
 4. **Generating a concrete investment plan** using Claude AI — which cryptos to trade, what strategy to use, what risk parameters to set
@@ -210,7 +210,7 @@ The AI Advisor is SignalForge's flagship feature for new users. It automates the
 1. Navigate to **AI Advisor** in the sidebar
 2. Enter your investment amount (e.g., $10,000)
 3. Choose your risk tolerance: **Conservative**, **Balanced**, or **Aggressive**
-4. Click **"Scan Market"** — the system fetches real-time data from Binance and scores each crypto (takes 30-60 seconds)
+4. Click **"Scan Market"** — the system fetches real-time data from Binance and scores every liquid crypto pair (takes 1-2 minutes)
 5. Review the scored table — see which cryptos have the best technical setup right now
 6. Click **"Generate AI Plan"** — Claude AI creates a personalized investment plan
 7. Review the plan — selected assets, risk config, expected behavior, warnings
@@ -411,10 +411,11 @@ cd frontend && npm run dev
 
 The system will:
 - Connect to Binance's public API
-- Fetch the top 30 USDT trading pairs by 24h volume
+- Fetch all USDT spot trading pairs with sufficient liquidity (>$1M daily volume)
+- Typically finds 80-120+ tradeable pairs, ranked by 24h volume
 - Download 200 candles (1h) for each pair
 - Run regime detection, trend analysis, RSI, MACD, ADX on each
-- Score and rank all 30 cryptos
+- Score and rank all qualifying cryptos
 
 You'll see a table like:
 
@@ -644,7 +645,7 @@ This happens with signals created before the position_size column was added. New
 
 ### Backfill taking too long
 
-The initial candle backfill fetches 500 candles per symbol/timeframe. With 10 symbols × 2 timeframes = 20 requests. CCXT rate-limits each to ~1 request per second, so expect ~20-30 seconds.
+The initial candle backfill fetches 500 candles per symbol/timeframe. With 15 symbols × 2 timeframes = 30 requests, or more if the advisor selects a larger set. CCXT rate-limits each to ~1 request per second, so expect 30-60 seconds for a typical deployment.
 
 ### Frontend build errors
 

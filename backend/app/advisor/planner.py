@@ -34,7 +34,7 @@ def _build_advisor_prompt(scored_cryptos: list[dict], investment_amount: float,
         f"  {c['symbol']}: score={c['score']}, regime={c['regime']}, "
         f"trend={c['trend_direction']}, RSI={c['rsi']}, ADX={c['adx']}, "
         f"volatility={c['atr_pct']}%, recommendation={c['recommendation']}"
-        for c in scored_cryptos[:20]
+        for c in scored_cryptos[:30]
     ])
 
     return f"""You are a professional crypto trading advisor for an automated trading system called SignalForge.
@@ -78,7 +78,7 @@ Create an investment plan. Return ONLY valid JSON with this structure:
 }}
 
 Rules:
-- Select 5-10 cryptos that have the best technical setup (score ≥40, avoid "avoid" recommendations)
+- Select 5-15 cryptos that have the best technical setup (score ≥40, avoid "avoid" recommendations)
 - Match strategy_preset to risk_tolerance: conservative→conservative_swing, balanced→balanced_momentum, aggressive→aggressive_scalper
 - The risk_config values should match the chosen preset but with account_equity set to the user's amount
 - Be realistic about expectations — this is paper trading for evaluation
@@ -144,15 +144,15 @@ class InvestmentPlanner:
         }
         preset_key = preset_map.get(risk_tolerance, "balanced_momentum")
 
-        # Select top cryptos with score >= 30, max 8
+        # Select top cryptos with score >= 30, max 15
         selected = [
             {"symbol": c["symbol"], "reason": f"Score {c['score']}/100 — {c['regime']} regime, {c['trend_direction']} trend, ADX {c['adx']}"}
             for c in scored_cryptos
             if c["score"] >= 30 and c["recommendation"] != "avoid"
-        ][:8]
+        ][:15]
 
         if not selected:
-            selected = [{"symbol": c["symbol"], "reason": f"Top by volume (score {c['score']}/100)"} for c in scored_cryptos[:5]]
+            selected = [{"symbol": c["symbol"], "reason": f"Top by volume (score {c['score']}/100)"} for c in scored_cryptos[:8]]
 
         # Risk config from preset
         risk_configs = {

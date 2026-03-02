@@ -19,8 +19,11 @@ class MarketScanner:
         exchange_class = getattr(ccxt, exchange_id)
         self.exchange = exchange_class({"enableRateLimit": True})
 
-    def scan_top_pairs(self, quote: str = "USDT", top_n: int = 50) -> list[dict]:
+    def scan_top_pairs(self, quote: str = "USDT", top_n: int = 100) -> list[dict]:
         """Fetch all USDT pairs, rank by 24h quote volume, return top N.
+
+        Any pair with < $1M 24h volume is excluded to ensure sufficient
+        liquidity for buy/sell orders to fill without slippage issues.
 
         Returns list of dicts:
             [{symbol, price, volume_24h, change_pct_24h, market_cap_rank}, ...]
