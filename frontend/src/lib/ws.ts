@@ -1,3 +1,5 @@
+import { useAuth } from "@/lib/auth";
+
 type MessageHandler = (data: unknown) => void;
 
 export class WebSocketManager {
@@ -26,7 +28,13 @@ export class WebSocketManager {
       this.retryCount.set(channel, 0);
     };
     ws.onmessage = (event: MessageEvent) => {
-      const data: unknown = JSON.parse(event.data as string);
+      let data: unknown;
+      try {
+        data = JSON.parse(event.data as string);
+      } catch (err) {
+        console.warn(`[ws] malformed JSON on channel "${channel}":`, event.data, err);
+        return;
+      }
       this.handlers.get(channel)?.forEach((fn) => fn(data));
     };
     ws.onerror = (event: Event) => {
@@ -41,7 +49,11 @@ export class WebSocketManager {
         return;
       }
       const delay = Math.min(3000 * 2 ** (count - 1), 30000);
-      const timer = setTimeout(() => this.connect(channel, token), delay);
+      // Re-fetch token from auth store at reconnection time instead of using stale closure value
+      const timer = setTimeout(() => {
+        const freshToken = useAuth.getState().accessToken ?? undefined;
+        this.connect(channel, freshToken);
+      }, delay);
       this.reconnectTimers.set(channel, timer);
     };
     this.connections.set(channel, ws);
@@ -67,7 +79,8 @@ export class WebSocketManager {
   }
 
   disconnectAll(): void {
-    for (const channel of this.connections.keys()) {
+    // Snapshot keys before iterating to avoid mutating the Map during iteration
+    for (const channel of [...this.connections.keys()]) {
       this.disconnect(channel);
     }
   }

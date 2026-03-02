@@ -6,6 +6,27 @@
     <title>SignalForge</title>
   </head>
   <body>
+    <script>
+      // Prevent theme flash: apply persisted theme class before React hydrates
+      try {
+        var raw = localStorage.getItem("sf-theme");
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          var theme = parsed && parsed.state && parsed.state.theme;
+          if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        } else {
+          // Default to dark if no preference stored
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {
+        // Fallback to dark theme on parse error
+        document.documentElement.classList.add("dark");
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

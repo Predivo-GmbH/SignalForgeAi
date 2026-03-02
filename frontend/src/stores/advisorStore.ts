@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import type { ScoredCrypto, MarketProfile, InvestmentPlan } from "@/hooks/useAdvisor";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 export interface ScanHistoryEntry {
   id: string;
@@ -67,31 +65,13 @@ export const useAdvisorStore = create<AdvisorState>()(
         const controller = new AbortController();
         _abortController = controller;
 
-        const { accessToken } = useAuth.getState();
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-        if (accessToken) {
-          headers["Authorization"] = `Bearer ${accessToken}`;
-        }
-
-        fetch(`${API_BASE}/advisor/scan`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ top_n: topN }),
-          signal: controller.signal,
-        })
-          .then(async (res) => {
-            if (res.status === 401) {
-              useAuth.getState().logout();
-              throw new Error("Unauthorized");
-            }
-            if (!res.ok) {
-              const body = await res.json().catch(() => ({}));
-              throw new Error(body.detail || `Request failed: ${res.status}`);
-            }
-            return res.json();
-          })
+        api
+          .post<{
+            pairs_scanned: number;
+            pairs_scored: number;
+            results: ScoredCrypto[];
+            market_profile?: MarketProfile;
+          }>("/advisor/scan", { top_n: topN }, { signal: controller.signal })
           .then((data) => {
             set((s) => ({
               activeScanId: null,

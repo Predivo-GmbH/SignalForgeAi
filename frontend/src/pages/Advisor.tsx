@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -591,15 +591,17 @@ export function AdvisorPage() {
 
   // Auto-select a scan only when a NEW scan we initiated completes
   const prevActiveScanId = useRef(activeScanId);
-  if (prevActiveScanId.current && !activeScanId) {
-    const justCompleted = scanHistory.find(
-      (h) => h.id === prevActiveScanId.current && h.status === "completed",
-    );
-    if (justCompleted) {
-      setSelectedScanId(justCompleted.id);
+  useEffect(() => {
+    if (prevActiveScanId.current && !activeScanId) {
+      const justCompleted = scanHistory.find(
+        (h) => h.id === prevActiveScanId.current && h.status === "completed",
+      );
+      if (justCompleted) {
+        setSelectedScanId(justCompleted.id);
+      }
     }
-  }
-  prevActiveScanId.current = activeScanId;
+    prevActiveScanId.current = activeScanId;
+  }, [activeScanId, scanHistory]);
 
   // Active strategies count
   const { data: strategiesData } = useStrategies();
