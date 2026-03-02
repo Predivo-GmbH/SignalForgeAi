@@ -52,7 +52,8 @@ docker compose -f docker-compose.prod.yml up -d
 - Frontend: Vitest with `globals: true` — do NOT import from 'vitest' in test files
 - Commit frequently, one logical change per commit
 - Always check existing code before modifying — read first
-- **Questions → answer only.** When the user asks a question, answer it and STOP. Do not take any action (edits, file changes, commands) unless explicitly asked. If action seems needed, say what you'd do and wait for approval.
+- **Questions → TEXT ONLY, NO TOOLS.** When the user's message is a question (contains "?", starts with "is/has/does/what/how/why/are" etc.), respond with TEXT ONLY. NEVER call Edit, Write, Bash, Agent, or any action tools. Reading files to inform the answer is OK, but do NOT modify anything. Describe what you'd do and wait for explicit action instructions.
+  - TRAP: "is everything documented?" = ANSWER with findings, NOT "go fix the docs". "has the workflow been followed?" = ANSWER yes/no. Only imperative sentences ("update the docs", "fix the tests") are action requests.
 
 ### Strategy Parameter Integrity (CORE PRINCIPLE)
 The AI Advisor chose the strategy parameters for a reason. If the market doesn't match, zero trades is the correct outcome — not a problem to "fix" by loosening things. Specifically:
