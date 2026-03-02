@@ -26,8 +26,8 @@ class ModelTier(str, Enum):
 # Centralized model mapping — upgrade any tier by changing one line
 MODEL_MAP: dict[ModelTier, str] = {
     ModelTier.FAST: "claude-haiku-4-5-20251001",
-    ModelTier.DEEP: "claude-sonnet-4-6-20250627",
-    ModelTier.EXPERT: "claude-opus-4-6-20250527",
+    ModelTier.DEEP: "claude-sonnet-4-6",
+    ModelTier.EXPERT: "claude-opus-4-6",
 }
 
 # Default max tokens per tier

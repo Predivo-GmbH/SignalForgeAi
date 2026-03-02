@@ -3,8 +3,8 @@
 # Source: https://docs.anthropic.com/en/docs/about-claude/models
 PRICING: dict[str, dict[str, float]] = {
     "claude-haiku-4-5-20251001": {"input": 1.00, "output": 5.00},
-    "claude-sonnet-4-6-20250627": {"input": 3.00, "output": 15.00},
-    "claude-opus-4-6-20250527": {"input": 5.00, "output": 25.00},
+    "claude-sonnet-4-6": {"input": 3.00, "output": 15.00},
+    "claude-opus-4-6": {"input": 5.00, "output": 25.00},
 }
 
 
