@@ -24,4 +24,8 @@ COPY . .
 
 EXPOSE 8000
 
+# Non-root user for security
+RUN addgroup --system appuser && adduser --system --ingroup appuser appuser
+USER appuser
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

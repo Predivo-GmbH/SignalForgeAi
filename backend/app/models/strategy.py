@@ -10,7 +10,7 @@ class Strategy(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "strategies"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -21,7 +21,7 @@ class BrokerConnection(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "broker_connections"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     broker: Mapped[str] = mapped_column(String(50), nullable=False)
     api_key_enc: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)

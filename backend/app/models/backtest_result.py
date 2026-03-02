@@ -13,10 +13,10 @@ class BacktestResult(Base, UUIDMixin):
     __tablename__ = "backtest_results"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False, index=True
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("strategies.id"), nullable=True
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
     )
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     timeframe: Mapped[str] = mapped_column(String(5), nullable=False)

@@ -13,10 +13,10 @@ class Position(Base, UUIDMixin):
     __tablename__ = "positions"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False, index=True
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     order_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("orders.id"), nullable=True
+        Uuid, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True
     )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
