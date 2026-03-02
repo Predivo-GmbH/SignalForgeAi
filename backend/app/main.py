@@ -4,9 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -25,6 +24,7 @@ from app.auth.router import router as auth_router
 from app.config import settings
 from app.core.database import async_session
 from app.core.logging_config import configure_logging
+from app.core.rate_limit import limiter
 from app.core.redis_subscriber import RedisSubscriber
 from app.ws.hub import manager, ws_prices, ws_signals, ws_trades
 
@@ -69,7 +69,6 @@ app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 # ---------------------------------------------------------------------------
 # Rate limiting (slowapi)
 # ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -147,22 +146,10 @@ app.websocket("/ws/trades")(ws_trades)
 
 
 # ---------------------------------------------------------------------------
-# Rate-limited auth endpoints
-# ---------------------------------------------------------------------------
-@app.post("/api/auth/login-limited")
-@limiter.limit("10/minute")
-async def _login_rate_limit(request: Request):
-    """Rate-limit wrapper — actual handler is in auth_router."""
-    pass  # pragma: no cover — routing handled by auth_router
-
-
-# ---------------------------------------------------------------------------
 # Enhanced health check
 # ---------------------------------------------------------------------------
 @app.get("/health")
 async def health() -> Response:
-    import json
-
     from starlette.responses import JSONResponse
 
     services: dict = {

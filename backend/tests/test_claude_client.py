@@ -21,6 +21,7 @@ def client_no_key():
         mock_settings.anthropic_api_key = ""
         mock_settings.redis_url = "redis://localhost:6379/0"
         mock_settings.ai_max_daily_api_calls = 500
+        mock_settings.ai_prepaid_credit_usd = 0.0
         c = ClaudeClient()
         yield c
 
@@ -32,6 +33,7 @@ def client_with_key():
         mock_settings.anthropic_api_key = "sk-ant-test-key"
         mock_settings.redis_url = "redis://localhost:6379/0"
         mock_settings.ai_max_daily_api_calls = 500
+        mock_settings.ai_prepaid_credit_usd = 0.0
         c = ClaudeClient()
         yield c
 

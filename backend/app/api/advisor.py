@@ -8,12 +8,13 @@ selection. The human provides investment amount and approves deployment.
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.strategy import Strategy
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,9 @@ class DeployResponse(BaseModel):
 
 
 @router.post("/scan")
+@limiter.limit("3/minute")
 async def scan_market(
+    request: Request,
     body: ScanRequest | None = None,
     _user_id: str = Depends(get_current_user),
 ):
@@ -136,7 +139,9 @@ async def scan_market(
 
 
 @router.post("/plan")
+@limiter.limit("5/minute")
 async def generate_plan(
+    request: Request,
     body: PlanRequest,
     _user_id: str = Depends(get_current_user),
 ):
