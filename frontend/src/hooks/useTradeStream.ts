@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { wsManager } from "@/lib/ws";
 import { useAuth } from "@/lib/auth";
 
@@ -12,11 +12,6 @@ const MAX_UPDATES = 50;
 export function useTradeStream() {
   const [updates, setUpdates] = useState<TradeUpdate[]>([]);
   const token = useAuth((s) => s.accessToken);
-  const tokenRef = useRef(token);
-
-  useEffect(() => {
-    tokenRef.current = token;
-  });
 
   useEffect(() => {
     if (!token) return;

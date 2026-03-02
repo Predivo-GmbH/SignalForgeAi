@@ -16,13 +16,6 @@ interface StrategyBacktestFormProps {
   prefillStrategyId?: string;
 }
 
-const PRESET_LABELS: Record<string, string> = {
-  conservative_swing: "Conservative Swing",
-  balanced_momentum: "Balanced Momentum",
-  aggressive_scalper: "Aggressive Scalper",
-  // Legacy presets kept for backwards compatibility
-};
-
 export function StrategyBacktestForm({
   onSubmit,
   isLoading,
