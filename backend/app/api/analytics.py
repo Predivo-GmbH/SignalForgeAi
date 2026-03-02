@@ -237,7 +237,10 @@ async def compare_strategies(
 
     # Determine best performers
     with_trades = [m for m in metrics_list if m.total_trades > 0]
-    best_return = max(with_trades, key=lambda m: m.total_return_pct).strategy_name if with_trades else None
+    best_return = (
+        max(with_trades, key=lambda m: m.total_return_pct).strategy_name
+        if with_trades else None
+    )
     best_sharpe = None
     sharpe_candidates = [m for m in with_trades if m.sharpe_ratio is not None]
     if sharpe_candidates:

@@ -1,4 +1,8 @@
-"""Deep Pattern Analyzer — Claude-powered trade history analysis."""
+"""Deep Pattern Analyzer — Claude-powered trade history analysis.
+
+When Claude is unavailable, no patterns are generated — the system does not
+fabricate analysis without AI.
+"""
 
 import logging
 
@@ -84,7 +88,8 @@ class PatternAnalyzer:
         if ai_result is not None:
             return self._validate_result(ai_result)
 
-        return self._algorithmic_fallback(trades)
+        logger.warning("Claude unavailable — skipping pattern analysis (no analysis without AI)")
+        return self._empty_result()
 
     @staticmethod
     def _build_user_message(trades: list) -> str:
@@ -163,67 +168,6 @@ class PatternAnalyzer:
         result["recommendations"] = valid_recs
 
         return result
-
-    @staticmethod
-    def _algorithmic_fallback(trades: list) -> dict:
-        """Basic algorithmic pattern detection fallback."""
-        total = len(trades)
-        wins = [t for t in trades if t.pnl and t.pnl > 0]
-        losses = [t for t in trades if t.pnl and t.pnl <= 0]
-        win_rate = len(wins) / total if total else 0
-
-        patterns = []
-        strengths = []
-        weaknesses = []
-        recommendations = []
-
-        # Low confluence losses
-        low_conf_losses = [t for t in losses if t.confluence_score and t.confluence_score < 50]
-        if low_conf_losses:
-            patterns.append({
-                "pattern": f"{len(low_conf_losses)} losses had confluence < 50",
-                "evidence": "Low-conviction entries consistently lose",
-                "severity": "high",
-                "actionable": True,
-            })
-            recommendations.append({
-                "action": "Raise minimum confluence threshold",
-                "expected_impact": "Fewer but higher-quality trades",
-                "priority": "high",
-            })
-
-        # High SL hit rate
-        sl_losses = [t for t in losses if t.exit_reason == "stop_loss"]
-        if losses and len(sl_losses) > len(losses) * 0.6:
-            patterns.append({
-                "pattern": "Over 60% of losses are stop-loss hits",
-                "evidence": f"{len(sl_losses)}/{len(losses)} losses hit stop-loss",
-                "severity": "medium",
-                "actionable": True,
-            })
-
-        # Win rate assessment
-        if win_rate >= 0.55:
-            strengths.append(f"Solid win rate of {win_rate*100:.1f}%")
-        elif win_rate < 0.40:
-            weaknesses.append(f"Low win rate of {win_rate*100:.1f}%")
-
-        summary = (
-            f"Analysed {total} trades: {len(wins)} wins, {len(losses)} losses "
-            f"({win_rate*100:.1f}% win rate)."
-        )
-
-        return {
-            "summary": summary,
-            "performance_metrics": {
-                "win_rate": round(win_rate, 3),
-                "total_trades": total,
-            },
-            "patterns": patterns,
-            "strengths": strengths,
-            "weaknesses": weaknesses,
-            "recommendations": recommendations,
-        }
 
     @staticmethod
     def _empty_result() -> dict:

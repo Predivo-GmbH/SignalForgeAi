@@ -58,8 +58,8 @@ async def scan_market(
     """
     req = body or ScanRequest()
 
-    from app.advisor.scanner import MarketScanner
     from app.advisor.analyzer import TechnicalAnalyzer
+    from app.advisor.scanner import MarketScanner
 
     # Step 0: Connect to Binance
     try:
@@ -151,8 +151,8 @@ async def generate_plan(
     market_profile = None
     if not scored:
         # Run a fresh scan
-        from app.advisor.scanner import MarketScanner
         from app.advisor.analyzer import TechnicalAnalyzer
+        from app.advisor.scanner import MarketScanner
 
         try:
             scanner = MarketScanner("binance")
@@ -180,6 +180,14 @@ async def generate_plan(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Plan generation failed: {e}",
         )
+
+    if plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI advisor is currently unavailable. The system cannot generate "
+                   "investment plans without AI analysis. Please try again later.",
+        )
+
     return plan
 
 

@@ -36,7 +36,7 @@ class Order(Base, UUIDMixin):
     )  # pending / filled / partial / cancelled / rejected
     broker: Mapped[str] = mapped_column(
         String(20), nullable=False
-    )  # alpaca / ccxt / paper
+    )  # ccxt / paper
     broker_order_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

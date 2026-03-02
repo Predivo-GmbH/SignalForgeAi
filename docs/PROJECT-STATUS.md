@@ -28,7 +28,7 @@
 | AI | Anthropic SDK (Claude Haiku 4.5 / Sonnet) | 0.52+ |
 | Email | Resend | 2.0+ |
 | Market Data | CCXT 4.4 | exchange connectors |
-| Broker (Stocks) | alpaca-py 0.30+ | Alpaca Markets SDK |
+| Broker (Crypto) | CCXT 4.4+ | Binance + 100 exchanges |
 | Encryption | cryptography 43+ | Fernet symmetric |
 | Rate Limiting | slowapi 0.1.9+ | FastAPI middleware |
 | Logging | structlog 24+ | JSON structured logging |
@@ -54,7 +54,7 @@ day-trading/
 │   │   ├── engine/              # 6-layer signal pipeline
 │   │   │   └── layers/          # regime, trend, zones, confluence, triggers, risk, hmm_regime, feedback_filter
 │   │   ├── execution/           # DB-backed executor, position manager, risk checks
-│   │   │   └── adapters/        # BrokerAdapter ABC, Paper, Alpaca, CCXT, BrokerRouter
+│   │   │   └── adapters/        # BrokerAdapter ABC, Paper, CCXT, BrokerRouter
 │   │   ├── models/              # SQLAlchemy models (11 models)
 │   │   ├── tasks/               # Celery tasks + Beat schedule (13 periodic tasks)
 │   │   ├── ws/                  # WebSocket hub (signals + prices + trades)
@@ -188,7 +188,7 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
 
 **What was built:**
 - **DB Models**: Order (17 cols), Position (14 cols), BacktestResult (13 cols)
-- **Broker Adapters**: BrokerAdapter ABC, PaperAdapter, AlpacaAdapter, CCXTAdapter, BrokerRouter
+- **Broker Adapters**: BrokerAdapter ABC, PaperAdapter, CCXTAdapter, BrokerRouter
 - **Encryption + Broker API**: Fernet encryption for credentials, CRUD endpoints
 - **DB-Backed Execution**: PositionManager, OrderExecutor, CandleStorage all async SQLAlchemy
 - **Celery Tasks**: Ingestion, pipeline, execution, polling, position management, alerts
@@ -216,7 +216,7 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
    - No presets, no human risk selection — AI decides everything from market profile
    - Selects 3–15 crypto pairs from scored candidates via Claude
    - Controls pipeline sensitivity + risk management + timeframes + risk features
-   - Algorithmic fallback when Claude unavailable
+   - Returns None when Claude unavailable — system does not generate plans without AI
 
 3. **Signal Quality Evaluator** (`advisor/signal_quality.py`):
    - Claude-powered second-opinion on every signal
@@ -234,11 +234,11 @@ Semantic: positive=#00D68F, negative=#FF4D6A, warning=#FFB020
    - **Only tunes risk management params**: min_confluence, max_risk_per_trade, max_daily_loss, atr_sl_multiplier, min_risk_reward
    - **Never touches pipeline sensitivity params** (min_trigger_count, trigger_lookback_candles, ema_slope_threshold) — those are strategy identity set by the AI Advisor
    - If there aren't enough trades, does nothing — zero trades is correct behavior when market doesn't match
-   - Algorithmic fallback rules (risk params only) when Claude unavailable
+   - No adjustments when Claude unavailable — system does not modify parameters without AI
 
 6. **Feedback Synthesizer** (`advisor/feedback_synthesizer.py`):
    - Analyzes last 50 trades for recurring patterns (symbol losses, low-confluence failures)
-   - Generates FeedbackRule objects via Claude (or algorithmic fallback)
+   - Generates FeedbackRule objects via Claude (returns empty when Claude unavailable)
    - Rules expire after 30 days
 
 7. **Pattern Analyzer** (`advisor/pattern_analyzer.py`):
@@ -476,10 +476,7 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | `SF_JWT_ALGORITHM` | `HS256` | JWT algorithm |
 | `SF_JWT_EXPIRY_MINUTES` | `30` | Access token expiry |
 | `SF_JWT_REFRESH_EXPIRY_DAYS` | `7` | Refresh token expiry |
-| `SF_ALPACA_API_KEY` | `` | Alpaca broker API key |
-| `SF_ALPACA_API_SECRET` | `` | Alpaca broker secret |
-| `SF_ALPACA_PAPER` | `True` | Use paper trading |
-| `SF_ANTHROPIC_API_KEY` | `` | Claude API key (advisor + journal) |
+| `SF_ANTHROPIC_API_KEY` | `` | Claude API key (AI advisor, signal quality, risk tuner, pattern analysis) |
 | `SF_ANTHROPIC_ADMIN_API_KEY` | `` | Anthropic Admin API (cost tracking) |
 | `SF_RESEND_API_KEY` | `` | Resend email API key |
 | `SF_RESEND_DOMAIN` | `signalforge.dev` | Email sender domain |

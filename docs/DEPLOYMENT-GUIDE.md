@@ -107,8 +107,7 @@ nano backend/.env.prod
 | `SF_CORS_ORIGINS` | `["http://YOUR_SERVER_IP"]` |
 
 Optional (add later when ready):
-- `SF_ALPACA_API_KEY` / `SF_ALPACA_API_SECRET` — for live stock trading
-- `SF_ANTHROPIC_API_KEY` — for AI journal analysis
+- `SF_ANTHROPIC_API_KEY` — for AI advisor + self-learning loop
 - `SF_RESEND_API_KEY` — for email alerts
 
 ---

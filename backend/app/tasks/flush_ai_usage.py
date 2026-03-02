@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.worker import celery_app
 
@@ -18,9 +18,9 @@ def flush_ai_usage() -> dict:
 
 
 async def _flush_async() -> dict:
-    from app.config import settings
-
     import redis as sync_redis
+
+    from app.config import settings
 
     r = sync_redis.from_url(settings.redis_url)
     items: list[dict] = []

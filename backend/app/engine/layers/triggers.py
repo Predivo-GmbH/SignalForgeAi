@@ -102,7 +102,11 @@ class TriggerDetector:
             cur_signal = signal_line.iloc[idx]
             prev_signal = signal_line.iloc[prev_idx]
 
-            if pd.isna(cur_macd) or pd.isna(prev_macd) or pd.isna(cur_signal) or pd.isna(prev_signal):
+            nans = (
+                pd.isna(cur_macd) or pd.isna(prev_macd)
+                or pd.isna(cur_signal) or pd.isna(prev_signal)
+            )
+            if nans:
                 continue
 
             if trend.direction == Trend.BULLISH:

@@ -1,4 +1,8 @@
-"""Signal Quality Evaluator — Claude-powered second opinion on pipeline signals."""
+"""Signal Quality Evaluator — Claude-powered second opinion on pipeline signals.
+
+When Claude is unavailable, signals are REJECTED — the system does not
+trade without AI quality analysis.
+"""
 
 import logging
 
@@ -99,10 +103,12 @@ class SignalQualityEvaluator:
 
         Returns dict with quality_score, recommendation, reasoning,
         and optional risk_adjustments.
-        Falls back to algorithmic passthrough if Claude unavailable.
+
+        When Claude is unavailable, signals are REJECTED — the system
+        does not trade without AI quality analysis.
         """
         if not settings.ai_signal_quality_enabled:
-            return self._passthrough_fallback(signal_data)
+            return self._feature_disabled_result(signal_data)
 
         user_message = build_quality_user_message(
             signal_data, confluence_details, candle_summary, mtf_data,
@@ -119,7 +125,11 @@ class SignalQualityEvaluator:
         if result is not None:
             return self._validate_result(result, signal_data)
 
-        return self._passthrough_fallback(signal_data)
+        logger.warning(
+            "Claude unavailable — rejecting signal %s %s (no AI quality analysis)",
+            signal_data.get("symbol"), signal_data.get("action"),
+        )
+        return self._ai_unavailable_reject(signal_data)
 
     def evaluate_sync(
         self,
@@ -132,7 +142,8 @@ class SignalQualityEvaluator:
 
         Returns dict with quality_score, recommendation, reasoning,
         and optional risk_adjustments.
-        Falls back to algorithmic passthrough if Claude unavailable.
+
+        When Claude is unavailable, signals are REJECTED.
         """
         user_message = build_quality_user_message(
             signal_data, confluence_details, candle_summary, mtf_data,
@@ -149,7 +160,11 @@ class SignalQualityEvaluator:
         if result is not None:
             return self._validate_result(result, signal_data)
 
-        return self._passthrough_fallback(signal_data)
+        logger.warning(
+            "Claude unavailable — rejecting signal %s %s in backtest (no AI quality analysis)",
+            signal_data.get("symbol"), signal_data.get("action"),
+        )
+        return self._ai_unavailable_reject(signal_data)
 
     def _validate_result(self, result: dict, signal_data: dict) -> dict:
         """Ensure all required fields exist with valid values."""
@@ -175,14 +190,30 @@ class SignalQualityEvaluator:
         }
 
     @staticmethod
-    def _passthrough_fallback(signal_data: dict) -> dict:
-        """Pass through the algorithmic score unchanged."""
+    def _feature_disabled_result(signal_data: dict) -> dict:
+        """Return passthrough when the feature is deliberately disabled by config."""
         return {
             "quality_score": signal_data["confluence_score"],
             "recommendation": "confirm",
-            "reasoning": "AI quality evaluation unavailable — using algorithmic score.",
+            "reasoning": "AI signal quality evaluation disabled by configuration.",
             "risk_adjustments": {
                 "position_size_factor": 1.0,
-                "reasoning": "No adjustment",
+                "reasoning": "No adjustment — feature disabled",
+            },
+        }
+
+    @staticmethod
+    def _ai_unavailable_reject(signal_data: dict) -> dict:
+        """Reject signal when Claude is unavailable — no trading without AI analysis."""
+        return {
+            "quality_score": 0,
+            "recommendation": "reject",
+            "reasoning": (
+                "Claude unavailable — signal rejected. "
+                "The system does not trade without AI quality analysis."
+            ),
+            "risk_adjustments": {
+                "position_size_factor": 0.0,
+                "reasoning": "Trade blocked — AI unavailable",
             },
         }

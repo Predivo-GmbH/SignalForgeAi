@@ -16,7 +16,7 @@ router = APIRouter(prefix="/broker", tags=["broker"])
 
 
 class BrokerConnectRequest(BaseModel):
-    broker: str  # "alpaca" or "binance"
+    broker: str  # "binance" or other CCXT-supported exchange
     api_key: str = ""
     api_secret: str = ""
     is_paper: bool = True

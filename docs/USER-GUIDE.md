@@ -28,14 +28,13 @@ SignalForge is a **multi-layer automated trading system** that uses technical an
 1. **Ingests real-time market data** from Binance via CCXT
 2. **Analyzes price action** through a 6-layer signal pipeline (regime detection, trend filtering, zone identification, confluence scoring, trigger confirmation, risk management)
 3. **Generates trading signals** when all 6 layers agree on a high-probability setup
-4. **Executes trades automatically** via paper trading (simulated) or live brokers (Alpaca, Binance)
+4. **Executes trades automatically** via paper trading (simulated) or live brokers (Binance via CCXT)
 5. **Manages open positions** — monitors stop-loss and take-profit levels, closes positions when targets are hit
 6. **Reports performance** — tracks all trades, calculates P&L, win rate, and other metrics
 
 ### Supported Markets
 
 - **Crypto**: Any USDT pair on Binance (BTC/USDT, ETH/USDT, SOL/USDT, and 200+ more)
-- **US Stocks/ETFs**: Via Alpaca API (SPY, QQQ, AAPL, etc.)
 
 ---
 
@@ -238,9 +237,9 @@ SignalForge doesn't allocate fixed amounts per coin (e.g., "$3K to BTC"). Instea
 - With 2% risk per trade and a 65% confluence score: risk = $10,000 × 0.02 × 0.65 = **$130 at risk per trade**
 - The actual position size depends on the stop-loss distance (ATR-based)
 
-### Algorithmic Fallback
+### Claude API Required
 
-If no Claude API key is configured (`SF_ANTHROPIC_API_KEY`), the advisor uses an algorithmic fallback that selects the top-scored cryptos and applies the matching strategy preset. The AI narrative is replaced with a data-driven summary.
+The AI Advisor requires a valid Claude API key (`SF_ANTHROPIC_API_KEY`). If Claude is unavailable, plan generation fails and the system returns an error — it does not trade or generate strategies without AI analysis. This is by design: the AI's market analysis is essential, not optional.
 
 ---
 
@@ -329,18 +328,11 @@ The main overview page with 5 widgets:
 
 The investment advisor page. See [Section 4](#4-the-ai-investment-advisor) for full details.
 
-### Signals (`/signals`)
-
-Complete signal history with:
-- Paginated table: Time, Symbol, Direction, Entry Price, SL, TP1, Position Size, Confluence Score, Regime, Status
-- **Generate Signal** button for testing (uses synthetic data)
-- Color-coded confluence bars (red < 30, yellow 30-60, green > 60)
-
 ### Trades (`/trades`)
 
-Historical trade log:
+Execution log and performance metrics:
 - Summary stats: Total Trades, Win Rate, Profit Factor, Total P&L
-- Trade table: Entry/Exit prices, P&L amount and %, Risk:Reward, Confluence score, Exit reason (stop_loss, take_profit, manual)
+- Trade table: Time, Symbol, Direction, Entry/Exit prices, Size, P&L amount and %, Risk:Reward, Confluence score, Exit reason
 
 ### Backtest Lab (`/backtest`)
 
@@ -356,20 +348,25 @@ Portfolio performance metrics:
 - Metrics: Total Return, Max Drawdown, Sharpe Ratio, Sortino Ratio, Calmar Ratio
 - Correlation matrix between traded symbols
 
-### Strategy Config (`/config`)
+### Strategies (`/strategies`)
 
 Strategy management:
-- **Preset Cards**: Choose from Conservative Swing, Balanced Momentum, or Aggressive Scalper
-- **Custom Config**: JSON editor for advanced users
-- Activate/deactivate strategies (only one active at a time)
+- List deployed strategies with performance metrics (P&L, win rate, Sharpe)
+- Activate/deactivate strategies
 - Edit, delete, and manage multiple strategies
 
-### API Keys (`/keys`)
+### Strategy Detail (`/strategies/:id`)
 
-Broker connection management:
-- Connect **Alpaca** (US stocks/crypto) or **Binance** (crypto)
-- Paper/Live mode toggle
-- Encrypted credential storage
+Individual strategy view:
+- **Signals tab**: Paginated signal table showing all signals for this strategy
+- **Validation tab**: Run a historical backtest against the strategy's configuration
+
+### Settings (`/settings`)
+
+Three tabs:
+- **Connections**: Connect exchange API keys (Binance) for live trading. Encrypted credential storage.
+- **Alerts**: Configure email notifications via Resend
+- **AI Usage**: Claude API cost tracking with daily charts, model/feature breakdown, credit management
 
 ---
 
@@ -405,9 +402,7 @@ cd frontend && npm run dev
 ### Step 3: Use the AI Advisor
 
 1. Click **"AI Advisor"** in the sidebar
-2. Enter **$10,000** as your investment amount
-3. Select **"Balanced"** risk tolerance
-4. Click **"Scan Market"**
+2. Click **"Scan Market"**
 
 The system will:
 - Connect to Binance's public API
@@ -426,15 +421,16 @@ You'll see a table like:
 | 3 | SOL/USDT | $145 | +3.1% | 62 | trending | ↑ | buy |
 | ... | | | | | | | |
 
-5. Click **"Generate AI Plan"**
+3. Enter your investment amount (e.g., **$10,000**)
+4. Click **"Generate Optimal Strategy"**
 
-Claude AI will analyze the scored data and recommend:
-- Which 5-10 cryptos to include
-- Which strategy preset to use
-- What risk parameters to set
+Claude AI will autonomously analyze market conditions and determine:
+- Which 3-15 cryptos to include based on technical scoring
+- ALL optimal strategy parameters (pipeline sensitivity + risk management)
+- Timeframes, risk features, and position sizing
 - What to expect over the next week
 
-6. Click **"Deploy & Start Trading"**
+5. Click **"Deploy & Start Trading"**
 
 This automatically:
 - Creates a new strategy with the AI's recommended config
@@ -509,10 +505,9 @@ Let's trace a real trade with $10,000 equity and "Balanced Momentum" settings:
 ### Step 6: Monitor Performance
 
 - **Dashboard**: Watch real-time signals, open positions, and P&L
-- **Signals page**: Review all generated signals with confluence scores
-- **Trades page**: See closed trades with P&L, win rate, profit factor
+- **Strategies**: Review deployed strategies and their signals
+- **Trades**: See closed trades with P&L, win rate, profit factor
 - **Analytics**: View equity curve and performance metrics over time
-- **Journal**: Get AI analysis of your trade patterns
 
 ---
 
@@ -531,12 +526,12 @@ Let's trace a real trade with $10,000 equity and "Balanced Momentum" settings:
 | Real-time candle ingestion | Working | CCXT + Binance, every 60 seconds |
 | Dynamic symbol ingestion | Working | Reads symbols from active strategy config |
 | Backtest engine | Working | Single + walk-forward optimization |
-| AI trade journal | Working | Requires `SF_ANTHROPIC_API_KEY` |
+| AI self-learning loop | Working | FeedbackFilter + Pattern Analysis + Risk Tuner + Feedback Synthesis |
 | Email alerts | Working | Requires `SF_RESEND_API_KEY` |
 | WebSocket real-time feeds | Working | Signals, prices, trades |
 | Analytics + equity curve | Working | Sharpe, Sortino, Calmar ratios |
 | HMM regime detection | Working | Trains weekly on real data |
-| Broker credential management | Working | Encrypted storage for Alpaca + Binance |
+| Broker credential management | Working | Encrypted storage for Binance (via CCXT) |
 | Dark/light theme | Working | Toggle in top bar |
 
 ### Working with Limitations
@@ -546,10 +541,9 @@ Let's trace a real trade with $10,000 equity and "Balanced Momentum" settings:
 | Backtest data | Uses real candles if available, falls back to synthetic |
 | "Generate Signal" button | Always uses synthetic candles (for quick testing) |
 | Analytics correlation | Falls back to synthetic if not enough real data |
-| Alpaca adapter | Wired but requires real API keys + Alpaca account |
-| CCXT live adapter | Wired but requires exchange API keys |
+| CCXT live adapter | Wired but requires exchange API keys (e.g. Binance) |
 | Email alerts | Requires Resend API key (`SF_RESEND_API_KEY`) |
-| AI Journal | Requires Anthropic API key (`SF_ANTHROPIC_API_KEY`) |
+| AI Advisor + self-learning | Requires Anthropic API key (`SF_ANTHROPIC_API_KEY`) |
 
 ### Not Yet Implemented
 
@@ -580,9 +574,6 @@ All variables use the `SF_` prefix. Set them in `backend/.env`.
 | `SF_JWT_SECRET` | `dev-secret-change-in-production` | JWT signing secret |
 | `SF_JWT_EXPIRY_MINUTES` | `30` | Access token lifetime |
 | `SF_ENCRYPTION_KEY` | (empty) | Fernet key for broker credentials |
-| `SF_ALPACA_API_KEY` | (empty) | Alpaca broker API key |
-| `SF_ALPACA_API_SECRET` | (empty) | Alpaca broker API secret |
-| `SF_ALPACA_PAPER` | `true` | Use Alpaca paper trading |
 | `SF_ANTHROPIC_API_KEY` | (empty) | Claude API key for AI features |
 | `SF_RESEND_API_KEY` | (empty) | Resend API key for email alerts |
 | `SF_DEBUG` | `true` | Debug mode |
@@ -593,13 +584,18 @@ All variables use the `SF_` prefix. Set them in `backend/.env`.
 | Task | Interval | Purpose |
 |------|----------|---------|
 | `ingest_candles` | 60s | Fetch latest candles from Binance |
-| `run_signal_pipeline` | 5 min | Run 6-layer analysis, persist signals |
+| `run_signal_pipeline` | 5 min | Run 6-layer pipeline + FeedbackFilter + AI enrichment |
 | `execute_pending_signals` | 30s | Place orders for pending signals |
 | `poll_order_status` | 15s | Check order fills, open positions |
 | `manage_positions` | 60s | Update prices, check SL/TP |
 | `reconcile_broker_state` | 5 min | Sync with broker (placeholder) |
+| `check_correlations` | 5 min | Check cross-symbol correlations |
+| `flush_ai_usage` | 60s | Flush AI usage metrics to DB |
 | `send_daily_summary` | Daily 17:00 UTC | Email trade summary |
 | `train_hmm_regime` | Sunday 02:00 UTC | Retrain HMM model |
+| `periodic_pattern_analysis` | Daily 02:30 UTC | Deep pattern analysis for Risk Tuner |
+| `adaptive_risk_tuning` | Daily 03:00 UTC | AI-driven risk parameter tuning |
+| `synthesize_feedback_rules` | Daily 04:00 UTC | Generate feedback rules from trade patterns |
 
 ### Docker Services
 
@@ -616,9 +612,7 @@ All variables use the `SF_` prefix. Set them in `backend/.env`.
 
 ### "No active strategy found" in Celery logs
 
-The pipeline requires an active strategy. Go to the **Strategy** page (`/config`) and either:
-- Create a new strategy from a preset and click the power icon to activate it
-- Or use the **AI Advisor** (`/advisor`) which creates and activates a strategy automatically
+The pipeline requires an active strategy. Use the **AI Advisor** (`/advisor`) to scan the market and deploy a strategy, or go to **Strategies** (`/strategies`) to manage existing strategies.
 
 ### Pipeline always returns NO_TRADE
 

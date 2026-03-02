@@ -21,11 +21,6 @@ class Settings(BaseSettings):
     # Encryption
     encryption_key: str = ""  # Fernet key for broker credential encryption
 
-    # Alpaca broker
-    alpaca_api_key: str = ""
-    alpaca_api_secret: str = ""
-    alpaca_paper: bool = True
-
     # AI
     anthropic_api_key: str = ""
     anthropic_admin_api_key: str = ""  # sk-ant-admin... for Usage & Cost API

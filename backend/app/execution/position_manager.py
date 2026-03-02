@@ -2,7 +2,7 @@
 
 All methods are static and take an ``AsyncSession`` so callers control the
 transaction boundary (commit / rollback).  On close, a ``Trade`` row is
-created automatically so the trade journal stays in sync.
+created automatically so the trade history stays in sync.
 """
 
 from __future__ import annotations

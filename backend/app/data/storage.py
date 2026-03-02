@@ -123,7 +123,11 @@ class CandleStorage:
                 "close": float(row["close"]),
                 "volume": float(row["volume"]),
                 "vwap": float(row["vwap"]) if has_vwap and pd.notna(row.get("vwap")) else None,
-                "trades": int(row["trades"]) if has_trades and pd.notna(row.get("trades")) else None,
+                "trades": (
+                    int(row["trades"])
+                    if has_trades and pd.notna(row.get("trades"))
+                    else None
+                ),
             }
             rows.append(r)
 

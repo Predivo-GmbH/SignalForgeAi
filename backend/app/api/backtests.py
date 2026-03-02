@@ -1,7 +1,7 @@
 """Backtest API endpoints."""
 
-import uuid as _uuid
 import logging
+import uuid as _uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
@@ -166,15 +166,15 @@ async def run_strategy_backtest(
     Runs the signal pipeline on every symbol in the strategy with its
     exact risk configuration, then aggregates into portfolio-level metrics.
     """
-    from app.api.strategies import STRATEGY_PRESETS
     from app.backtest.portfolio_runner import run_portfolio_backtest
 
     config: dict = {}
     strategy_name = "Strategy"
 
     if body.strategy_id:
-        from app.models.strategy import Strategy
         from sqlalchemy import select
+
+        from app.models.strategy import Strategy
 
         uid = _uuid.UUID(user_id)
         sid = _uuid.UUID(body.strategy_id)

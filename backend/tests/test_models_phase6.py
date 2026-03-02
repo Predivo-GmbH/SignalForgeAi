@@ -64,8 +64,8 @@ class TestOrderModel:
             price=None,
             stop_loss=2800.0,
             take_profit=3200.0,
-            broker="alpaca",
-            broker_order_id="alp-123",
+            broker="ccxt",
+            broker_order_id="ccxt-123",
             status="filled",
             filled_quantity=1.5,
             average_fill_price=3050.0,
@@ -76,7 +76,7 @@ class TestOrderModel:
         assert order.price is None
         assert order.stop_loss == 2800.0
         assert order.take_profit == 3200.0
-        assert order.broker_order_id == "alp-123"
+        assert order.broker_order_id == "ccxt-123"
         assert order.status == "filled"
         assert order.filled_quantity == 1.5
         assert order.average_fill_price == 3050.0

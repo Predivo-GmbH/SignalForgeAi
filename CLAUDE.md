@@ -52,6 +52,7 @@ docker compose -f docker-compose.prod.yml up -d
 - Frontend: Vitest with `globals: true` — do NOT import from 'vitest' in test files
 - Commit frequently, one logical change per commit
 - Always check existing code before modifying — read first
+- **Questions → answer only.** When the user asks a question, answer it and STOP. Do not take any action (edits, file changes, commands) unless explicitly asked. If action seems needed, say what you'd do and wait for approval.
 
 ### Strategy Parameter Integrity (CORE PRINCIPLE)
 The AI Advisor chose the strategy parameters for a reason. If the market doesn't match, zero trades is the correct outcome — not a problem to "fix" by loosening things. Specifically:
@@ -59,6 +60,17 @@ The AI Advisor chose the strategy parameters for a reason. If the market doesn't
 - **Pipeline sensitivity params** (`min_trigger_count`, `trigger_lookback_candles`, `ema_slope_threshold`) are strategy identity — set by the AI Advisor at creation, never modified afterward.
 - **RiskTuner** only adjusts risk management params (`min_confluence`, `max_risk_per_trade`, `max_daily_loss`, `atr_sl_multiplier`, `min_risk_reward`) based on actual trade results with 5+ closed trades.
 - No system component should treat "no trades" as a problem to solve. The strategy is working correctly by staying out when conditions don't match.
+
+### No AI, No Trading (CORE PRINCIPLE)
+When Claude is unavailable, the system does NOT trade, guess, or fabricate analysis. Every AI-dependent component must abort or reject — never fall back to algorithmic approximations. Specifically:
+- **Planner** returns `None` → API returns HTTP 503.
+- **Signal Quality Evaluator** returns `recommendation="reject"` → signal is blocked.
+- **Multi-Timeframe Analyzer** returns `recommendation="reject"` → signal is blocked.
+- **Risk Tuner** returns empty adjustments → strategy config unchanged.
+- **Feedback Synthesizer** returns empty rules → no rules created.
+- **Pattern Analyzer** returns empty result → nothing stored.
+- **Pipeline AI enrichment** failure → signal is rejected (not let through).
+- No `_algorithmic_fallback()` methods exist anywhere in the advisor module.
 
 ## Frontend Pages & Navigation
 Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics → Settings

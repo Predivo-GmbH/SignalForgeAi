@@ -184,7 +184,10 @@ def compute_obv(candles: pd.DataFrame) -> pd.Series:
 
 
 def compute_williams_r(candles: pd.DataFrame, period: int = 14) -> pd.Series:
-    """Williams %R — momentum oscillator (-100 to 0). -80 to -100 is oversold, 0 to -20 is overbought."""
+    """Williams %R oscillator (-100 to 0).
+
+    -80 to -100 is oversold, 0 to -20 is overbought.
+    """
     if HAS_TALIB:
         return pd.Series(
             talib.WILLR(

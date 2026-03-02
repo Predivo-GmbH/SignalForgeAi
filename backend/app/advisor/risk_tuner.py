@@ -1,4 +1,8 @@
-"""Adaptive Risk Tuner — Claude-powered strategy parameter optimization."""
+"""Adaptive Risk Tuner — Claude-powered strategy parameter optimization.
+
+When Claude is unavailable, no adjustments are made — the system does not
+modify strategy parameters without AI analysis.
+"""
 
 import logging
 
@@ -127,8 +131,18 @@ class RiskTuner:
                 "metrics_snapshot": ai_result.get("metrics_snapshot", metrics),
             }
 
-        # Algorithmic fallback only when Claude is unavailable
-        return self._algorithmic_fallback(metrics, current_params)
+        # Claude unavailable — no adjustments. The system does not modify
+        # strategy parameters without AI analysis.
+        logger.warning("Claude unavailable — skipping risk tuning (no adjustments without AI)")
+        return {
+            "adjustments": {},
+            "reasoning": (
+                "Claude unavailable — no adjustments made. "
+                "The system does not modify strategy parameters "
+                "without AI analysis."
+            ),
+            "metrics_snapshot": metrics,
+        }
 
     @staticmethod
     def _compute_metrics(trades: list) -> dict:
@@ -254,37 +268,3 @@ class RiskTuner:
 
         return validated
 
-    @staticmethod
-    def _algorithmic_fallback(metrics: dict, current_params: dict) -> dict:
-        """Simple rule-based adjustments when Claude unavailable."""
-        adjustments = {}
-
-        # If win rate < 40%, raise min_confluence
-        if metrics["win_rate"] < 0.40:
-            new_conf = min(100, current_params["min_confluence"] + 5)
-            if new_conf != current_params["min_confluence"]:
-                adjustments["min_confluence"] = new_conf
-
-        # If SL hit rate > 60%, widen stops
-        if metrics["stop_loss_hit_rate"] > 0.60:
-            new_atr = min(5.0, current_params["atr_sl_multiplier"] * 1.1)
-            adjustments["atr_sl_multiplier"] = round(new_atr, 2)
-
-        # If max drawdown > 10%, reduce risk per trade
-        if metrics["max_drawdown_pct"] > 0.10:
-            new_risk = max(0.005, current_params["max_risk_per_trade"] * 0.9)
-            adjustments["max_risk_per_trade"] = round(new_risk, 4)
-
-        reasoning = "Algorithmic fallback: "
-        if adjustments:
-            reasoning += ", ".join(
-                f"{k} adjusted to {v}" for k, v in adjustments.items()
-            )
-        else:
-            reasoning += "no adjustments needed based on current metrics."
-
-        return {
-            "adjustments": adjustments,
-            "reasoning": reasoning,
-            "metrics_snapshot": metrics,
-        }

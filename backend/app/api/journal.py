@@ -200,18 +200,19 @@ async def get_deep_patterns(
 ):
     """Deep AI-powered pattern analysis from trade history (Sonnet)."""
     from app.advisor.pattern_analyzer import PatternAnalyzer
-    from app.config import settings
 
-    if settings.ai_pattern_analysis_enabled and claude_client.available:
-        analyzer = PatternAnalyzer()
-        result = await analyzer.analyze_deep(user_id, db)
-        return EnhancedPatternSummary(**result)
-
-    # Fallback to basic algorithmic analysis
     analyzer = PatternAnalyzer()
-    result = analyzer._algorithmic_fallback(
-        await _load_recent_trades(user_id, db),
-    )
+    result = await analyzer.analyze_deep(user_id, db)
+
+    if not result.get("summary") and not result.get("patterns"):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "AI pattern analysis unavailable. "
+                "The system does not generate analysis without AI."
+            ),
+        )
+
     return EnhancedPatternSummary(**result)
 
 

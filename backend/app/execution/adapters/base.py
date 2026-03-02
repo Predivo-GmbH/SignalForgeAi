@@ -64,7 +64,7 @@ class BrokerAdapter(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Broker identifier (e.g. 'alpaca', 'ccxt', 'paper')."""
+        """Broker identifier (e.g. 'ccxt', 'paper')."""
 
     @abstractmethod
     async def connect(self) -> bool:

@@ -167,7 +167,9 @@ async def _run_strategy_pipeline(db, active_strategy):
                     )
                     if confluence_override and signal.confluence_score < confluence_override:
                         logger.info(
-                            "FeedbackFilter: %s %s confluence %d < learned threshold %d — skipping (strategy=%s)",
+                            "FeedbackFilter: %s %s confluence %d "
+                            "< learned threshold %d — skipping "
+                            "(strategy=%s)",
                             symbol, timeframe, signal.confluence_score,
                             confluence_override, active_strategy.name,
                         )
@@ -211,7 +213,7 @@ async def _run_strategy_pipeline(db, active_strategy):
                         entry_price, position_size,
                     )
 
-                    # AI enrichment (non-blocking — failures don't block the signal)
+                    # AI enrichment — failures reject the signal (no trading without AI)
                     await _ai_enrich_signal(signal, signal_row, db, df)
 
                     # Honor AI reject in live mode
@@ -255,7 +257,11 @@ async def _run_strategy_pipeline(db, active_strategy):
 
 
 async def _ai_enrich_signal(signal, signal_row, db, df):
-    """Run AI enrichment on a BUY/SELL signal (non-blocking)."""
+    """Run AI enrichment on a BUY/SELL signal.
+
+    If enrichment fails for any reason, the signal is marked as rejected —
+    the system does not trade without AI analysis.
+    """
     from app.config import settings
 
     try:
@@ -318,4 +324,14 @@ async def _ai_enrich_signal(signal, signal_row, db, df):
                 )
 
     except Exception:
-        logger.exception("AI enrichment failed for %s — signal proceeds without AI", signal.symbol)
+        logger.exception(
+            "AI enrichment failed for %s — rejecting signal "
+            "(no trading without AI)",
+            signal.symbol,
+        )
+        signal_row.ai_recommendation = "reject"
+        signal_row.ai_reasoning = (
+            "AI enrichment failed — signal rejected. "
+            "The system does not trade without AI analysis."
+        )
+        signal_row.ai_quality_score = 0

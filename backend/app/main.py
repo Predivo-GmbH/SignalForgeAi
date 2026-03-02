@@ -9,6 +9,8 @@ from slowapi.util import get_remote_address
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.advisor import router as advisor_router
+from app.api.ai_usage import router as ai_usage_router
 from app.api.alerts import router as alerts_router
 from app.api.analytics import router as analytics_router
 from app.api.backtests import router as backtests_router
@@ -18,8 +20,6 @@ from app.api.positions import router as positions_router
 from app.api.signals import router as signals_router
 from app.api.strategies import router as strategies_router
 from app.api.trades import router as trades_router
-from app.api.advisor import router as advisor_router
-from app.api.ai_usage import router as ai_usage_router
 from app.auth.router import router as auth_router
 from app.config import settings
 from app.core.database import async_session
@@ -98,10 +98,11 @@ async def get_user_guide():
     from pathlib import Path
 
     # Try multiple locations: Docker mount, relative to project root, etc.
+    app_dir = Path(__file__).resolve().parent
     candidates = [
-        Path("/code/docs/USER-GUIDE.md"),                              # Docker volume mount
-        Path(__file__).resolve().parent.parent.parent / "docs" / "USER-GUIDE.md",  # relative to app/
-        Path(__file__).resolve().parent.parent / "docs" / "USER-GUIDE.md",         # if running from backend/
+        Path("/code/docs/USER-GUIDE.md"),                # Docker mount
+        app_dir.parent.parent / "docs" / "USER-GUIDE.md",  # project root
+        app_dir.parent / "docs" / "USER-GUIDE.md",         # backend/
     ]
     for guide_path in candidates:
         if guide_path.exists():

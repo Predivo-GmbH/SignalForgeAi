@@ -107,13 +107,14 @@ def test_build_quality_user_message_with_mtf(
 
 
 # ---------------------------------------------------------------------------
-# Evaluator — fallback without API key
+# Evaluator — rejects signal when Claude unavailable
 # ---------------------------------------------------------------------------
 
 
-async def test_evaluator_passthrough_fallback_without_key(
+async def test_evaluator_rejects_when_claude_unavailable(
     sample_signal_data, sample_confluence_details, sample_candle_summary,
 ):
+    """When Claude is unavailable, signals must be rejected — no trading without AI."""
     with patch("app.advisor.signal_quality.claude_client") as mock_client:
         mock_client.ask_json = AsyncMock(return_value=None)
         mock_client.available = False
@@ -123,9 +124,9 @@ async def test_evaluator_passthrough_fallback_without_key(
             sample_signal_data, sample_confluence_details, sample_candle_summary,
         )
 
-    assert result["quality_score"] == 68  # passes through confluence_score
-    assert result["recommendation"] == "confirm"
-    assert result["risk_adjustments"]["position_size_factor"] == 1.0
+    assert result["quality_score"] == 0
+    assert result["recommendation"] == "reject"
+    assert result["risk_adjustments"]["position_size_factor"] == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -189,13 +190,14 @@ async def test_evaluator_clamps_quality_score(
 
 
 # ---------------------------------------------------------------------------
-# Evaluator — feature flag off
+# Evaluator — feature flag off (deliberate config, not AI unavailable)
 # ---------------------------------------------------------------------------
 
 
 async def test_evaluator_disabled_by_feature_flag(
     sample_signal_data, sample_confluence_details, sample_candle_summary,
 ):
+    """When deliberately disabled by config, passthrough is OK."""
     with patch("app.advisor.signal_quality.settings") as mock_settings:
         mock_settings.ai_signal_quality_enabled = False
 

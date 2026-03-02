@@ -110,11 +110,11 @@ class TechnicalAnalyzer:
                 upper_clean = upper.dropna()
                 lower_clean = lower.dropna()
                 if len(upper_clean) > 0 and len(lower_clean) > 0:
-                    u = float(upper_clean.iloc[-1])
-                    l = float(lower_clean.iloc[-1])
-                    bw = u - l
+                    bb_upper = float(upper_clean.iloc[-1])
+                    bb_lower = float(lower_clean.iloc[-1])
+                    bw = bb_upper - bb_lower
                     if bw > 0:
-                        bb_pct = (price - l) / bw
+                        bb_pct = (price - bb_lower) / bw
                         if trend.direction == Trend.BULLISH and bb_pct < 0.3:
                             bb_score = 8  # Near lower band in uptrend
                         elif trend.direction == Trend.BEARISH and bb_pct > 0.7:

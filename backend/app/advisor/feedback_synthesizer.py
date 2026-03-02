@@ -1,4 +1,8 @@
-"""Feedback Synthesizer — converts trade patterns into actionable rules."""
+"""Feedback Synthesizer — converts trade patterns into actionable rules.
+
+When Claude is unavailable, no rules are generated — the system does not
+create feedback rules without AI analysis.
+"""
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -83,7 +87,8 @@ class FeedbackSynthesizer:
         )
 
         if ai_result is None:
-            ai_result = self._algorithmic_fallback(trades)
+            logger.warning("Claude unavailable — skipping feedback synthesis (no rules without AI)")
+            return []
 
         new_rules = []
         for rule_data in ai_result.get("rules", []):
@@ -133,40 +138,3 @@ class FeedbackSynthesizer:
         rule_type = rule_data.get("rule_type", "")
         return rule_type in ("avoid_pattern", "prefer_pattern", "adjust_param", "filter_condition")
 
-    @staticmethod
-    def _algorithmic_fallback(trades: list) -> dict:
-        """Generate basic rules from simple pattern detection."""
-        rules = []
-        losses = [t for t in trades if t.pnl and t.pnl <= 0]
-
-        # Find symbols that consistently lose
-        from collections import Counter
-        symbol_losses = Counter(t.symbol for t in losses)
-        symbol_total = Counter(t.symbol for t in trades)
-
-        for sym, loss_count in symbol_losses.items():
-            total = symbol_total[sym]
-            if total >= 3 and loss_count / total > 0.7:
-                rules.append({
-                    "rule_type": "avoid_pattern",
-                    "description": (
-                        f"{sym} has a {loss_count}/{total} "
-                        "loss rate — consider skipping"
-                    ),
-                    "conditions": {"symbol": sym, "action": "skip"},
-                    "confidence": round(loss_count / total, 2),
-                    "evidence": f"{loss_count} losses out of {total} trades",
-                })
-
-        # Low confluence losses pattern
-        low_conf_losses = [t for t in losses if t.confluence_score and t.confluence_score < 45]
-        if len(low_conf_losses) >= 3:
-            rules.append({
-                "rule_type": "adjust_param",
-                "description": "Low-confluence entries consistently lose — raise threshold",
-                "conditions": {"min_confluence": 55, "action": "require_confirmation"},
-                "confidence": 0.7,
-                "evidence": f"{len(low_conf_losses)} losses with confluence < 45",
-            })
-
-        return {"rules": rules, "summary": f"Algorithmic analysis of {len(trades)} trades."}

@@ -1,4 +1,8 @@
-"""Multi-Timeframe Analyzer — synthesizes signals across timeframes."""
+"""Multi-Timeframe Analyzer — synthesizes signals across timeframes.
+
+When Claude is unavailable, MTF analysis returns a reject recommendation —
+the system does not synthesize timeframe data without AI analysis.
+"""
 
 import logging
 
@@ -78,7 +82,7 @@ class MultiTimeframeAnalyzer:
         and sends to Claude for synthesis.
         """
         if not settings.ai_multi_timeframe_enabled:
-            return self._passthrough_fallback(primary_signal_data)
+            return self._feature_disabled_result()
 
         # Gather timeframe data
         tf_summaries = [
@@ -108,9 +112,9 @@ class MultiTimeframeAnalyzer:
             except Exception:
                 logger.debug("No %s candles for %s in MTF analysis", tf, symbol)
 
-        # If we only have the primary timeframe, use algorithmic fallback
+        # If we only have the primary timeframe, MTF analysis isn't applicable
         if len(tf_summaries) <= 1:
-            return self._algorithmic_fallback(tf_summaries)
+            return self._single_timeframe_result()
 
         # Build prompt and call Claude
         user_message = self._build_user_message(symbol, tf_summaries)
@@ -125,7 +129,13 @@ class MultiTimeframeAnalyzer:
         if result is not None:
             return self._validate_result(result)
 
-        return self._algorithmic_fallback(tf_summaries)
+        # Claude unavailable — reject. The system does not synthesize
+        # timeframe data without AI analysis.
+        logger.warning(
+            "Claude unavailable — rejecting MTF analysis for %s (no synthesis without AI)",
+            symbol,
+        )
+        return self._ai_unavailable_reject()
 
     @staticmethod
     def _build_user_message(symbol: str, tf_summaries: list[dict]) -> str:
@@ -155,51 +165,39 @@ class MultiTimeframeAnalyzer:
         }
 
     @staticmethod
-    def _algorithmic_fallback(tf_summaries: list[dict]) -> dict:
-        """Simple alignment check without Claude."""
-        directions = [
-            s["trend_direction"] for s in tf_summaries
-            if s.get("trend_direction") not in (None, "undetermined")
-        ]
+    def _single_timeframe_result() -> dict:
+        """Return neutral result when only one timeframe is available.
 
-        if not directions:
-            return {
-                "mtf_confidence": 50,
-                "timeframe_alignment": "mixed",
-                "reasoning": "Insufficient timeframe data for alignment check.",
-                "recommendation": "confirm",
-            }
-
-        # Check if all non-undetermined directions agree
-        unique = set(directions)
-        if len(unique) == 1:
-            return {
-                "mtf_confidence": 85,
-                "timeframe_alignment": "aligned",
-                "reasoning": f"All {len(directions)} timeframes show {directions[0]} trend.",
-                "recommendation": "confirm",
-            }
-        elif "bullish" in unique and "bearish" in unique:
-            return {
-                "mtf_confidence": 30,
-                "timeframe_alignment": "conflicting",
-                "reasoning": "Timeframes show conflicting trend directions.",
-                "recommendation": "caution",
-            }
-        else:
-            return {
-                "mtf_confidence": 60,
-                "timeframe_alignment": "mixed",
-                "reasoning": "Timeframes show mixed alignment.",
-                "recommendation": "confirm",
-            }
-
-    @staticmethod
-    def _passthrough_fallback(signal_data: dict) -> dict:
-        """Return neutral MTF data when feature is disabled."""
+        MTF analysis isn't applicable with a single timeframe — this is not
+        an AI failure, just insufficient data for cross-timeframe synthesis.
+        The signal was already vetted by the signal quality evaluator.
+        """
         return {
             "mtf_confidence": 50,
             "timeframe_alignment": "mixed",
-            "reasoning": "Multi-timeframe analysis disabled.",
+            "reasoning": "Only one timeframe available — MTF analysis not applicable.",
+            "recommendation": "confirm",
+        }
+
+    @staticmethod
+    def _ai_unavailable_reject() -> dict:
+        """Reject when Claude is unavailable — no synthesis without AI."""
+        return {
+            "mtf_confidence": 0,
+            "timeframe_alignment": "mixed",
+            "reasoning": (
+                "Claude unavailable — MTF analysis rejected. "
+                "The system does not synthesize timeframe data without AI."
+            ),
+            "recommendation": "reject",
+        }
+
+    @staticmethod
+    def _feature_disabled_result() -> dict:
+        """Return neutral MTF data when feature is deliberately disabled."""
+        return {
+            "mtf_confidence": 50,
+            "timeframe_alignment": "mixed",
+            "reasoning": "Multi-timeframe analysis disabled by configuration.",
             "recommendation": "confirm",
         }

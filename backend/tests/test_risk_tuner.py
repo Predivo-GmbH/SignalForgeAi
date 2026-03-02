@@ -115,56 +115,11 @@ def test_validate_adjustments_skips_unchanged():
 
 
 # ---------------------------------------------------------------------------
-# Algorithmic fallback
+# Claude unavailable — no adjustments (no algorithmic fallback)
 # ---------------------------------------------------------------------------
-
-
-def test_algorithmic_fallback_low_win_rate():
-    tuner = RiskTuner()
-    metrics = {
-        "win_rate": 0.30,
-        "stop_loss_hit_rate": 0.40,
-        "max_drawdown_pct": 0.05,
-    }
-    current = {
-        "min_confluence": 50,
-        "max_risk_per_trade": 0.02,
-        "atr_sl_multiplier": 2.0,
-    }
-    result = tuner._algorithmic_fallback(metrics, current)
-    assert result["adjustments"]["min_confluence"] == 55
-
-
-def test_algorithmic_fallback_high_sl_rate():
-    tuner = RiskTuner()
-    metrics = {
-        "win_rate": 0.50,
-        "stop_loss_hit_rate": 0.70,
-        "max_drawdown_pct": 0.05,
-    }
-    current = {
-        "min_confluence": 50,
-        "max_risk_per_trade": 0.02,
-        "atr_sl_multiplier": 2.0,
-    }
-    result = tuner._algorithmic_fallback(metrics, current)
-    assert result["adjustments"]["atr_sl_multiplier"] == 2.2
-
-
-def test_algorithmic_fallback_no_changes_needed():
-    tuner = RiskTuner()
-    metrics = {
-        "win_rate": 0.55,
-        "stop_loss_hit_rate": 0.40,
-        "max_drawdown_pct": 0.05,
-    }
-    current = {
-        "min_confluence": 50,
-        "max_risk_per_trade": 0.02,
-        "atr_sl_multiplier": 2.0,
-    }
-    result = tuner._algorithmic_fallback(metrics, current)
-    assert result["adjustments"] == {}
+# The _algorithmic_fallback method was intentionally removed.
+# When Claude is unavailable, no adjustments are made — the system
+# does not modify strategy parameters without AI analysis.
 
 
 # ---------------------------------------------------------------------------

@@ -31,6 +31,7 @@ async def _ingest_async():
 
     # Collect symbols from active strategies
     from sqlalchemy import select
+
     from app.models.strategy import Strategy
 
     symbols = set(DEFAULT_SYMBOLS)

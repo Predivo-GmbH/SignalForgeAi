@@ -6,7 +6,7 @@ data and simulates trades with proper position sizing and risk management.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -119,7 +119,10 @@ class BacktestEngine:
                     open_trade.exit_price = open_trade.stop_loss
                     risk_dist = abs(open_trade.entry_price - open_trade.stop_loss)
                     if risk_dist > 0:
-                        position_size = capital * self.risk_pct / risk_dist * open_trade.position_size_factor
+                        position_size = (
+                            capital * self.risk_pct / risk_dist
+                            * open_trade.position_size_factor
+                        )
                         if open_trade.direction == "BUY":
                             open_trade.pnl = (
                                 open_trade.exit_price - open_trade.entry_price
@@ -136,7 +139,10 @@ class BacktestEngine:
                     open_trade.exit_price = open_trade.take_profit
                     risk_dist = abs(open_trade.entry_price - open_trade.stop_loss)
                     if risk_dist > 0:
-                        position_size = capital * self.risk_pct / risk_dist * open_trade.position_size_factor
+                        position_size = (
+                            capital * self.risk_pct / risk_dist
+                            * open_trade.position_size_factor
+                        )
                         if open_trade.direction == "BUY":
                             open_trade.pnl = (
                                 open_trade.exit_price - open_trade.entry_price
@@ -190,7 +196,10 @@ class BacktestEngine:
             open_trade.exit_price = float(candles["close"].iloc[-1])
             risk_dist = abs(open_trade.entry_price - open_trade.stop_loss)
             if risk_dist > 0:
-                position_size = capital * self.risk_pct / risk_dist * open_trade.position_size_factor
+                position_size = (
+                    capital * self.risk_pct / risk_dist
+                    * open_trade.position_size_factor
+                )
                 if open_trade.direction == "BUY":
                     open_trade.pnl = (
                         open_trade.exit_price - open_trade.entry_price

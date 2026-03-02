@@ -63,7 +63,8 @@ async def _execute_async():
 
                 cfg = strategy.config or {}
                 user_id = str(strategy.user_id)
-                quantity = sig.position_size if sig.position_size and sig.position_size > 0 else 0.01
+                has_size = sig.position_size and sig.position_size > 0
+                quantity = sig.position_size if has_size else 0.01
 
                 # --- Drawdown circuit breaker check (Feature 2) ---
                 if cfg.get("drawdown_breaker_enabled", False):

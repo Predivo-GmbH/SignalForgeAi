@@ -35,11 +35,6 @@ interface BrokerMeta {
 
 const SUPPORTED_BROKERS: BrokerMeta[] = [
   {
-    name: "Alpaca",
-    description: "Commission-free stock & crypto trading API",
-    docsUrl: "https://docs.alpaca.markets/",
-  },
-  {
     name: "Binance",
     description: "Crypto exchange with spot & futures trading",
     docsUrl: "https://binance-docs.github.io/apidocs/",

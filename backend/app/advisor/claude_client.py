@@ -210,8 +210,9 @@ class ClaudeClient:
     ) -> dict | None:
         """Send a message to Claude and parse JSON response (async).
 
-        Returns None if API key missing or call fails — callers must
-        implement their own algorithmic fallback.
+        Returns None if API key missing or call fails. Callers must
+        abort the operation or reject the signal — the system does
+        not trade or make decisions without AI analysis.
         """
         if not self.available:
             return None

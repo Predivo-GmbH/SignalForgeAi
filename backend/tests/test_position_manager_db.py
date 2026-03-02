@@ -101,7 +101,7 @@ class TestOpenPosition:
                 entry_price=3000.0,
                 stop_loss=None,
                 take_profit=None,
-                broker="alpaca",
+                broker="ccxt",
                 order_id=order_id,
             )
             await db.commit()
