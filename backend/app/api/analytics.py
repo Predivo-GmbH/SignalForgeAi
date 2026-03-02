@@ -1,5 +1,7 @@
 """Analytics API — equity curves, risk metrics, and correlation."""
 
+import uuid
+
 import numpy as np
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -91,9 +93,10 @@ async def get_equity_curve(
     db: AsyncSession = Depends(get_db),
 ):
     """Build equity curve from closed trades."""
+    uid = uuid.UUID(user_id)
     result = await db.execute(
         select(Trade)
-        .where(Trade.user_id == user_id, Trade.pnl.is_not(None))
+        .where(Trade.user_id == uid, Trade.pnl.is_not(None))
         .order_by(Trade.exit_time.asc())
     )
     trades = list(result.scalars().all())
@@ -160,8 +163,9 @@ async def compare_strategies(
     from app.models.strategy import Strategy
 
     # Get all strategies for this user
+    uid = uuid.UUID(user_id)
     strat_result = await db.execute(
-        select(Strategy).where(Strategy.user_id == user_id).order_by(Strategy.created_at.desc())
+        select(Strategy).where(Strategy.user_id == uid).order_by(Strategy.created_at.desc())
     )
     strategies = list(strat_result.scalars().all())
 

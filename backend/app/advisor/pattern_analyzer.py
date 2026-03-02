@@ -5,6 +5,7 @@ fabricate analysis without AI.
 """
 
 import logging
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,7 +68,7 @@ class PatternAnalyzer:
         """Run deep analysis on recent trade history."""
         result = await db.execute(
             select(Trade)
-            .where(Trade.user_id == user_id, Trade.pnl.is_not(None))
+            .where(Trade.user_id == uuid.UUID(user_id), Trade.pnl.is_not(None))
             .order_by(Trade.exit_time.desc())
             .limit(limit)
         )

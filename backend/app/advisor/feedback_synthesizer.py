@@ -5,6 +5,7 @@ create feedback rules without AI analysis.
 """
 
 import logging
+import uuid as uuid_mod
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -66,7 +67,7 @@ class FeedbackSynthesizer:
             select(Trade)
             .join(Signal, Trade.signal_id == Signal.id)
             .where(
-                Signal.strategy_id == strategy_id,
+                Signal.strategy_id == uuid_mod.UUID(strategy_id),
                 Trade.pnl.is_not(None),
             )
             .order_by(Trade.exit_time.desc())
@@ -96,8 +97,8 @@ class FeedbackSynthesizer:
                 continue
 
             rule = FeedbackRule(
-                strategy_id=strategy_id,
-                user_id=user_id,
+                strategy_id=uuid_mod.UUID(strategy_id),
+                user_id=uuid_mod.UUID(user_id),
                 rule_type=rule_data.get("rule_type", "filter_condition"),
                 description=rule_data.get("description", ""),
                 conditions_json=rule_data.get("conditions", {}),

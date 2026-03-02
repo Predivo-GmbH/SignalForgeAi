@@ -5,6 +5,7 @@ the pipeline execution in run_pipeline.py.
 """
 
 import logging
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -99,7 +100,7 @@ class FeedbackFilter:
         now = datetime.now(timezone.utc)
         result = await db.execute(
             select(FeedbackRule).where(
-                FeedbackRule.strategy_id == strategy_id,
+                FeedbackRule.strategy_id == uuid.UUID(strategy_id),
                 FeedbackRule.is_active == True,  # noqa: E712
                 (FeedbackRule.expires_at.is_(None)) | (FeedbackRule.expires_at > now),
             )
