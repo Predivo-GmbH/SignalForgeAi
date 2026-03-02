@@ -21,6 +21,7 @@ import type { Column } from "@/components/ui/DataTable";
 import type { Signal } from "@/hooks/useSignals";
 import type { StrategyBacktestResult } from "@/hooks/useStrategyBacktest";
 import { cn } from "@/lib/cn";
+import { formatPrice } from "@/lib/format";
 
 const PAGE_SIZE = 20;
 
@@ -32,11 +33,6 @@ const TABS: { key: Tab; label: string; icon: typeof Zap; tip: string }[] = [
 ];
 
 /* ----- Signal table helpers ----- */
-function formatPrice(val: number): string {
-  if (val >= 1000) return `$${val.toFixed(2)}`;
-  if (val >= 1) return `$${val.toFixed(4)}`;
-  return `$${val.toFixed(6)}`;
-}
 
 function formatTime(dateStr: string): string {
   const d = new Date(dateStr);

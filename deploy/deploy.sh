@@ -6,12 +6,16 @@
 # Usage:
 #   First deploy:  bash deploy.sh setup
 #   Update/redeploy: bash deploy.sh update
+#   Rollback:      bash deploy.sh rollback
 # =============================================================================
 set -euo pipefail
 
 APP_DIR="/opt/signalforge"
 REPO_URL=""  # Set your Git repo URL here (e.g. git@github.com:youruser/day-trading.git)
 BRANCH="main"
+
+# Images that are built locally (not pulled from registry)
+BUILD_IMAGES=("signalforge-api" "signalforge-worker" "signalforge-beat")
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -43,6 +47,18 @@ generate_secrets_hint() {
   echo "  JWT secret:       python3 -c \"import secrets; print(secrets.token_urlsafe(64))\""
   echo "  Fernet key:       python3 -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
   echo ""
+}
+
+tag_current_images_as_previous() {
+  info "Tagging current images as :previous for rollback..."
+  for img in "${BUILD_IMAGES[@]}"; do
+    if docker image inspect "${img}:latest" &>/dev/null; then
+      docker tag "${img}:latest" "${img}:previous"
+      info "  Tagged ${img}:latest -> ${img}:previous"
+    else
+      warn "  ${img}:latest not found, skipping tag"
+    fi
+  done
 }
 
 # --- Commands -----------------------------------------------------------------
@@ -138,6 +154,7 @@ setup() {
   echo "    View API logs: cd $APP_DIR && docker compose -f docker-compose.prod.yml logs -f api"
   echo "    Stop all:      cd $APP_DIR && docker compose -f docker-compose.prod.yml down"
   echo "    Redeploy:      bash $APP_DIR/deploy/deploy.sh update"
+  echo "    Rollback:      bash $APP_DIR/deploy/deploy.sh rollback"
   echo ""
 }
 
@@ -163,6 +180,9 @@ update() {
     docker run --rm -v "$APP_DIR/frontend:/app" -w /app node:20-slim sh -c "npm ci && npm run build"
   fi
 
+  # Tag current images as :previous before rebuilding
+  tag_current_images_as_previous
+
   # Rebuild and restart Docker services
   info "Rebuilding Docker images..."
   docker compose -f docker-compose.prod.yml build
@@ -184,6 +204,41 @@ update() {
 
   echo ""
   info "Update complete!"
+}
+
+rollback() {
+  echo "============================================"
+  echo "  SignalForge — Rollback to Previous Version"
+  echo "============================================"
+
+  cd "$APP_DIR"
+
+  # Verify :previous images exist
+  local missing=false
+  for img in "${BUILD_IMAGES[@]}"; do
+    if ! docker image inspect "${img}:previous" &>/dev/null; then
+      error "No :previous image found for ${img}. Cannot rollback."
+    fi
+  done
+
+  # Tag :previous images back to :latest
+  info "Restoring previous images..."
+  for img in "${BUILD_IMAGES[@]}"; do
+    docker tag "${img}:previous" "${img}:latest"
+    info "  Restored ${img}:previous -> ${img}:latest"
+  done
+
+  # Restart containers with the restored images
+  info "Restarting services with previous images..."
+  docker compose -f docker-compose.prod.yml up -d
+
+  # Verify health
+  verify
+
+  echo ""
+  info "Rollback complete! Services are running the previous version."
+  warn "If you need to rollback database migrations, do so manually:"
+  echo "  docker compose -f docker-compose.prod.yml exec api python -m alembic downgrade -1"
 }
 
 verify() {
@@ -233,15 +288,17 @@ setup_backup_cron() {
 # --- Entrypoint ---------------------------------------------------------------
 
 case "${1:-help}" in
-  setup)  setup ;;
-  update) update ;;
-  verify) verify ;;
+  setup)    setup ;;
+  update)   update ;;
+  rollback) rollback ;;
+  verify)   verify ;;
   *)
     echo "Usage: bash deploy.sh <command>"
     echo ""
     echo "Commands:"
-    echo "  setup   — First-time deployment (clone, build, start, migrate)"
-    echo "  update  — Pull latest code, rebuild, restart, migrate"
-    echo "  verify  — Check all services are running"
+    echo "  setup    — First-time deployment (clone, build, start, migrate)"
+    echo "  update   — Pull latest code, rebuild, restart, migrate"
+    echo "  rollback — Revert to previously deployed images"
+    echo "  verify   — Check all services are running"
     ;;
 esac

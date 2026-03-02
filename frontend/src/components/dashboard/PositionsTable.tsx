@@ -1,4 +1,5 @@
 import { Briefcase } from "lucide-react";
+import { formatPrice } from "@/lib/format";
 import type { Position } from "@/hooks/usePositions";
 
 interface PositionsTableProps {
@@ -6,9 +7,7 @@ interface PositionsTableProps {
   loading?: boolean;
 }
 
-function formatPrice(val: number): string {
-  return `$${val.toFixed(2)}`;
-}
+
 
 function SkeletonRow() {
   return (

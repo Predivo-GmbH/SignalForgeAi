@@ -23,6 +23,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { formatPrice } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
 import { useGeneratePlan, useDeployPlan } from "@/hooks/useAdvisor";
 import { useStrategies, useToggleStrategy } from "@/hooks/useStrategies";
@@ -38,11 +39,6 @@ function formatVolume(vol: number): string {
   return `$${vol.toLocaleString()}`;
 }
 
-function formatPrice(price: number): string {
-  if (price >= 1000) return `$${price.toFixed(2)}`;
-  if (price >= 1) return `$${price.toFixed(4)}`;
-  return `$${price.toFixed(6)}`;
-}
 
 function formatTimestamp(ts: number): string {
   const d = new Date(ts);
