@@ -53,4 +53,17 @@ fi
 info "Gzip integrity check: OK"
 
 # Warn if backup is suspiciously small (< 1KB)
-DUMP_SIZE_BYTES=$(stat --format="%s" "$DUMP_FILE" 2>/dev/null || stat -
+DUMP_SIZE_BYTES=$(stat --format="%s" "$DUMP_FILE" 2>/dev/null || stat -f "%z" "$DUMP_FILE" 2>/dev/null || echo "0")
+if [ "$DUMP_SIZE_BYTES" -lt 1024 ]; then
+  warn "Backup file is only ${DUMP_SIZE_BYTES} bytes (< 1KB) — this may indicate a problem."
+fi
+
+# --- 2. Cleanup old backups ---------------------------------------------------
+info "Cleaning backups older than $RETENTION_DAYS days..."
+DELETED=$(find "$BACKUP_DIR" -name "signalforge_*.sql.gz" -mtime +"$RETENTION_DAYS" -print -delete | wc -l)
+info "Removed $DELETED old backup(s)."
+
+# --- 3. Summary ---------------------------------------------------------------
+TOTAL=$(find "$BACKUP_DIR" -name "signalforge_*.sql.gz" | wc -l)
+TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
+info "Backup complete. $TOTAL backups stored ($TOTAL_SIZE total)."
