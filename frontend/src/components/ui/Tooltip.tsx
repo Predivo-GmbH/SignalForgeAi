@@ -4,14 +4,12 @@ import { Info } from "lucide-react";
 interface TooltipProps {
   text: string;
   children?: React.ReactNode;
-  /** Show a small (i) icon instead of wrapping children */
-  icon?: boolean;
 }
 
-export function Tooltip({ text, children, icon }: TooltipProps) {
+export function Tooltip({ text, children }: TooltipProps) {
   const [show, setShow] = useState(false);
   const [coords, setCoords] = useState({ x: 0, y: 0, pos: "bottom" as "top" | "bottom" });
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLSpanElement>(null);
 
   const handleEnter = useCallback(() => {
     if (ref.current) {
@@ -28,16 +26,14 @@ export function Tooltip({ text, children, icon }: TooltipProps) {
   }, []);
 
   return (
-    <div
-      className="relative inline-flex"
+    <span
+      className="relative inline-flex items-center"
       onMouseEnter={handleEnter}
       onMouseLeave={() => setShow(false)}
       ref={ref}
     >
-      {icon ? (
+      {children || (
         <Info className="w-3.5 h-3.5 text-[var(--color-text-secondary)]/50 hover:text-[var(--color-text-secondary)] cursor-help transition-colors" />
-      ) : (
-        children
       )}
       {show && (
         <div
@@ -53,6 +49,6 @@ export function Tooltip({ text, children, icon }: TooltipProps) {
           {text}
         </div>
       )}
-    </div>
+    </span>
   );
 }

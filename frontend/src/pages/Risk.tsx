@@ -49,18 +49,28 @@ function DrawdownCard() {
           <h3 className="text-sm font-semibold text-(--color-text-primary)">
             Drawdown Circuit Breaker
           </h3>
-          <Tooltip text="Monitors portfolio drawdown from peak equity. Reduces or halts trading at configurable thresholds." />
+          <Tooltip text="Monitors how far your portfolio has fallen from its highest point. Automatically reduces or halts trading at 4 configurable levels to protect your capital." />
         </div>
-        <div className={cn("flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full", cfg.bg, cfg.color)}>
-          <Icon className="h-3.5 w-3.5" />
-          {cfg.label}
-        </div>
+        <Tooltip text={
+          level === 0 ? "Normal: No drawdown risk. Full position sizing is allowed."
+          : level === 1 ? "Warning: Drawdown is approaching the limit. New position sizes are automatically cut by 50%."
+          : level === 2 ? "Halt: Drawdown at critical level. All new trades are blocked until equity recovers."
+          : "Emergency: Severe drawdown detected. All open positions are being closed automatically to prevent further losses."
+        }>
+          <div className={cn("flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-help", cfg.bg, cfg.color)}>
+            <Icon className="h-3.5 w-3.5" />
+            {cfg.label}
+          </div>
+        </Tooltip>
       </div>
 
       {/* Drawdown bar */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-(--color-text-secondary)">Drawdown</span>
+          <span className="text-(--color-text-secondary) flex items-center gap-1">
+            Drawdown
+            <Tooltip text="Percentage drop from your peak equity. Green (<5%) = safe, amber (5-10%) = caution, red (>10%) = danger. The bar fills toward 20% maximum." />
+          </span>
           <span className={cn("font-mono font-semibold", drawdownPct > 10 ? "text-(--color-negative)" : drawdownPct > 5 ? "text-amber-500" : "text-(--color-text-primary)")}>
             {drawdownPct.toFixed(2)}%
           </span>
@@ -83,13 +93,19 @@ function DrawdownCard() {
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Peak Equity</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Peak Equity
+            <Tooltip text="The highest account value ever recorded. Drawdown is calculated as the percentage drop from this peak. Only resets upward when equity makes a new high." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-text-primary)">
             ${peakEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Current Equity</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Current Equity
+            <Tooltip text="Your account value right now. The gap between this and peak equity determines the drawdown percentage and which protection level is active." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-text-primary)">
             ${currentEquity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
@@ -130,21 +146,30 @@ function CPPICard() {
           <h3 className="text-sm font-semibold text-(--color-text-primary)">
             Portfolio Insurance (CPPI)
           </h3>
-          <Tooltip text="Constant Proportion Portfolio Insurance. Dynamically adjusts risky exposure based on cushion above floor value." />
+          <Tooltip text="Constant Proportion Portfolio Insurance (CPPI). Dynamically adjusts how much of your capital is exposed to risk based on how far your equity is above a protected floor value." />
         </div>
-        <div className={cn(
-          "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full",
-          isReduced ? "bg-amber-500/10 text-amber-500" : "bg-(--color-positive)/10 text-(--color-positive)"
-        )}>
-          {isReduced ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-          {exposure.toFixed(0)}% Exposed
-        </div>
+        <Tooltip text={
+          isReduced
+            ? `Exposure reduced to ${exposure.toFixed(0)}%. The system is limiting new position sizes because equity is approaching the protected floor.`
+            : "Full 100% exposure allowed. Your equity is comfortably above the protected floor value."
+        }>
+          <div className={cn(
+            "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-help",
+            isReduced ? "bg-amber-500/10 text-amber-500" : "bg-(--color-positive)/10 text-(--color-positive)"
+          )}>
+            {isReduced ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+            {exposure.toFixed(0)}% Exposed
+          </div>
+        </Tooltip>
       </div>
 
       {/* Exposure bar */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-(--color-text-secondary)">Risk Exposure</span>
+          <span className="text-(--color-text-secondary) flex items-center gap-1">
+            Risk Exposure
+            <Tooltip text="Percentage of your full position size currently allowed. Drops automatically as equity falls toward the floor. Red (<50%) = heavily protected, amber (50-80%) = cautious, green (>80%) = normal." />
+          </span>
           <span className={cn("font-mono font-semibold", exposure < 50 ? "text-(--color-negative)" : exposure < 80 ? "text-amber-500" : "text-(--color-positive)")}>
             {exposure.toFixed(1)}%
           </span>
@@ -163,19 +188,28 @@ function CPPICard() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Floor</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Floor
+            <Tooltip text="The minimum portfolio value the system will protect. As equity approaches this level, position sizes are aggressively reduced to prevent breaching it." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-text-primary)">
             ${floor.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
         </div>
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Cushion</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Cushion
+            <Tooltip text="The dollar amount your equity is above the floor. This is your 'risk budget' — the amount available for potential losses before protection activates. A larger cushion allows bigger positions." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-positive)">
             ${cushion.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
         </div>
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Multiplier</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Multiplier
+            <Tooltip text="Amplification factor applied to the cushion. Exposure = (Cushion x Multiplier) / Portfolio Value. A higher multiplier means exposure scales up more aggressively with available cushion." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-text-primary)">
             {multiplier.toFixed(1)}x
           </p>
@@ -215,21 +249,30 @@ function CorrelationCard() {
           <h3 className="text-sm font-semibold text-(--color-text-primary)">
             Correlation Monitor
           </h3>
-          <Tooltip text="Tracks pairwise correlation between open positions. Reduces sizing when high correlation detected to prevent concentrated risk." />
+          <Tooltip text="Monitors how correlated your open positions are. Holding highly correlated assets (e.g., two tech stocks) amplifies risk. The system automatically reduces position sizes when correlation is too high." />
         </div>
-        <div className={cn(
-          "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full",
-          hasAlerts ? "bg-amber-500/10 text-amber-500" : "bg-(--color-positive)/10 text-(--color-positive)"
-        )}>
-          {hasAlerts ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle className="h-3.5 w-3.5" />}
-          {hasAlerts ? `${alerts.length} Alert${alerts.length > 1 ? "s" : ""}` : "Clear"}
-        </div>
+        <Tooltip text={
+          hasAlerts
+            ? `${alerts.length} pair${alerts.length > 1 ? "s" : ""} of positions ${alerts.length > 1 ? "are" : "is"} highly correlated. Position sizes are being reduced to offset concentrated risk.`
+            : "No high-correlation pairs detected. All positions are sufficiently diversified."
+        }>
+          <div className={cn(
+            "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full cursor-help",
+            hasAlerts ? "bg-amber-500/10 text-amber-500" : "bg-(--color-positive)/10 text-(--color-positive)"
+          )}>
+            {hasAlerts ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle className="h-3.5 w-3.5" />}
+            {hasAlerts ? `${alerts.length} Alert${alerts.length > 1 ? "s" : ""}` : "Clear"}
+          </div>
+        </Tooltip>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Max Correlation</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Max Correlation
+            <Tooltip text="Highest correlation between any two of your open positions, ranging from 0 (uncorrelated) to 1 (move identically). Green (<0.7) = diversified, amber (0.7-0.85) = warning, red (>0.85) = critical." />
+          </p>
           <p className={cn(
             "text-sm font-mono font-semibold",
             maxCorr > 0.85 ? "text-(--color-negative)" : maxCorr > 0.7 ? "text-amber-500" : "text-(--color-positive)"
@@ -238,7 +281,10 @@ function CorrelationCard() {
           </p>
         </div>
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Sizing Penalty</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Sizing Penalty
+            <Tooltip text="Position size multiplier applied due to correlated holdings. 100% = no penalty (full sizing allowed). Lower values mean new position sizes are reduced to compensate for concentrated risk." />
+          </p>
           <p className={cn(
             "text-sm font-mono font-semibold",
             penalty < 0.7 ? "text-(--color-negative)" : penalty < 1.0 ? "text-amber-500" : "text-(--color-positive)"
@@ -311,17 +357,24 @@ function AccountCard() {
         <h3 className="text-sm font-semibold text-(--color-text-primary)">
           Account Overview
         </h3>
+        <Tooltip text="Real-time snapshot of your trading account. All values update automatically when positions change." />
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Equity</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Equity
+            <Tooltip text="Total account value including cash balance and unrealized profit/loss from all open positions." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-text-primary)">
             ${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Daily P&L</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Daily P&L
+            <Tooltip text="Net profit or loss for today's trading session. Green = profit, red = loss. Resets at the start of each trading day." />
+          </p>
           <p className={cn(
             "text-sm font-mono font-semibold",
             dailyPnl > 0 ? "text-(--color-positive)" : dailyPnl < 0 ? "text-(--color-negative)" : "text-(--color-text-primary)"
@@ -330,7 +383,10 @@ function AccountCard() {
           </p>
         </div>
         <div className="bg-(--color-bg-elevated) rounded-lg p-3 space-y-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary)">Positions</p>
+          <p className="text-[10px] uppercase tracking-wider text-(--color-text-secondary) flex items-center gap-1">
+            Positions
+            <Tooltip text="Currently open trades vs. the maximum allowed at once. The limit prevents over-exposure to market risk." />
+          </p>
           <p className="text-sm font-mono font-semibold text-(--color-text-primary)">
             {openPos} / {maxPos}
           </p>
