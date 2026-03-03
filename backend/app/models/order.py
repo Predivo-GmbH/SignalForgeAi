@@ -33,7 +33,7 @@ class Order(Base, UUIDMixin):
     take_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), default="pending", index=True
-    )  # pending / filled / partial / cancelled / rejected
+    )  # pending / submitted / filled / partial / cancelled / rejected / completed
     broker: Mapped[str] = mapped_column(
         String(20), nullable=False
     )  # ccxt / paper

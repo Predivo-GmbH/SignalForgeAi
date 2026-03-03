@@ -146,13 +146,13 @@ STRATEGY_PRESETS: dict[str, dict] = {
 
 
 class CreateStrategyRequest(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=200)
     config: dict = {}
     preset: str | None = None
 
 
 class UpdateStrategyRequest(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=200)
     config: dict | None = None
 
 
@@ -360,6 +360,7 @@ async def list_feedback_rules(
         select(FeedbackRule)
         .where(FeedbackRule.strategy_id == strategy_id)
         .order_by(FeedbackRule.created_at.desc())
+        .limit(100)
     )
     rules = result.scalars().all()
     return {
@@ -448,6 +449,15 @@ async def delete_strategy(
     await db.execute(
         update(SignalModel)
         .where(SignalModel.strategy_id == strategy_id)
+        .values(strategy_id=None)
+    )
+    await db.flush()
+
+    # Detach feedback rules so FK constraint doesn't block deletion
+    from app.models.ai_insight import FeedbackRule
+    await db.execute(
+        update(FeedbackRule)
+        .where(FeedbackRule.strategy_id == strategy.id)
         .values(strategy_id=None)
     )
     await db.flush()

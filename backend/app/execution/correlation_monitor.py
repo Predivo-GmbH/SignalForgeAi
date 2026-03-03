@@ -68,18 +68,25 @@ class CorrelationMonitor:
         if len(symbols) < 2:
             return CorrelationResult(matrix={}, max_correlation=0.0, exposure_penalty=1.0)
 
-        # Load close prices for each symbol
+        # Load all close prices in one query (PERF-002: batch fetch)
+        all_candles_result = await db.execute(
+            select(Candle.symbol, Candle.close, Candle.time)
+            .where(Candle.symbol.in_(symbols), Candle.timeframe == timeframe)
+            .order_by(Candle.symbol, Candle.time.desc())
+        )
+        all_rows = all_candles_result.fetchall()
+
+        # Group by symbol in Python and apply lookback limit
         price_data: dict[str, list[float]] = {}
-        for symbol in symbols:
-            result = await db.execute(
-                select(Candle.close)
-                .where(Candle.symbol == symbol, Candle.timeframe == timeframe)
-                .order_by(Candle.time.desc())
-                .limit(self.lookback_bars)
-            )
-            closes = [row[0] for row in result.fetchall()]
-            if len(closes) >= 30:
-                price_data[symbol] = list(reversed(closes))
+        rows_by_symbol: dict[str, list[float]] = {}
+        for row in all_rows:
+            sym = row[0]
+            rows_by_symbol.setdefault(sym, []).append(row[1])
+
+        for sym, closes in rows_by_symbol.items():
+            trimmed = closes[:self.lookback_bars]  # already desc ordered
+            if len(trimmed) >= 30:
+                price_data[sym] = list(reversed(trimmed))
 
         valid_symbols = list(price_data.keys())
         if len(valid_symbols) < 2:
@@ -197,8 +204,8 @@ class CorrelationMonitor:
                     max_correlation=d.get("max_correlation", 0.0),
                     exposure_penalty=d.get("exposure_penalty", 1.0),
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to load cached correlation result: %s", e)
         return None
 
     async def get_cached_penalty(self, user_id: str) -> float:

@@ -12,11 +12,37 @@ def check_correlations(self):
     """For each user with 2+ open positions, compute correlation matrix."""
     import asyncio
 
+    import redis
+
+    from app.config import settings
+
+    r = None
+    lock = None
+    try:
+        r = redis.from_url(settings.redis_url)
+        lock = r.lock("signalforge:lock:check_correlations", timeout=300, blocking=False)
+        if not lock.acquire(blocking=False):
+            logger.info("check_correlations already running, skipping")
+            r.close()
+            return
+    except redis.ConnectionError:
+        logger.warning("Redis unavailable for check_correlations lock — proceeding without lock")
+
     try:
         asyncio.run(_check_correlations_async())
     except (ConnectionError, OSError, TimeoutError) as exc:
         logger.warning("check_correlations transient error: %s — retrying", exc)
         self.retry(exc=exc, countdown=60)
+    finally:
+        if lock is not None:
+            try:
+                lock.release()
+            except redis.exceptions.LockNotOwnedError:
+                logger.warning("check_correlations lock expired before release")
+            except Exception:
+                pass
+        if r is not None:
+            r.close()
 
 
 async def _check_correlations_async():
@@ -98,6 +124,6 @@ async def _check_correlations_async():
                     )
 
             except Exception as e:
-                logger.error(
+                logger.exception(
                     "Correlation check failed for user %s: %s", user_id, e
                 )

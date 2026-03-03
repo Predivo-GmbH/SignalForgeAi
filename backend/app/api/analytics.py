@@ -5,7 +5,7 @@ import uuid
 import numpy as np
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -93,6 +93,7 @@ def compute_correlation(prices_a: list[float], prices_b: list[float]) -> float:
 async def get_equity_curve(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=500, le=2000),
 ):
     """Build equity curve from closed trades."""
     uid = uuid.UUID(user_id)
@@ -100,6 +101,7 @@ async def get_equity_curve(
         select(Trade)
         .where(Trade.user_id == uid, Trade.pnl.is_not(None))
         .order_by(Trade.exit_time.asc())
+        .limit(limit)
     )
     trades = list(result.scalars().all())
 
@@ -190,15 +192,18 @@ async def compare_strategies(
             .join(Signal, Trade.signal_id == Signal.id)
             .where(Signal.strategy_id == strat.id, Trade.pnl.is_not(None))
             .order_by(Trade.exit_time.asc())
+            .limit(500)
         )
         trades = list(trade_result.scalars().all())
 
-        # Get active signals count
-        sig_result = await db.execute(
-            select(Signal)
-            .where(Signal.strategy_id == strat.id, Signal.status.in_(["pending", "active"]))
+        # Get active signals count (SQL aggregate instead of loading all rows)
+        active_count_result = await db.execute(
+            select(func.count(Signal.id)).where(
+                Signal.strategy_id == strat.id,
+                Signal.status.in_(["pending", "active"]),
+            )
         )
-        active_signals = len(list(sig_result.scalars().all()))
+        active_signals = active_count_result.scalar() or 0
 
         total_trades = len(trades)
         winning = [t for t in trades if (t.pnl or 0) > 0]

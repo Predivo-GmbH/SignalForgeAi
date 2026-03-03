@@ -36,40 +36,51 @@ class RedisSubscriber:
 
     async def _listen(self):
         """Subscribe to signalforge:* Redis channels and route messages."""
-        try:
-            import redis.asyncio as aioredis
+        import redis.asyncio as aioredis
 
-            r = aioredis.from_url(self._redis_url)
-            pubsub = r.pubsub()
-            await pubsub.psubscribe("signalforge:*")
+        backoff = 1
+        while self._running:
+            try:
+                r = aioredis.from_url(self._redis_url)
+                pubsub = r.pubsub()
+                await pubsub.psubscribe("signalforge:*")
+                logger.info("Redis subscriber connected")
+                backoff = 1  # Reset on successful connect
 
-            async for message in pubsub.listen():
+                async for message in pubsub.listen():
+                    if not self._running:
+                        break
+                    if message["type"] == "pmessage":
+                        channel = message["channel"]
+                        if isinstance(channel, bytes):
+                            channel = channel.decode()
+                        data = message["data"]
+                        if isinstance(data, bytes):
+                            data = data.decode()
+
+                        try:
+                            parsed = json.loads(data)
+                        except json.JSONDecodeError:
+                            parsed = {"raw": data}
+
+                        # Route to appropriate WS channel
+                        try:
+                            if "signals" in channel:
+                                await self._broadcast_fn("signals", parsed)
+                            elif "prices" in channel:
+                                await self._broadcast_fn("prices", parsed)
+                            elif "trades" in channel:
+                                await self._broadcast_fn("trades", parsed)
+                        except Exception as e:
+                            logger.exception("Subscriber handler error on %s: %s", channel, e)
+
+                await pubsub.unsubscribe()
+                await r.aclose()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
                 if not self._running:
                     break
-                if message["type"] == "pmessage":
-                    channel = message["channel"]
-                    if isinstance(channel, bytes):
-                        channel = channel.decode()
-                    data = message["data"]
-                    if isinstance(data, bytes):
-                        data = data.decode()
-
-                    try:
-                        parsed = json.loads(data)
-                    except json.JSONDecodeError:
-                        parsed = {"raw": data}
-
-                    # Route to appropriate WS channel
-                    if "signals" in channel:
-                        await self._broadcast_fn("signals", parsed)
-                    elif "prices" in channel:
-                        await self._broadcast_fn("prices", parsed)
-                    elif "trades" in channel:
-                        await self._broadcast_fn("trades", parsed)
-
-            await pubsub.unsubscribe()
-            await r.aclose()
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error("Redis subscriber error: %s", e)
+                logger.warning("Redis subscriber disconnected: %s — reconnecting in %ds", e, backoff)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)

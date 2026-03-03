@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { wsManager } from "@/lib/ws";
 import { useAuth } from "@/lib/auth";
+import type { TradeMessage } from "@/hooks/useWebSocket";
 
 export interface TradeUpdate {
   type: "order_filled" | "position_opened" | "position_closed";
-  data: Record<string, unknown>;
+  data: TradeMessage;
 }
 
 const MAX_UPDATES = 50;

@@ -2,12 +2,14 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.auth.dependencies import get_current_user
 
 from app.api.advisor import router as advisor_router
 from app.api.ai_usage import router as ai_usage_router
@@ -95,6 +97,21 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RequestIDMiddleware)
 
 # ---------------------------------------------------------------------------
+# Security headers
+# ---------------------------------------------------------------------------
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ---------------------------------------------------------------------------
 # CORS — restrict methods and headers in production
 # ---------------------------------------------------------------------------
 app.add_middleware(
@@ -126,7 +143,7 @@ app.include_router(ai_usage_router, prefix="/api")
 # Static content endpoints
 # ---------------------------------------------------------------------------
 @app.get("/api/guide")
-async def get_user_guide():
+async def get_user_guide(_user_id: str = Depends(get_current_user)):
     """Return the user guide markdown content."""
     from pathlib import Path
 

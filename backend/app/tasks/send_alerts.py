@@ -88,4 +88,4 @@ async def _send_summary_async():
                     total_pnl,
                 )
             except Exception as e:
-                logger.error("Failed to send summary to %s: %s", alert_email, e)
+                logger.exception("Failed to send summary to %s: %s", alert_email, e)

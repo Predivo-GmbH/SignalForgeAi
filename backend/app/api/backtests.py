@@ -230,7 +230,7 @@ async def run_strategy_backtest(
         logger.exception("Strategy backtest failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Strategy backtest failed: {e}",
+            detail="Backtest execution failed. Check server logs.",
         )
 
     return result

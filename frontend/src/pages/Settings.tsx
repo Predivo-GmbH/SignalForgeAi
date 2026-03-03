@@ -97,33 +97,37 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
         </select>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          API Key
-        </label>
-        <input
-          type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="Enter API key"
-          required
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-        />
-      </div>
+      {!isPaper && (
+        <>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              API Key
+            </label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Enter API key"
+              required
+              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+            />
+          </div>
 
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          API Secret
-        </label>
-        <input
-          type="password"
-          value={apiSecret}
-          onChange={(e) => setApiSecret(e.target.value)}
-          placeholder="Enter API secret"
-          required
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-        />
-      </div>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              API Secret
+            </label>
+            <input
+              type="password"
+              value={apiSecret}
+              onChange={(e) => setApiSecret(e.target.value)}
+              placeholder="Enter API secret"
+              required
+              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+            />
+          </div>
+        </>
+      )}
 
       <label className="flex items-center gap-2 cursor-pointer">
         <input

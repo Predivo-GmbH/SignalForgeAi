@@ -42,6 +42,7 @@ export function useTrades(limit = 20, offset = 0, strategyId?: string) {
       if (strategyId) url += `&strategy_id=${strategyId}`;
       return api.get<{ trades: Trade[]; total: number }>(url);
     },
+    refetchInterval: 60_000,
   });
 }
 
@@ -53,5 +54,6 @@ export function useTradeStats(strategyId?: string) {
       if (strategyId) url += `?strategy_id=${strategyId}`;
       return api.get<TradeStats>(url);
     },
+    refetchInterval: 60_000,
   });
 }

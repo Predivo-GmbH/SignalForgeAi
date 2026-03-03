@@ -3,6 +3,7 @@ import {
   createChart,
   LineSeries,
   type IChartApi,
+  type ISeriesApi,
   type Time,
   ColorType,
 } from "lightweight-charts";
@@ -15,9 +16,11 @@ interface EquityCurveProps {
 export function EquityCurve({ points }: EquityCurveProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Line"> | null>(null);
 
+  // Create chart once on mount
   useEffect(() => {
-    if (!containerRef.current || points.length === 0) return;
+    if (!containerRef.current) return;
 
     const isDark = document.documentElement.classList.contains("dark");
 
@@ -55,8 +58,6 @@ export function EquityCurve({ points }: EquityCurveProps) {
       },
     });
 
-    chartRef.current = chart;
-
     const series = chart.addSeries(LineSeries, {
       color: "#7B61FF",
       lineWidth: 2,
@@ -65,13 +66,8 @@ export function EquityCurve({ points }: EquityCurveProps) {
       priceLineVisible: false,
     });
 
-    const data = points.map((p) => ({
-      time: p.date as Time,
-      value: p.equity,
-    }));
-
-    series.setData(data);
-    chart.timeScale().fitContent();
+    chartRef.current = chart;
+    seriesRef.current = series;
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -85,7 +81,21 @@ export function EquityCurve({ points }: EquityCurveProps) {
       observer.disconnect();
       chart.remove();
       chartRef.current = null;
+      seriesRef.current = null;
     };
+  }, []);
+
+  // Update data when points change
+  useEffect(() => {
+    if (!seriesRef.current || !points.length) return;
+
+    const data = points.map((p) => ({
+      time: p.date as Time,
+      value: p.equity,
+    }));
+
+    seriesRef.current.setData(data);
+    chartRef.current?.timeScale().fitContent();
   }, [points]);
 
   if (points.length === 0) {

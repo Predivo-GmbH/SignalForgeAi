@@ -1,20 +1,21 @@
-import { Component, type ReactNode } from "react";
+import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PasswordGate } from "./components/PasswordGate";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/layout/AppLayout";
-import { LoginPage } from "./pages/Login";
-import { RegisterPage } from "./pages/Register";
-import { DashboardPage } from "./pages/Dashboard";
-import { TradesPage } from "./pages/Trades";
-import { AnalyticsPage } from "./pages/Analytics";
-import { AdvisorPage } from "./pages/Advisor";
-import { StrategiesPage } from "./pages/Strategies";
-import { StrategyDetailPage } from "./pages/StrategyDetail";
-import { BacktestPage } from "./pages/Backtest";
-import { SettingsPage } from "./pages/Settings";
 import { queryClient } from "./lib/query";
+
+const LoginPage = lazy(() => import("./pages/Login").then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/Register").then(m => ({ default: m.RegisterPage })));
+const DashboardPage = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.DashboardPage })));
+const TradesPage = lazy(() => import("./pages/Trades").then(m => ({ default: m.TradesPage })));
+const AnalyticsPage = lazy(() => import("./pages/Analytics").then(m => ({ default: m.AnalyticsPage })));
+const AdvisorPage = lazy(() => import("./pages/Advisor").then(m => ({ default: m.AdvisorPage })));
+const StrategiesPage = lazy(() => import("./pages/Strategies").then(m => ({ default: m.StrategiesPage })));
+const StrategyDetailPage = lazy(() => import("./pages/StrategyDetail").then(m => ({ default: m.StrategyDetailPage })));
+const BacktestPage = lazy(() => import("./pages/Backtest").then(m => ({ default: m.BacktestPage })));
+const SettingsPage = lazy(() => import("./pages/Settings").then(m => ({ default: m.SettingsPage })));
 
 /* ---------- Error Boundary ---------- */
 
@@ -98,28 +99,30 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <PasswordGate>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="advisor" element={<AdvisorPage />} />
-                <Route path="strategies" element={<StrategiesPage />} />
-                <Route path="strategies/:id" element={<StrategyDetailPage />} />
-                <Route path="backtest" element={<BacktestPage />} />
-                <Route path="trades" element={<TradesPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                {/* Redirects for old routes */}
-                <Route path="config" element={<Navigate to="/strategies" replace />} />
-                <Route path="signals" element={<Navigate to="/strategies" replace />} />
-                <Route path="journal" element={<Navigate to="/trades" replace />} />
-                <Route path="keys" element={<Navigate to="/settings" replace />} />
-                <Route path="guide" element={<Navigate to="/" replace />} />
+          <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="advisor" element={<AdvisorPage />} />
+                  <Route path="strategies" element={<StrategiesPage />} />
+                  <Route path="strategies/:id" element={<StrategyDetailPage />} />
+                  <Route path="backtest" element={<BacktestPage />} />
+                  <Route path="trades" element={<TradesPage />} />
+                  <Route path="analytics" element={<AnalyticsPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  {/* Redirects for old routes */}
+                  <Route path="config" element={<Navigate to="/strategies" replace />} />
+                  <Route path="signals" element={<Navigate to="/strategies" replace />} />
+                  <Route path="journal" element={<Navigate to="/trades" replace />} />
+                  <Route path="keys" element={<Navigate to="/settings" replace />} />
+                  <Route path="guide" element={<Navigate to="/" replace />} />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
+            </Routes>
+          </Suspense>
         </PasswordGate>
       </QueryClientProvider>
     </ErrorBoundary>

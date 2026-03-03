@@ -30,10 +30,13 @@ export class WebSocketManager {
     ws.onopen = () => {
       this.retryCount.set(channel, 0);
       this.isReconnecting.delete(channel);
-      // After a successful reconnect, invalidate all React Query caches
+      // After a successful reconnect, invalidate relevant React Query caches
       // so components refetch fresh data
       if (wasReconnecting) {
-        queryClient.invalidateQueries();
+        queryClient.invalidateQueries({ queryKey: ["signals"] });
+        queryClient.invalidateQueries({ queryKey: ["trades"] });
+        queryClient.invalidateQueries({ queryKey: ["positions"] });
+        queryClient.invalidateQueries({ queryKey: ["prices"] });
       }
     };
     ws.onmessage = (event: MessageEvent) => {

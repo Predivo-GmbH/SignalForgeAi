@@ -1,5 +1,6 @@
 """WebSocket hub for real-time signal and price streaming."""
 
+import asyncio
 import logging
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -39,24 +40,34 @@ class ConnectionManager:
                 (ws, uid) for ws, uid in self.active_connections[channel] if ws != websocket
             ]
 
-    async def broadcast(self, channel: str, message: dict):
-        """Send a message to all connections on a channel, removing dead ones.
+    async def broadcast(self, channel: str, message: dict, user_id: str | None = None):
+        """Send a message to all connections on a channel using parallel sends.
 
         If the message contains a 'user_id' field, only send to that user's
-        connections (or to connections with no user — e.g. prices channel).
+        connections (or to connections with no user -- e.g. prices channel).
         """
-        target_user = message.get("user_id")
-        dead = []
-        for ws, uid in self.active_connections.get(channel, []):
-            # If the message is user-scoped, only send to matching connections
-            if target_user and uid and uid != target_user:
-                continue
+        target_user = user_id or message.get("user_id")
+        conns = self.active_connections.get(channel, [])
+        if not conns:
+            return
+
+        async def _safe_send(ws: WebSocket, uid: str | None) -> tuple[WebSocket, str | None, bool]:
             try:
                 await ws.send_json(message)
             except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self.disconnect(ws, channel)
+                return (ws, uid, True)  # Mark for removal
+            return (ws, uid, False)
+
+        targets = [(ws, uid) for ws, uid in conns if target_user is None or not uid or uid == target_user]
+        if not targets:
+            return
+
+        results = await asyncio.gather(*[_safe_send(ws, uid) for ws, uid in targets], return_exceptions=True)
+
+        # Clean up dead connections
+        dead = {r[0] for r in results if isinstance(r, tuple) and r[2]}
+        if dead:
+            self.active_connections[channel] = [(ws, uid) for ws, uid in conns if ws not in dead]
 
 
 manager = ConnectionManager()
@@ -92,6 +103,9 @@ async def ws_signals(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket, "signals")
+    except Exception as e:
+        logger.exception("WebSocket error on signals: %s", e)
+        manager.disconnect(websocket, "signals")
 
 
 async def ws_prices(websocket: WebSocket):
@@ -104,6 +118,9 @@ async def ws_prices(websocket: WebSocket):
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        manager.disconnect(websocket, "prices")
+    except Exception as e:
+        logger.exception("WebSocket error on prices: %s", e)
         manager.disconnect(websocket, "prices")
 
 
@@ -122,4 +139,7 @@ async def ws_trades(websocket: WebSocket):
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        manager.disconnect(websocket, "trades")
+    except Exception as e:
+        logger.exception("WebSocket error on trades: %s", e)
         manager.disconnect(websocket, "trades")

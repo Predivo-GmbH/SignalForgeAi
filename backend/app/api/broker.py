@@ -1,6 +1,7 @@
 """Broker connection management API — CRUD for API credentials."""
 
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/broker", tags=["broker"])
 
 
 class BrokerConnectRequest(BaseModel):
-    broker: str  # "binance" or other CCXT-supported exchange
+    broker: Literal["binance"] = "binance"
     api_key: str = ""
     api_secret: str = ""
     is_paper: bool = True

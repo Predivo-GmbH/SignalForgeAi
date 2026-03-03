@@ -82,8 +82,7 @@ async def _train_async(symbol: str, timeframe: str) -> dict:
     model = HMMRegimeModel(n_states=3)
     model.fit(df)
 
-    r = redis.Redis.from_url(settings.redis_url)
-    r.set(f"hmm_model:{symbol}:{timeframe}", model.serialize(), ex=7 * 86400)
+    await redis_client.set(f"signalforge:hmm_regime:{symbol}", model.serialize(), ex=7 * 86400)
 
     return {
         "status": "trained",

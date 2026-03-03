@@ -34,7 +34,7 @@ async def list_symbols():
 async def get_candles(
     symbol: str,
     timeframe: str,
-    limit: int = Query(default=200, ge=1, le=5000),
+    limit: int = Query(default=200, ge=1, le=1000),
     _user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

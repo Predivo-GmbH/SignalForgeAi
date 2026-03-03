@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -100,25 +100,38 @@ async def trade_stats(
     """Aggregate trade statistics for the authenticated user."""
     uid = uuid.UUID(user_id)
 
-    # Build base queries, optionally joining through Signal for strategy filtering
-    closed_q = select(Trade).where(Trade.user_id == uid, Trade.pnl.isnot(None))
+    # Total trade count (including open)
     count_q = select(func.count()).select_from(Trade).where(Trade.user_id == uid)
-
     if strategy_id:
-        closed_q = closed_q.join(Signal, Trade.signal_id == Signal.id).where(
-            Signal.strategy_id == strategy_id
-        )
         count_q = count_q.join(Signal, Trade.signal_id == Signal.id).where(
             Signal.strategy_id == strategy_id
         )
-
-    result = await db.execute(closed_q)
-    closed_trades = result.scalars().all()
-
     count_result = await db.execute(count_q)
     total = count_result.scalar() or 0
 
-    if not closed_trades:
+    # SQL aggregates for closed trades (pnl IS NOT NULL)
+    agg_q = select(
+        func.count(Trade.id).label("closed_count"),
+        func.sum(case((Trade.pnl > 0, 1), else_=0)).label("wins"),
+        func.sum(case((Trade.pnl > 0, Trade.pnl), else_=0)).label("gross_profit"),
+        func.sum(case((Trade.pnl < 0, func.abs(Trade.pnl)), else_=0)).label("gross_loss"),
+        func.max(Trade.pnl).label("best"),
+        func.min(Trade.pnl).label("worst"),
+        func.sum(Trade.pnl).label("total_pnl"),
+    ).where(
+        Trade.user_id == uid,
+        Trade.pnl.isnot(None),
+    )
+    if strategy_id:
+        agg_q = agg_q.join(Signal, Trade.signal_id == Signal.id).where(
+            Signal.strategy_id == strategy_id
+        )
+
+    result = await db.execute(agg_q)
+    row = result.one()
+
+    closed_count = row.closed_count or 0
+    if closed_count == 0:
         return TradeStatsResponse(
             total_trades=total,
             win_rate=0.0,
@@ -129,14 +142,18 @@ async def trade_stats(
             worst_trade=0.0,
         )
 
-    pnls = [t.pnl for t in closed_trades]
-    wins = [p for p in pnls if p > 0]
-    losses = [p for p in pnls if p < 0]
+    wins = row.wins or 0
+    gross_profit = float(row.gross_profit or 0)
+    gross_loss = float(row.gross_loss or 0)
+    total_pnl = float(row.total_pnl or 0)
+    best = float(row.best or 0)
+    worst = float(row.worst or 0)
 
-    total_pnl = sum(pnls)
-    win_rate = round(len(wins) / len(closed_trades) * 100, 2) if closed_trades else 0.0
+    win_rate = round(wins / closed_count * 100, 2)
     profit_factor = (
-        round(sum(wins) / abs(sum(losses)), 2) if losses else 999.99 if wins else 0.0
+        round(gross_profit / gross_loss, 2) if gross_loss > 0
+        else 999.99 if gross_profit > 0
+        else 0.0
     )
 
     return TradeStatsResponse(
@@ -144,9 +161,9 @@ async def trade_stats(
         win_rate=win_rate,
         profit_factor=profit_factor,
         total_pnl=round(total_pnl, 2),
-        avg_pnl=round(total_pnl / len(closed_trades), 2),
-        best_trade=round(max(pnls), 2),
-        worst_trade=round(min(pnls), 2),
+        avg_pnl=round(total_pnl / closed_count, 2),
+        best_trade=round(best, 2),
+        worst_trade=round(worst, 2),
     )
 
 

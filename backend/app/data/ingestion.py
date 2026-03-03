@@ -3,8 +3,12 @@ CCXT-based candle ingestion.
 Fetches historical OHLCV data and converts to our DataFrame format.
 """
 
+import logging
+
 import ccxt
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class CCXTIngestion:
@@ -21,7 +25,11 @@ class CCXTIngestion:
         limit: int = 500,
         since: int | None = None,
     ) -> pd.DataFrame:
-        ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
+        try:
+            ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
+        except Exception as e:
+            logger.error("Failed to fetch candles for %s %s: %s", symbol, timeframe, e)
+            raise
 
         if not ohlcv:
             return pd.DataFrame()

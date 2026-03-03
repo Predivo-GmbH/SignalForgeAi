@@ -15,6 +15,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+MAX_MEMORY_ENTRIES = 100
+
+
 class CandleStorage:
     """Database-backed candle storage using the Candle model.
 
@@ -51,6 +54,11 @@ class CandleStorage:
             self._store[key] = combined
         else:
             self._store[key] = candles.sort_values("time").reset_index(drop=True)
+
+        # Evict oldest entries if over limit
+        while len(self._store) > MAX_MEMORY_ENTRIES:
+            oldest_key = next(iter(self._store))
+            del self._store[oldest_key]
 
         return len(candles)
 

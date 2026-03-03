@@ -55,7 +55,7 @@ class CCXTAdapter(BrokerAdapter):
             await self._exchange.load_markets()
             return True
         except Exception as e:
-            logger.error("CCXT connect failed: %s", e)
+            logger.exception("CCXT connect failed")
             return False
 
     async def place_order(
@@ -93,7 +93,7 @@ class CCXTAdapter(BrokerAdapter):
             await self._exchange.cancel_order(broker_order_id, symbol=symbol or None)
             return True
         except Exception as e:
-            logger.error("CCXT cancel failed: %s", e)
+            logger.exception("CCXT cancel failed")
             return False
 
     async def get_order_status(self, broker_order_id: str, symbol: str = "") -> BrokerOrder:

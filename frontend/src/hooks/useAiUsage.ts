@@ -58,6 +58,7 @@ export function useAiUsage(days = 30) {
   return useQuery({
     queryKey: ["ai-usage", days],
     queryFn: () => api.get<AiUsageResponse>(`/ai-usage?days=${days}`),
+    staleTime: 60_000,
     refetchInterval: 60_000,
   });
 }

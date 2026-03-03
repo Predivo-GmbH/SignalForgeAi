@@ -147,7 +147,7 @@ class OrderExecutor:
         except Exception as e:
             order.status = "rejected"
             order.error_message = str(e)
-            logger.error("Order %s rejected: %s", order.id, e)
+            logger.exception("Order %s rejected", order.id)
 
         await db.flush()
         return order

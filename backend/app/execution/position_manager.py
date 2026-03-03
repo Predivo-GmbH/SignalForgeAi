@@ -190,12 +190,12 @@ class PositionManagerDB:
     # ------------------------------------------------------------------
     @staticmethod
     async def list_open(db: AsyncSession, user_id: str) -> list[Position]:
-        """List all open positions for a user."""
+        """List all open positions for a user (capped at 50)."""
         result = await db.execute(
             select(Position).where(
                 Position.user_id == uuid.UUID(user_id),
                 Position.is_open == True,  # noqa: E712
-            )
+            ).limit(50)
         )
         return list(result.scalars().all())
 

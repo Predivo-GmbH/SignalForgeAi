@@ -58,8 +58,8 @@ async def _run_pipeline_async():
                     await redis_client.publish(
                         "signalforge:signals", json.dumps(msg),
                     )
-            except Exception:
-                pass  # Redis publish is best-effort
+            except Exception as pub_err:
+                logger.warning("Redis publish failed: %s", pub_err)
 
 
 async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[dict] | None = None):
@@ -279,7 +279,7 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                         })
 
             except Exception as e:
-                logger.error(
+                logger.exception(
                     "Pipeline failed for %s %s (strategy=%s): %s",
                     symbol, timeframe, active_strategy.name, e,
                 )

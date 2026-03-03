@@ -120,8 +120,8 @@ class DrawdownBreaker:
             if data:
                 d = json.loads(data)
                 return DrawdownState(**d)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to load drawdown state from Redis: %s", e)
         return None
 
     async def _save_state(self, user_id: str, state: DrawdownState) -> None:

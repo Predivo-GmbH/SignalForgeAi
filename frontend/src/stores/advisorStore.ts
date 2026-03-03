@@ -166,10 +166,12 @@ export const useAdvisorStore = create<AdvisorState>()(
     {
       name: "sf-advisor",
       partialize: (state) => ({
-        scanHistory: state.scanHistory.map((h) =>
-          // If app was closed while a scan was running, mark it as failed
-          h.status === "running" ? { ...h, status: "failed" as const, error: "Interrupted" } : h,
-        ),
+        scanHistory: state.scanHistory
+          .map((h) =>
+            // If app was closed while a scan was running, mark it as failed
+            h.status === "running" ? { ...h, status: "failed" as const, error: "Interrupted" } : h,
+          )
+          .slice(0, 10),
       }),
     },
   ),

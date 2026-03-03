@@ -3,7 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +24,7 @@ class AlertConfig(BaseModel):
     email_on_signal: bool = False
     email_daily_summary: bool = False
     min_confluence_alert: int = 60
-    alert_email: str = ""
+    alert_email: str = Field(default="", max_length=254)
 
 
 # ---------------------------------------------------------------------------

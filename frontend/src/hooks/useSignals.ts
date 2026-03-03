@@ -39,5 +39,6 @@ export function useSignals(limit = 20, offset = 0, strategyId?: string) {
       if (strategyId) url += `&strategy_id=${strategyId}`;
       return api.get<SignalListResponse>(url);
     },
+    refetchInterval: 30_000,
   });
 }
