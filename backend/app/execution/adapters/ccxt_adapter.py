@@ -140,6 +140,12 @@ class CCXTAdapter(BrokerAdapter):
             buying_power=float(free.get("USDT", 0)),
         )
 
+    async def get_full_balance(self) -> dict[str, float]:
+        """Return all non-zero asset balances as {symbol: total_amount}."""
+        balance = await self._exchange.fetch_balance()
+        total = balance.get("total", {})
+        return {k: float(v) for k, v in total.items() if float(v or 0) > 0}
+
     async def close(self):
         """Close the exchange connection."""
         await self._exchange.close()

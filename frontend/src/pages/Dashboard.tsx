@@ -1,21 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
-import { StatsCards } from "@/components/dashboard/StatsCards";
-import { PriceChart } from "@/components/dashboard/PriceChart";
-import { SignalFeed } from "@/components/dashboard/SignalFeed";
-import { PositionsTable } from "@/components/dashboard/PositionsTable";
-import { RegimeWidget } from "@/components/dashboard/RegimeWidget";
-import { useTradeStats } from "@/hooks/useTrades";
-import { useSignals } from "@/hooks/useSignals";
-import { usePositions } from "@/hooks/usePositions";
 import { useStrategies } from "@/hooks/useStrategies";
+import { usePositions } from "@/hooks/usePositions";
+import { AccountHero } from "@/components/portfolio/AccountHero";
+import { HoldingsCard } from "@/components/portfolio/HoldingsCard";
+import { PortfolioEquitySection } from "@/components/portfolio/PortfolioEquitySection";
+import { ActiveStrategyCard } from "@/components/portfolio/ActiveStrategyCard";
+import { RecentTradesCard } from "@/components/portfolio/RecentTradesCard";
+import { PerformanceSummary } from "@/components/portfolio/PerformanceSummary";
+import { PositionsTable } from "@/components/dashboard/PositionsTable";
 
-export function DashboardPage() {
+export function PortfolioPage() {
   const navigate = useNavigate();
-  const { data: stats, isLoading: statsLoading } = useTradeStats();
-  const { data: signalsData, isLoading: signalsLoading } = useSignals({ limit: 10 });
-  const { data: positions, isLoading: positionsLoading } = usePositions();
   const { data: strategiesData, isLoading: strategiesLoading } = useStrategies();
+  const { data: positions, isLoading: positionsLoading } = usePositions();
 
   const hasActiveStrategy = strategiesData?.strategies?.some((s) => s.is_active) ?? false;
   const showOnboarding = !strategiesLoading && !hasActiveStrategy;
@@ -45,25 +43,29 @@ export function DashboardPage() {
         </button>
       )}
 
-      {/* Top row: Stats cards */}
-      <StatsCards stats={statsLoading ? null : (stats ?? null)} />
+      {/* Account Hero — equity, daily P&L, drawdown */}
+      <AccountHero />
 
-      {/* Middle: Chart + sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 min-h-[420px]">
-        <PriceChart />
+      {/* Crypto Holdings — exchange + manual + trading */}
+      <HoldingsCard />
+
+      {/* Middle grid: Equity curve + sidebar cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+        <PortfolioEquitySection />
         <div className="flex flex-col gap-4">
-          <RegimeWidget />
-          <div className="flex-1 min-h-0">
-            <SignalFeed
-              signals={signalsData?.signals}
-              loading={signalsLoading}
-            />
-          </div>
+          <ActiveStrategyCard />
+          <RecentTradesCard />
         </div>
       </div>
 
-      {/* Bottom: Positions table */}
+      {/* Performance Summary — 5-metric row */}
+      <PerformanceSummary />
+
+      {/* Open Positions */}
       <PositionsTable positions={positions} loading={positionsLoading} />
     </div>
   );
 }
+
+/** @deprecated Use PortfolioPage instead */
+export const DashboardPage = PortfolioPage;

@@ -8,7 +8,7 @@ import { queryClient } from "./lib/query";
 
 const LoginPage = lazy(() => import("./pages/Login").then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import("./pages/Register").then(m => ({ default: m.RegisterPage })));
-const DashboardPage = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.DashboardPage })));
+const PortfolioPage = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.PortfolioPage })));
 const TradesPage = lazy(() => import("./pages/Trades").then(m => ({ default: m.TradesPage })));
 const AnalyticsPage = lazy(() => import("./pages/Analytics").then(m => ({ default: m.AnalyticsPage })));
 const AdvisorPage = lazy(() => import("./pages/Advisor").then(m => ({ default: m.AdvisorPage })));
@@ -106,7 +106,7 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
-                  <Route index element={<DashboardPage />} />
+                  <Route index element={<PortfolioPage />} />
                   <Route path="advisor" element={<AdvisorPage />} />
                   <Route path="strategies" element={<StrategiesPage />} />
                   <Route path="strategies/:id" element={<StrategyDetailPage />} />

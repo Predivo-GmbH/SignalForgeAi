@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Briefcase,
   ArrowUpDown,
   BarChart2,
   Shield,
@@ -14,7 +14,7 @@ import { useSidebar } from "@/lib/sidebar";
 import { cn } from "@/lib/cn";
 
 const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/", icon: Briefcase, label: "Portfolio" },
   { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
   { to: "/strategies", icon: Target, label: "Strategies" },
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },

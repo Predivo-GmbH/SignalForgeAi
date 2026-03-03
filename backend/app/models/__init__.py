@@ -2,6 +2,7 @@ from app.models.ai_insight import AIInsight, FeedbackRule
 from app.models.backtest_result import BacktestResult
 from app.models.base import Base
 from app.models.candle import Candle
+from app.models.holding import ManualHolding
 from app.models.order import Order
 from app.models.position import Position
 from app.models.signal import Signal
@@ -16,6 +17,7 @@ __all__ = [
     "Base",
     "BrokerConnection",
     "Candle",
+    "ManualHolding",
     "Order",
     "Position",
     "Signal",

@@ -17,6 +17,7 @@ from app.api.alerts import router as alerts_router
 from app.api.analytics import router as analytics_router
 from app.api.backtests import router as backtests_router
 from app.api.broker import router as broker_router
+from app.api.holdings import router as holdings_router
 from app.api.market import router as market_router
 from app.api.positions import router as positions_router
 from app.api.signals import router as signals_router
@@ -137,6 +138,7 @@ app.include_router(analytics_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
 app.include_router(advisor_router, prefix="/api")
 app.include_router(ai_usage_router, prefix="/api")
+app.include_router(holdings_router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------
