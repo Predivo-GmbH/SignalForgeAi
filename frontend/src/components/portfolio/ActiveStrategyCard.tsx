@@ -45,7 +45,7 @@ export function ActiveStrategyCard() {
       </div>
 
       {activeStrategies.map((s) => {
-        const symbols: string[] = s.config?.symbols ?? [];
+        const symbols = Array.isArray(s.config?.symbols) ? (s.config.symbols as string[]) : [];
         return (
           <Link
             key={s.id}
