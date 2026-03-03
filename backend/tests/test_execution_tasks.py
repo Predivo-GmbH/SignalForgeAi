@@ -330,11 +330,11 @@ class TestExecuteSignals:
             from app.tasks.execute_signals import _execute_async
             await _execute_async()
 
-        # Signal should still be pending (the except block does not set active)
+        # Signal should be marked failed (the except block sets status = "failed")
         async with test_session() as db:
             result = await db.execute(select(Signal).where(Signal.id == sig_id))
             sig = result.scalar_one()
-            assert sig.status == "pending"
+            assert sig.status == "failed"
 
     @pytest.mark.asyncio
     async def test_execute_sell_signal(self, setup_db, mock_task_session):
@@ -461,7 +461,7 @@ class TestPollOrders:
         async with test_session() as db:
             result = await db.execute(select(Order).where(Order.id == order_id))
             updated_order = result.scalar_one()
-            assert updated_order.status == "filled"
+            assert updated_order.status == "completed"
             assert updated_order.filled_quantity == pytest.approx(0.05)
 
     @pytest.mark.asyncio
@@ -594,16 +594,15 @@ class TestPollOrders:
             from app.tasks.poll_orders import _poll_async
             await _poll_async()
 
-        # Both orders should have been filled (paper + pending -> filled)
+        # order1: error during open_position → stays "filled"
+        # order2: open_position succeeds → "completed"
         async with test_session() as db:
             r1 = await db.execute(select(Order).where(Order.id == order1_id))
             r2 = await db.execute(select(Order).where(Order.id == order2_id))
             o1 = r1.scalar_one()
             o2 = r2.scalar_one()
-            # Both should be filled (paper pending -> filled happens before
-            # open_position, so both are marked filled regardless of the error)
             assert o1.status == "filled"
-            assert o2.status == "filled"
+            assert o2.status == "completed"
 
         # open_position was attempted for both orders (2 calls total)
         assert call_count == 2

@@ -108,6 +108,7 @@ async def _execute_async():
                                 sig.id, user_id,
                             )
                             sig.status = "rejected"
+                            await db.commit()
                             continue
                         if multiplier < 1.0:
                             old_qty = quantity
@@ -144,6 +145,7 @@ async def _execute_async():
                         "Quantity reduced to zero for signal %s, skipping", sig.id
                     )
                     sig.status = "rejected"
+                    await db.commit()
                     continue
 
                 signal_dict = {

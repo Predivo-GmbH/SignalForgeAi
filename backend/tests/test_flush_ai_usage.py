@@ -17,15 +17,28 @@ from tests.conftest import test_session
 # ---------------------------------------------------------------------------
 
 class FakeRedis:
-    """Minimal Redis stub that supports lpop on a pre-loaded queue."""
+    """Minimal Redis stub that supports the queue operations used by flush."""
 
     def __init__(self, items=None):
         self._queue = list(items or [])
+
+    def llen(self, key):
+        return len(self._queue)
+
+    def lrange(self, key, start, end):
+        return self._queue[start:end + 1]
+
+    def ltrim(self, key, start, end):
+        if start > 0:
+            self._queue = self._queue[start:]
 
     def lpop(self, key):
         if self._queue:
             return self._queue.pop(0)
         return None
+
+    def close(self):
+        pass
 
 
 def _make_record(**overrides) -> dict:
