@@ -11,7 +11,37 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="adaptive_risk_tuning", bind=True, max_retries=1)
 def adaptive_risk_tuning(self, strategy_id: str | None = None):
     """Tune risk parameters using Claude analysis."""
-    asyncio.run(_tune_risk_async(strategy_id))
+    import redis
+
+    from app.config import settings
+
+    r = None
+    lock = None
+    try:
+        r = redis.from_url(settings.redis_url)
+        lock = r.lock("signalforge:lock:risk_tuning", timeout=600, blocking=False)
+        if not lock.acquire(blocking=False):
+            logger.info("adaptive_risk_tuning already running, skipping")
+            r.close()
+            return
+    except redis.ConnectionError:
+        logger.warning("Redis unavailable for risk_tuning lock — proceeding without lock")
+
+    try:
+        asyncio.run(_tune_risk_async(strategy_id))
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("adaptive_risk_tuning transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=120)
+    finally:
+        if lock is not None:
+            try:
+                lock.release()
+            except redis.exceptions.LockNotOwnedError:
+                logger.warning("adaptive_risk_tuning lock expired before release")
+            except Exception:
+                pass
+        if r is not None:
+            r.close()
 
 
 async def _tune_risk_async(strategy_id: str | None):

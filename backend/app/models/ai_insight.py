@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -23,6 +24,9 @@ class AIInsight(Base, UUIDMixin, TimestampMixin):
     """Audit trail for all AI-generated analysis."""
 
     __tablename__ = "ai_insights"
+    __table_args__ = (
+        Index("ix_ai_insights_created", "created_at"),
+    )
 
     insight_type: Mapped[str] = mapped_column(String(50))
     # Types: signal_quality, risk_tuning, trade_feedback,
@@ -58,8 +62,8 @@ class FeedbackRule(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "feedback_rules"
 
-    strategy_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("strategies.id", ondelete="SET NULL")
+    strategy_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE")

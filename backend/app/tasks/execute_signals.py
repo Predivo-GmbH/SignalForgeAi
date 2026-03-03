@@ -21,23 +21,33 @@ def execute_pending_signals(self):
 
     from app.config import settings
 
-    r = redis.from_url(settings.redis_url)
-    lock = r.lock("signalforge:lock:execute_signals", timeout=120, blocking=False)
-    if not lock.acquire(blocking=False):
-        logger.info("execute_pending_signals already running, skipping")
-        r.close()
-        return
+    r = None
+    lock = None
+    try:
+        r = redis.from_url(settings.redis_url)
+        lock = r.lock("signalforge:lock:execute_signals", timeout=600, blocking=False)
+        if not lock.acquire(blocking=False):
+            logger.info("execute_pending_signals already running, skipping")
+            r.close()
+            return
+    except redis.ConnectionError:
+        logger.warning("Redis unavailable for execute_signals lock — proceeding without lock")
+
     try:
         asyncio.run(_execute_async())
     except (ConnectionError, OSError, TimeoutError) as exc:
         logger.warning("execute_pending_signals transient error: %s — retrying", exc)
         self.retry(exc=exc, countdown=30)
     finally:
-        try:
-            lock.release()
-        except Exception:
-            pass
-        r.close()
+        if lock is not None:
+            try:
+                lock.release()
+            except redis.exceptions.LockNotOwnedError:
+                logger.warning("execute_pending_signals lock expired before release — concurrent execution may have occurred")
+            except Exception:
+                pass
+        if r is not None:
+            r.close()
 
 
 async def _execute_async():
@@ -47,6 +57,7 @@ async def _execute_async():
     from app.execution.adapters.paper import PaperAdapter
     from app.execution.broker_router import BrokerRouter
     from app.execution.executor import OrderExecutor
+    from app.models.order import Order
     from app.models.signal import Signal
     from app.models.strategy import Strategy
 
@@ -148,6 +159,17 @@ async def _execute_async():
                     await db.commit()
                     continue
 
+                # --- Idempotency check: skip if an active order already exists ---
+                existing_order = await db.execute(
+                    select(Order.id).where(
+                        Order.signal_id == str(sig.id),
+                        Order.status.notin_(["rejected", "cancelled", "failed"]),
+                    ).limit(1)
+                )
+                if existing_order.scalar_one_or_none():
+                    logger.info("Signal %s already has an active order, skipping (idempotency)", sig.id)
+                    continue
+
                 signal_dict = {
                     "signal_id": str(sig.id),
                     "symbol": sig.symbol,
@@ -180,7 +202,7 @@ async def _execute_async():
                 )
             except Exception as e:
                 sig.status = "failed"
-                logger.error("Failed to execute signal %s: %s", sig.id, e)
+                logger.exception("Failed to execute signal %s: %s", sig.id, e)
 
             # Commit after each signal to prevent stuck "pending" state
             await db.commit()

@@ -11,10 +11,14 @@ from app.worker import celery_app
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="flush_ai_usage")
-def flush_ai_usage() -> dict:
+@celery_app.task(name="flush_ai_usage", bind=True, max_retries=3)
+def flush_ai_usage(self) -> dict:
     """Pop all items from ai_usage_queue and bulk-insert into ai_insights."""
-    return asyncio.run(_flush_async())
+    try:
+        return asyncio.run(_flush_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("flush_ai_usage transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=60)
 
 
 async def _flush_async() -> dict:

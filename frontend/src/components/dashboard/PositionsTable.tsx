@@ -107,10 +107,10 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
                       {pos.quantity}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-[var(--color-text-secondary)]">
-                      {formatPrice(pos.stop_loss)}
+                      {pos.stop_loss != null ? formatPrice(pos.stop_loss) : "--"}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-[var(--color-text-secondary)]">
-                      {formatPrice(pos.take_profit)}
+                      {pos.take_profit != null ? formatPrice(pos.take_profit) : "--"}
                     </td>
                     <td
                       className={`px-4 py-3 text-right font-mono font-semibold ${pnlColor}`}

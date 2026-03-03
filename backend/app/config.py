@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     ai_max_daily_api_calls: int = 500
     ai_prepaid_credit_usd: float = 0.0
 
+    # Admin
+    admin_user_id: str = ""  # UUID of admin user; empty = no admin restriction
+
     # Email alerts
     resend_api_key: str = ""
     resend_domain: str = "signalforge.dev"

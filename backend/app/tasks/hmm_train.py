@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 MIN_CANDLES_FOR_REAL_DATA = 100
 
 
-@celery_app.task(name="train_hmm_regime")
-def train_hmm_regime(symbol: str = "BTC/USDT", timeframe: str = "1h"):
+@celery_app.task(name="train_hmm_regime", bind=True, max_retries=2)
+def train_hmm_regime(self, symbol: str = "BTC/USDT", timeframe: str = "1h"):
     """Retrain HMM regime model on latest data and cache in Redis.
 
     Tries to load real candle data from the database first.
@@ -19,16 +19,20 @@ def train_hmm_regime(symbol: str = "BTC/USDT", timeframe: str = "1h"):
     """
     import asyncio
 
-    return asyncio.run(_train_async(symbol, timeframe))
+    try:
+        return asyncio.run(_train_async(symbol, timeframe))
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("train_hmm_regime transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=300)
 
 
 async def _train_async(symbol: str, timeframe: str) -> dict:
     import numpy as np
     import pandas as pd
-    import redis
 
     from app.config import settings
     from app.core.database import task_session
+    from app.core.redis_client import redis_client
     from app.data.storage import CandleStorage
     from app.engine.layers.hmm_regime import HMMRegimeModel
 

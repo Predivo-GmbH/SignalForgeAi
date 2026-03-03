@@ -19,23 +19,33 @@ def manage_positions(self):
 
     from app.config import settings
 
-    r = redis.from_url(settings.redis_url)
-    lock = r.lock("signalforge:lock:manage_positions", timeout=120, blocking=False)
-    if not lock.acquire(blocking=False):
-        logger.info("manage_positions already running, skipping")
-        r.close()
-        return
+    r = None
+    lock = None
+    try:
+        r = redis.from_url(settings.redis_url)
+        lock = r.lock("signalforge:lock:manage_positions", timeout=600, blocking=False)
+        if not lock.acquire(blocking=False):
+            logger.info("manage_positions already running, skipping")
+            r.close()
+            return
+    except redis.ConnectionError:
+        logger.warning("Redis unavailable for manage_positions lock — proceeding without lock")
+
     try:
         asyncio.run(_manage_async())
     except (ConnectionError, OSError, TimeoutError) as exc:
         logger.warning("manage_positions transient error: %s — retrying", exc)
         self.retry(exc=exc, countdown=30)
     finally:
-        try:
-            lock.release()
-        except Exception:
-            pass
-        r.close()
+        if lock is not None:
+            try:
+                lock.release()
+            except redis.exceptions.LockNotOwnedError:
+                logger.warning("manage_positions lock expired before release")
+            except Exception:
+                pass
+        if r is not None:
+            r.close()
 
 
 async def _manage_async():
@@ -280,12 +290,15 @@ async def _manage_async():
                         continue
 
             except Exception as e:
-                logger.error("Position management failed for %s: %s", pos.id, e)
+                logger.exception("Position management failed for %s: %s", pos.id, e)
 
         # ----------------------------------------------------------
         # 7-8. Portfolio-level checks: drawdown breaker
         # ----------------------------------------------------------
-        await _check_portfolio_drawdown(db, positions, strategy_configs)
+        try:
+            await _check_portfolio_drawdown(db, positions, strategy_configs)
+        except Exception as e:
+            logger.exception("Portfolio drawdown check failed: %s", e)
 
         await db.commit()
 
@@ -357,9 +370,9 @@ async def _check_portfolio_drawdown(db, positions, strategy_configs):
                                 "drawdown_breaker",
                             )
                         except Exception as e:
-                            logger.error(
+                            logger.exception(
                                 "Failed to close position %s during drawdown liquidation: %s",
                                 pos.id, e,
                             )
         except Exception as e:
-            logger.error("Drawdown breaker check failed for user %s: %s", user_id, e)
+            logger.exception("Drawdown breaker check failed for user %s: %s", user_id, e)

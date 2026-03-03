@@ -21,6 +21,7 @@ export interface CorrelationResult {
   symbol_b: string;
   correlation: number;
   data_points: number;
+  is_synthetic?: boolean;
 }
 
 export function useEquityHistory() {

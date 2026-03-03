@@ -5,14 +5,16 @@ is configured. Falls back to local ai_insights table otherwise.
 """
 
 import logging
+import uuid as _uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.config import settings
 from app.core.database import get_db
 from app.models.ai_insight import AIInsight
 
@@ -105,7 +107,7 @@ async def get_ai_usage(
         anthropic_data = await _fetch_anthropic_data(days)
 
     # Always query local DB for per-feature breakdown + recent calls
-    local = await _query_local(db, days)
+    local = await _query_local(db, days, user_id=_user_id)
 
     if anthropic_data is not None:
         # Merge: Anthropic for costs, local for feature breakdown
@@ -122,6 +124,10 @@ async def update_credit(
     _user_id: str = Depends(get_current_user),
 ):
     """Set the prepaid credit amount (from Anthropic console)."""
+    # Only allow admin to modify credits
+    if settings.admin_user_id and str(_user_id) != settings.admin_user_id:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
     from app.core.redis_client import redis_client
 
     await redis_client.set("ai_prepaid_credit", str(body.prepaid_usd))
@@ -231,10 +237,11 @@ def _build_response_from_anthropic(
 
 
 async def _query_local(
-    db: AsyncSession, days: int,
+    db: AsyncSession, days: int, *, user_id: str,
 ) -> dict:
-    """Query local ai_insights table for all data."""
+    """Query local ai_insights table for all data, filtered by user."""
     cutoff = datetime.now(UTC) - timedelta(days=days)
+    uid = _uuid.UUID(user_id)
 
     # Summary
     summary_q = select(
@@ -242,7 +249,7 @@ async def _query_local(
         func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
         func.coalesce(func.avg(AIInsight.cost_usd), 0.0).label("avg_c"),
         func.coalesce(func.avg(AIInsight.latency_ms), 0.0).label("lat"),
-    ).where(AIInsight.created_at >= cutoff)
+    ).where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
     row = (await db.execute(summary_q)).one()
 
     total_calls = row.total_calls or 0
@@ -258,7 +265,7 @@ async def _query_local(
             func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
             func.coalesce(func.avg(AIInsight.latency_ms), 0.0).label("lat"),
         )
-        .where(AIInsight.created_at >= cutoff)
+        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
         .group_by(AIInsight.model_used)
         .order_by(func.sum(AIInsight.cost_usd).desc())
     )
@@ -283,7 +290,7 @@ async def _query_local(
             func.count(AIInsight.id).label("calls"),
             func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
         )
-        .where(AIInsight.created_at >= cutoff)
+        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
         .group_by(AIInsight.insight_type)
         .order_by(func.sum(AIInsight.cost_usd).desc())
     )
@@ -305,7 +312,7 @@ async def _query_local(
             func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
             func.count(AIInsight.id).label("calls"),
         )
-        .where(AIInsight.created_at >= cutoff)
+        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
         .group_by(date_expr)
         .order_by(date_expr)
     )
@@ -322,7 +329,7 @@ async def _query_local(
     # Recent calls (last 20)
     recent_q = (
         select(AIInsight)
-        .where(AIInsight.created_at >= cutoff)
+        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
         .order_by(AIInsight.created_at.desc())
         .limit(20)
     )
@@ -346,7 +353,7 @@ async def _query_local(
     prepaid = await _get_prepaid_credit()
     all_time_q = select(
         func.coalesce(func.sum(AIInsight.cost_usd), 0.0),
-    )
+    ).where(AIInsight.user_id == uid)
     all_time_spent = float(
         (await db.execute(all_time_q)).scalar() or 0,
     )
@@ -403,8 +410,8 @@ async def _get_prepaid_credit() -> float:
         val = await redis_client.get("ai_prepaid_credit")
         if val is not None:
             return float(val)
-    except Exception:
-        pass
-    from app.config import settings
+    except Exception as e:
+        logger.debug("Redis read failed for prepaid credit: %s", e)
+    from app.config import settings as _settings
 
-    return settings.ai_prepaid_credit_usd
+    return _settings.ai_prepaid_credit_usd

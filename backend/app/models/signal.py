@@ -14,6 +14,7 @@ class Signal(Base, UUIDMixin, TimestampMixin):
         Index("ix_signals_user_id", "user_id"),
         Index("ix_signals_strategy_id", "strategy_id"),
         Index("ix_signals_status", "status"),
+        Index("ix_signals_dedup", "strategy_id", "symbol", "timeframe", "direction", "status"),
     )
 
     user_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -35,7 +36,7 @@ class Signal(Base, UUIDMixin, TimestampMixin):
     triggers: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), default="pending"
-    )  # pending, active, closed, cancelled
+    )  # pending, active, rejected, failed
 
     # AI enrichment fields
     ai_quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)

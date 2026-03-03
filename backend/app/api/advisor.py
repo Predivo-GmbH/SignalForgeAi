@@ -67,21 +67,21 @@ async def scan_market(
     # Step 0: Connect to Binance
     try:
         scanner = MarketScanner("binance")
-    except Exception as e:
-        logger.error("Failed to initialize Binance connection: %s", e)
+    except Exception:
+        logger.exception("Failed to initialize Binance connection")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Cannot connect to Binance exchange: {e}",
+            detail="Cannot connect to exchange. Please try again later.",
         )
 
     # Step 1: Get top pairs by volume
     try:
         top_pairs = scanner.scan_top_pairs(top_n=req.top_n)
-    except Exception as e:
-        logger.error("Failed to scan Binance markets: %s", e)
+    except Exception:
+        logger.exception("Failed to scan Binance markets")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch market data from Binance: {e}",
+            detail="Failed to fetch market data. Please try again later.",
         )
 
     if not top_pairs:
@@ -96,11 +96,11 @@ async def scan_market(
     # Step 2: Fetch candles for technical analysis
     try:
         candles = scanner.fetch_candles_batch(symbols, timeframe="1h", limit=200)
-    except Exception as e:
-        logger.error("Failed to fetch candle data: %s", e)
+    except Exception:
+        logger.exception("Failed to fetch candle data")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch candle data from Binance: {e}",
+            detail="Failed to fetch candle data. Please try again later.",
         )
 
     if not candles:
@@ -113,11 +113,11 @@ async def scan_market(
     try:
         analyzer = TechnicalAnalyzer()
         scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
-    except Exception as e:
-        logger.error("Technical analysis failed: %s", e)
+    except Exception:
+        logger.exception("Technical analysis failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Technical analysis failed: {e}",
+            detail="Technical analysis failed. Please try again later.",
         )
 
     # Merge 24h stats from ticker data
@@ -169,21 +169,21 @@ async def generate_plan(
             )
             scored = analyzer.analyze_market(candles, volume_ranks=volume_ranks)
             market_profile = analyzer.compute_market_profile(scored)
-        except Exception as e:
-            logger.error("Fresh scan for plan generation failed: %s", e)
+        except Exception:
+            logger.exception("Fresh scan for plan generation failed")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Market scan failed: {e}",
+                detail="Market scan failed. Please try again later.",
             )
 
     try:
         planner = InvestmentPlanner()
         plan = planner.generate_plan(scored, body.amount, market_profile)
-    except Exception as e:
-        logger.error("Plan generation failed: %s", e)
+    except Exception:
+        logger.exception("Plan generation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Plan generation failed: {e}",
+            detail="Plan generation failed. Please try again later.",
         )
 
     if plan is None:
