@@ -39,6 +39,12 @@ class TradeResponse(BaseModel):
     broker_order_id: str | None
     metadata_json: dict | None
     created_at: str
+    # Signal reasoning (joined from signals table)
+    regime: str | None = None
+    triggers: list[str] | None = None
+    ai_quality_score: float | None = None
+    ai_recommendation: str | None = None
+    ai_reasoning: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -63,8 +69,8 @@ class TradeStatsResponse(BaseModel):
 # ---------- Helpers ----------
 
 
-def _trade_to_response(t: Trade) -> TradeResponse:
-    return TradeResponse(
+def _trade_to_response(t: Trade, signal: Signal | None = None) -> TradeResponse:
+    resp = TradeResponse(
         id=str(t.id),
         signal_id=str(t.signal_id) if t.signal_id else None,
         user_id=str(t.user_id),
@@ -86,6 +92,13 @@ def _trade_to_response(t: Trade) -> TradeResponse:
         metadata_json=t.metadata_json,
         created_at=t.created_at.isoformat() if t.created_at else "",
     )
+    if signal:
+        resp.regime = signal.regime
+        resp.triggers = signal.triggers if isinstance(signal.triggers, list) else None
+        resp.ai_quality_score = signal.ai_quality_score
+        resp.ai_recommendation = signal.ai_recommendation
+        resp.ai_reasoning = signal.ai_reasoning
+    return resp
 
 
 # ---------- Routes ----------
@@ -176,12 +189,15 @@ async def get_trade(
     """Get a single trade by ID, scoped to the authenticated user."""
     uid = uuid.UUID(user_id)
     result = await db.execute(
-        select(Trade).where(Trade.id == trade_id, Trade.user_id == uid)
+        select(Trade, Signal)
+        .outerjoin(Signal, Trade.signal_id == Signal.id)
+        .where(Trade.id == trade_id, Trade.user_id == uid)
     )
-    trade = result.scalar_one_or_none()
-    if not trade:
+    row = result.one_or_none()
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trade not found")
-    return _trade_to_response(trade)
+    trade, signal = row
+    return _trade_to_response(trade, signal)
 
 
 @router.get("", response_model=TradeListResponse)
@@ -196,15 +212,18 @@ async def list_trades(
     uid = uuid.UUID(user_id)
 
     count_q = select(func.count()).select_from(Trade).where(Trade.user_id == uid)
-    data_q = select(Trade).where(Trade.user_id == uid)
+    # Join signals to get reasoning data
+    data_q = (
+        select(Trade, Signal)
+        .outerjoin(Signal, Trade.signal_id == Signal.id)
+        .where(Trade.user_id == uid)
+    )
 
     if strategy_id:
         count_q = count_q.join(Signal, Trade.signal_id == Signal.id).where(
             Signal.strategy_id == strategy_id
         )
-        data_q = data_q.join(Signal, Trade.signal_id == Signal.id).where(
-            Signal.strategy_id == strategy_id
-        )
+        data_q = data_q.where(Signal.strategy_id == strategy_id)
 
     count_result = await db.execute(count_q)
     total = count_result.scalar() or 0
@@ -212,10 +231,10 @@ async def list_trades(
     result = await db.execute(
         data_q.order_by(Trade.created_at.desc()).limit(limit).offset(offset)
     )
-    trades = result.scalars().all()
+    rows = result.all()
 
     return TradeListResponse(
-        trades=[_trade_to_response(t) for t in trades],
+        trades=[_trade_to_response(trade, signal) for trade, signal in rows],
         total=total,
         limit=limit,
         offset=offset,

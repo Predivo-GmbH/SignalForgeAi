@@ -22,6 +22,12 @@ export interface Trade {
   broker_order_id: string | null;
   metadata_json: Record<string, unknown> | null;
   created_at: string;
+  // Signal reasoning (joined from signals table)
+  regime: string | null;
+  triggers: string[] | null;
+  ai_quality_score: number | null;
+  ai_recommendation: string | null;
+  ai_reasoning: string | null;
 }
 
 export interface TradeStats {

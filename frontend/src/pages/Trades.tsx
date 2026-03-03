@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -8,6 +8,7 @@ import {
   Target,
   DollarSign,
   BarChart3,
+  Info,
 } from "lucide-react";
 import { useTrades, useTradeStats } from "@/hooks/useTrades";
 import type { Trade } from "@/hooks/useTrades";
@@ -87,6 +88,131 @@ function SkeletonRow() {
   );
 }
 
+/* ----- Reasoning Tooltip ----- */
+function ReasoningTooltip({ trade }: { trade: Trade }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const hasReasoning = trade.ai_reasoning || trade.triggers?.length || trade.regime;
+  if (!hasReasoning) {
+    return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" /></span>;
+  }
+
+  const triggerLabels: Record<string, string> = {
+    macd_crossover: "MACD crossover",
+    rsi_midline_cross: "RSI midline cross",
+    engulfing_candle: "Engulfing candle",
+    zone_reclaim: "Zone reclaim",
+    stochastic_exit_extreme: "Stochastic extreme exit",
+    bollinger_squeeze: "Bollinger squeeze",
+    volume_spike: "Volume spike",
+  };
+
+  return (
+    <div ref={ref} className="relative inline-flex">
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "p-0.5 rounded transition-colors",
+          trade.ai_recommendation === "confirm"
+            ? "text-(--color-positive) hover:bg-(--color-positive)/10"
+            : trade.ai_recommendation === "caution"
+              ? "text-(--color-warning) hover:bg-(--color-warning)/10"
+              : "text-(--color-text-secondary) hover:bg-(--color-bg-elevated)",
+        )}
+        aria-label="Trade reasoning"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <div className="absolute z-50 right-0 top-full mt-1 w-80 bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg p-3 text-xs space-y-2">
+          {/* Entry reasoning */}
+          <div>
+            <p className="font-semibold text-(--color-text-primary) mb-1">
+              Entry: {trade.direction.toUpperCase()} {trade.symbol}
+            </p>
+            {trade.regime && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Regime:</span>{" "}
+                <span className="capitalize">{trade.regime}</span>
+              </p>
+            )}
+            {trade.triggers && trade.triggers.length > 0 && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Triggers:</span>{" "}
+                {trade.triggers.map((t) => triggerLabels[t] || t).join(", ")}
+              </p>
+            )}
+            {trade.confluence_score > 0 && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Confluence:</span> {trade.confluence_score}/100
+              </p>
+            )}
+          </div>
+
+          {/* AI assessment */}
+          {(trade.ai_quality_score != null || trade.ai_reasoning) && (
+            <div className="border-t border-(--color-border) pt-2">
+              <p className="font-semibold text-(--color-text-primary) mb-1 flex items-center gap-1.5">
+                AI Assessment
+                {trade.ai_recommendation && (
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                      trade.ai_recommendation === "confirm"
+                        ? "bg-(--color-positive)/15 text-(--color-positive)"
+                        : trade.ai_recommendation === "caution"
+                          ? "bg-(--color-warning)/15 text-(--color-warning)"
+                          : "bg-(--color-negative)/15 text-(--color-negative)",
+                    )}
+                  >
+                    {trade.ai_recommendation}
+                  </span>
+                )}
+                {trade.ai_quality_score != null && (
+                  <span className="text-(--color-text-secondary) font-normal">
+                    (score: {trade.ai_quality_score})
+                  </span>
+                )}
+              </p>
+              {trade.ai_reasoning && (
+                <p className="text-(--color-text-secondary) leading-relaxed">
+                  {trade.ai_reasoning}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Exit reasoning */}
+          {trade.exit_reason && (
+            <div className="border-t border-(--color-border) pt-2">
+              <p className="font-semibold text-(--color-text-primary) mb-1">Exit Reason</p>
+              <p className="text-(--color-text-secondary)">
+                {trade.exit_reason === "sell_signal"
+                  ? "Pipeline generated a SELL signal — higher timeframe trend turned bearish, closing the position."
+                  : trade.exit_reason === "stop_loss"
+                    ? `Price hit the stop-loss at ${formatPrice(trade.stop_loss)}, limiting the downside risk.`
+                    : trade.exit_reason === "take_profit"
+                      ? `Price reached the take-profit target at ${formatPrice(trade.take_profit)}.`
+                      : trade.exit_reason}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ----- Trade Row ----- */
 function TradeRow({ trade }: { trade: Trade }) {
   const isLong = trade.direction === "long";
@@ -152,6 +278,9 @@ function TradeRow({ trade }: { trade: Trade }) {
       </td>
       <td className="px-3 py-2.5 text-xs text-(--color-text-secondary) whitespace-nowrap">
         {trade.exit_reason ?? "--"}
+      </td>
+      <td className="px-3 py-2.5 text-center">
+        <ReasoningTooltip trade={trade} />
       </td>
     </tr>
   );
@@ -246,6 +375,7 @@ export function TradesPage() {
                   "R:R",
                   "Score",
                   "Exit Reason",
+                  "Info",
                 ].map((h, i) => (
                   <th
                     key={i}
@@ -264,7 +394,7 @@ export function TradesPage() {
               ) : trades.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={12}
                     className="px-3 py-16 text-center text-(--color-text-secondary)"
                   >
                     No trades recorded yet
