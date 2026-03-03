@@ -6,7 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import create_access_token, create_refresh_token, decode_token
 from app.auth.dependencies import get_current_user
-from app.auth.schemas import LoginRequest, ProfileResponse, RefreshRequest, RegisterRequest, TokenResponse
+from app.auth.schemas import (
+    ChangeEmailRequest,
+    ChangePasswordRequest,
+    LoginRequest,
+    MessageResponse,
+    ProfileResponse,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+)
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.security import hash_password, verify_password
@@ -83,6 +92,64 @@ async def get_profile(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    return ProfileResponse(
+        id=str(user.id),
+        email=user.email,
+        is_active=user.is_active,
+        created_at=user.created_at.isoformat() if user.created_at else "",
+        updated_at=user.updated_at.isoformat() if user.updated_at else None,
+    )
+
+
+@router.put("/password", response_model=MessageResponse)
+async def change_password(
+    body: ChangePasswordRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the authenticated user's password."""
+    result = await db.execute(
+        select(User).where(User.id == uuid.UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()
+    return MessageResponse(message="Password updated successfully")
+
+
+@router.put("/email", response_model=ProfileResponse)
+async def change_email(
+    body: ChangeEmailRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change the authenticated user's email address."""
+    result = await db.execute(
+        select(User).where(User.id == uuid.UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Password is incorrect")
+
+    # Check if new email is already taken
+    existing = await db.execute(
+        select(User).where(User.email == body.new_email, User.id != user.id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already in use")
+
+    user.email = body.new_email
+    await db.commit()
+    await db.refresh(user)
     return ProfileResponse(
         id=str(user.id),
         email=user.email,

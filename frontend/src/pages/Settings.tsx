@@ -15,6 +15,11 @@ import {
   Mail,
   Calendar,
   CheckCircle2,
+  KeyRound,
+  LogOut,
+  Eye,
+  EyeOff,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -26,7 +31,7 @@ import { useAlertConfig, useUpdateAlertConfig } from "@/hooks/useAlertConfig";
 import type { ConnectBrokerRequest } from "@/hooks/useBrokerConnections";
 import type { AlertConfig } from "@/hooks/useAlertConfig";
 import { AiUsageTab } from "@/components/settings/AiUsageTab";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, useChangePassword, useChangeEmail } from "@/hooks/useProfile";
 import { useAuth } from "@/lib/auth";
 
 type Tab = "profile" | "connections" | "alerts" | "ai-usage";
@@ -490,9 +495,198 @@ function AlertsTab() {
 
 /* ---- Profile Tab ---- */
 
+function ChangePasswordForm() {
+  const mutation = useChangePassword();
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+
+  const mismatch = confirmPw.length > 0 && newPw !== confirmPw;
+  const tooShort = newPw.length > 0 && newPw.length < 8;
+  const canSubmit = currentPw && newPw.length >= 8 && newPw === confirmPw && !mutation.isPending;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    mutation.mutate(
+      { current_password: currentPw, new_password: newPw },
+      {
+        onSuccess: () => {
+          setCurrentPw("");
+          setNewPw("");
+          setConfirmPw("");
+        },
+      },
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+          Current Password
+        </label>
+        <div className="relative">
+          <input
+            type={showCurrent ? "text" : "password"}
+            value={currentPw}
+            onChange={(e) => setCurrentPw(e.target.value)}
+            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 pr-10 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowCurrent(!showCurrent)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+          >
+            {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+          New Password
+        </label>
+        <div className="relative">
+          <input
+            type={showNew ? "text" : "password"}
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 pr-10 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowNew(!showNew)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+          >
+            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+        {tooShort && (
+          <p className="text-xs text-(--color-warning)">Must be at least 8 characters</p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+          Confirm New Password
+        </label>
+        <input
+          type="password"
+          value={confirmPw}
+          onChange={(e) => setConfirmPw(e.target.value)}
+          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+        />
+        {mismatch && (
+          <p className="text-xs text-(--color-negative)">Passwords do not match</p>
+        )}
+      </div>
+
+      {mutation.isError && (
+        <p className="text-xs text-(--color-negative)">
+          {mutation.error instanceof Error ? mutation.error.message : "Failed to change password"}
+        </p>
+      )}
+      {mutation.isSuccess && (
+        <p className="text-xs text-(--color-positive)">Password changed successfully.</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {mutation.isPending ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <KeyRound className="w-4 h-4" />
+        )}
+        {mutation.isPending ? "Updating..." : "Update Password"}
+      </button>
+    </form>
+  );
+}
+
+function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
+  const mutation = useChangeEmail();
+  const [newEmail, setNewEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const canSubmit =
+    newEmail && newEmail !== currentEmail && password && !mutation.isPending;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    mutation.mutate(
+      { new_email: newEmail, password },
+      {
+        onSuccess: () => {
+          setNewEmail("");
+          setPassword("");
+        },
+      },
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+          New Email
+        </label>
+        <input
+          type="email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          placeholder={currentEmail}
+          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+          Current Password
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Confirm with your password"
+          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+        />
+      </div>
+
+      {mutation.isError && (
+        <p className="text-xs text-(--color-negative)">
+          {mutation.error instanceof Error ? mutation.error.message : "Failed to change email"}
+        </p>
+      )}
+      {mutation.isSuccess && (
+        <p className="text-xs text-(--color-positive)">Email updated successfully.</p>
+      )}
+
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {mutation.isPending ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Mail className="w-4 h-4" />
+        )}
+        {mutation.isPending ? "Updating..." : "Update Email"}
+      </button>
+    </form>
+  );
+}
+
 function ProfileTab() {
   const { data: profile, isLoading } = useProfile();
   const logout = useAuth((s) => s.logout);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   if (isLoading) {
     return (
@@ -517,20 +711,20 @@ function ProfileTab() {
           Profile
         </h2>
         <p className="text-sm text-(--color-text-secondary) mt-0.5">
-          Your account information
+          Your account information and security settings
         </p>
       </div>
 
+      {/* Account Info */}
       <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
-        {/* Avatar + email header */}
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-(--color-accent)/15 flex items-center justify-center">
             <span className="text-xl font-bold text-(--color-accent)">
               {profile?.email?.charAt(0).toUpperCase() ?? "?"}
             </span>
           </div>
-          <div>
-            <p className="text-base font-semibold text-(--color-text-primary)">
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-semibold text-(--color-text-primary) truncate">
               {profile?.email ?? "—"}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -542,59 +736,99 @@ function ProfileTab() {
 
         <div className="border-t border-(--color-border)" />
 
-        {/* Info rows */}
         <div className="grid gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
-              <Mail className="w-4 h-4 text-(--color-text-secondary)" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-                Email
-              </p>
-              <p className="text-sm text-(--color-text-primary)">
-                {profile?.email ?? "—"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center shrink-0">
               <Calendar className="w-4 h-4 text-(--color-text-secondary)" />
             </div>
             <div>
               <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 Member since
               </p>
-              <p className="text-sm text-(--color-text-primary)">
-                {memberSince}
-              </p>
+              <p className="text-sm text-(--color-text-primary)">{memberSince}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center shrink-0">
               <Shield className="w-4 h-4 text-(--color-text-secondary)" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 Account ID
               </p>
-              <p className="text-sm font-mono text-(--color-text-primary)">
+              <p className="text-sm font-mono text-(--color-text-primary) truncate">
                 {profile?.id ?? "—"}
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-(--color-border)" />
+      {/* Change Email */}
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+              <Mail className="w-4 h-4 text-(--color-text-secondary)" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-(--color-text-primary)">Email Address</p>
+              <p className="text-xs text-(--color-text-secondary)">{profile?.email ?? "—"}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowEmailForm(!showEmailForm)}
+            className="flex items-center gap-1.5 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {showEmailForm ? "Cancel" : "Change"}
+          </button>
+        </div>
+        {showEmailForm && (
+          <>
+            <div className="border-t border-(--color-border)" />
+            <ChangeEmailForm currentEmail={profile?.email ?? ""} />
+          </>
+        )}
+      </div>
 
-        {/* Logout */}
+      {/* Change Password */}
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+              <KeyRound className="w-4 h-4 text-(--color-text-secondary)" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-(--color-text-primary)">Password</p>
+              <p className="text-xs text-(--color-text-secondary)">Last changed: unknown</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowPasswordForm(!showPasswordForm)}
+            className="flex items-center gap-1.5 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {showPasswordForm ? "Cancel" : "Change"}
+          </button>
+        </div>
+        {showPasswordForm && (
+          <>
+            <div className="border-t border-(--color-border)" />
+            <ChangePasswordForm />
+          </>
+        )}
+      </div>
+
+      {/* Logout */}
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5">
         <button
           onClick={logout}
           className="flex items-center gap-2 text-sm font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors"
         >
-          Log out
+          <LogOut className="w-4 h-4" />
+          Log out of your account
         </button>
       </div>
     </div>
