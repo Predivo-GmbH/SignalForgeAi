@@ -57,6 +57,7 @@ async def _execute_async():
     from app.execution.adapters.paper import PaperAdapter
     from app.execution.broker_router import BrokerRouter
     from app.execution.executor import OrderExecutor
+    from app.execution.position_manager import PositionManagerDB
     from app.models.order import Order
     from app.models.signal import Signal
     from app.models.strategy import Strategy
@@ -154,6 +155,29 @@ async def _execute_async():
                 if quantity <= 0:
                     logger.warning(
                         "Quantity reduced to zero for signal %s, skipping", sig.id
+                    )
+                    sig.status = "rejected"
+                    await db.commit()
+                    continue
+
+                # --- Position-aware safety check (defense-in-depth) ---
+                has_position = await PositionManagerDB.has_open_position(
+                    db, user_id, sig.symbol,
+                )
+                if sig.direction == "BUY" and has_position:
+                    logger.info(
+                        "PositionFilter REJECT: BUY signal %s for %s — "
+                        "open position exists",
+                        sig.id, sig.symbol,
+                    )
+                    sig.status = "rejected"
+                    await db.commit()
+                    continue
+                if sig.direction == "SELL" and not has_position:
+                    logger.info(
+                        "PositionFilter REJECT: SELL signal %s for %s — "
+                        "no open position to close",
+                        sig.id, sig.symbol,
                     )
                     sig.status = "rejected"
                     await db.commit()

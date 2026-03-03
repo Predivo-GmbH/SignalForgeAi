@@ -338,11 +338,25 @@ class TestExecuteSignals:
 
     @pytest.mark.asyncio
     async def test_execute_sell_signal(self, setup_db, mock_task_session):
-        """A pending SELL signal is executed correctly."""
+        """A pending SELL signal is executed correctly when an open position exists."""
         async with test_session() as db:
             strat = _make_strategy()
             db.add(strat)
             await db.flush()
+
+            # Create an open BUY position so SELL is valid
+            pos = Position(
+                id=uuid.uuid4(),
+                user_id=USER_ID,
+                symbol="BTC/USDT",
+                direction="BUY",
+                quantity=0.05,
+                entry_price=50000.0,
+                current_price=50000.0,
+                broker="paper",
+                is_open=True,
+            )
+            db.add(pos)
 
             sig = _make_signal(strat.id, direction="SELL")
             db.add(sig)
@@ -734,3 +748,147 @@ class TestPollOrders:
 
             # No position should have been created
             mock_pm.open_position.assert_not_called()
+
+
+# ===================================================================
+# Position-aware signal filtering tests
+# ===================================================================
+
+
+class TestPositionFilter:
+    """Tests for position-aware filtering in execute_signals."""
+
+    @pytest.mark.asyncio
+    async def test_buy_rejected_when_open_position_exists(
+        self, setup_db, mock_task_session
+    ):
+        """A pending BUY signal is rejected when an open position exists for that symbol."""
+        async with test_session() as db:
+            strat = _make_strategy()
+            db.add(strat)
+            await db.flush()
+
+            pos = Position(
+                id=uuid.uuid4(),
+                user_id=USER_ID,
+                symbol="BTC/USDT",
+                direction="BUY",
+                quantity=0.01,
+                entry_price=50000.0,
+                current_price=50000.0,
+                broker="paper",
+                is_open=True,
+            )
+            db.add(pos)
+
+            sig = _make_signal(strat.id, direction="BUY")
+            db.add(sig)
+            await db.commit()
+            sig_id = sig.id
+
+        with patch("app.core.database.task_session", mock_task_session):
+            from app.tasks.execute_signals import _execute_async
+            await _execute_async()
+
+        async with test_session() as db:
+            result = await db.execute(select(Signal).where(Signal.id == sig_id))
+            updated_sig = result.scalar_one()
+            assert updated_sig.status == "rejected"
+
+            orders = (await db.execute(select(Order))).scalars().all()
+            assert len(orders) == 0
+
+    @pytest.mark.asyncio
+    async def test_sell_rejected_when_no_open_position(
+        self, setup_db, mock_task_session
+    ):
+        """A pending SELL signal is rejected when no open position exists."""
+        async with test_session() as db:
+            strat = _make_strategy()
+            db.add(strat)
+            await db.flush()
+
+            sig = _make_signal(strat.id, direction="SELL")
+            db.add(sig)
+            await db.commit()
+            sig_id = sig.id
+
+        with patch("app.core.database.task_session", mock_task_session):
+            from app.tasks.execute_signals import _execute_async
+            await _execute_async()
+
+        async with test_session() as db:
+            result = await db.execute(select(Signal).where(Signal.id == sig_id))
+            updated_sig = result.scalar_one()
+            assert updated_sig.status == "rejected"
+
+            orders = (await db.execute(select(Order))).scalars().all()
+            assert len(orders) == 0
+
+    @pytest.mark.asyncio
+    async def test_buy_executes_when_no_position(
+        self, setup_db, mock_task_session
+    ):
+        """A pending BUY signal executes normally when no open position exists."""
+        async with test_session() as db:
+            strat = _make_strategy()
+            db.add(strat)
+            await db.flush()
+
+            sig = _make_signal(strat.id, direction="BUY")
+            db.add(sig)
+            await db.commit()
+            sig_id = sig.id
+
+        with patch("app.core.database.task_session", mock_task_session):
+            from app.tasks.execute_signals import _execute_async
+            await _execute_async()
+
+        async with test_session() as db:
+            result = await db.execute(select(Signal).where(Signal.id == sig_id))
+            updated_sig = result.scalar_one()
+            assert updated_sig.status == "active"
+
+            orders = (await db.execute(select(Order))).scalars().all()
+            assert len(orders) == 1
+
+    @pytest.mark.asyncio
+    async def test_sell_executes_when_open_position_exists(
+        self, setup_db, mock_task_session
+    ):
+        """A pending SELL signal executes normally when an open BUY position exists."""
+        async with test_session() as db:
+            strat = _make_strategy()
+            db.add(strat)
+            await db.flush()
+
+            pos = Position(
+                id=uuid.uuid4(),
+                user_id=USER_ID,
+                symbol="BTC/USDT",
+                direction="BUY",
+                quantity=0.01,
+                entry_price=50000.0,
+                current_price=50000.0,
+                broker="paper",
+                is_open=True,
+            )
+            db.add(pos)
+
+            sig = _make_signal(strat.id, direction="SELL")
+            db.add(sig)
+            await db.commit()
+            sig_id = sig.id
+
+        with patch("app.core.database.task_session", mock_task_session):
+            from app.tasks.execute_signals import _execute_async
+            await _execute_async()
+
+        async with test_session() as db:
+            result = await db.execute(select(Signal).where(Signal.id == sig_id))
+            updated_sig = result.scalar_one()
+            assert updated_sig.status == "active"
+
+            orders = (await db.execute(select(Order))).scalars().all()
+            assert len(orders) == 1
+            assert orders[0].direction == "SELL"

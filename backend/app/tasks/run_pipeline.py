@@ -70,6 +70,7 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
     from app.engine.layers.feedback_filter import FeedbackFilter
     from app.engine.layers.risk import RiskConfig
     from app.engine.pipeline import SignalPipeline
+    from app.execution.position_manager import PositionManagerDB
     from app.models.signal import Signal as SignalModel
 
     cfg = active_strategy.config or {}
@@ -189,6 +190,25 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             "(strategy=%s)",
                             symbol, timeframe, signal.confluence_score,
                             confluence_override, active_strategy.name,
+                        )
+                        continue
+
+                    # --- Position-aware filter: prevent invalid signals ---
+                    has_position = await PositionManagerDB.has_open_position(
+                        db, str(active_strategy.user_id), symbol,
+                    )
+                    if signal.action == "BUY" and has_position:
+                        logger.info(
+                            "PositionFilter SKIP: BUY %s %s — open position "
+                            "already exists (strategy=%s)",
+                            symbol, timeframe, active_strategy.name,
+                        )
+                        continue
+                    if signal.action == "SELL" and not has_position:
+                        logger.info(
+                            "PositionFilter SKIP: SELL %s %s — no open "
+                            "position to close (strategy=%s)",
+                            symbol, timeframe, active_strategy.name,
                         )
                         continue
 

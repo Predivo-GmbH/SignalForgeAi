@@ -1,23 +1,71 @@
-import { Briefcase } from "lucide-react";
+import { useState } from "react";
+import { Briefcase, X } from "lucide-react";
 import { formatPrice } from "@/lib/format";
 import type { Position } from "@/hooks/usePositions";
+import { useClosePosition } from "@/hooks/usePositions";
 
 interface PositionsTableProps {
   positions: Position[] | undefined;
   loading?: boolean;
 }
 
-
-
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 7 }, (_, i) => (
+      {Array.from({ length: 8 }, (_, i) => (
         <td key={i} className="px-4 py-3">
           <div className="h-4 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
         </td>
       ))}
     </tr>
+  );
+}
+
+function CloseButton({ position }: { position: Position }) {
+  const [confirming, setConfirming] = useState(false);
+  const closePosition = useClosePosition();
+
+  const handleClose = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    const exitPrice = position.current_price ?? position.entry_price;
+    closePosition.mutate(
+      { positionId: position.id, exitPrice },
+      { onSettled: () => setConfirming(false) },
+    );
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      {confirming && (
+        <button
+          onClick={() => setConfirming(false)}
+          className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+        >
+          Cancel
+        </button>
+      )}
+      <button
+        onClick={handleClose}
+        disabled={closePosition.isPending}
+        className={`flex items-center justify-center h-6 rounded transition-colors ${
+          confirming
+            ? "bg-[var(--color-negative)] text-white px-2 text-xs font-medium hover:bg-[var(--color-negative)]/80"
+            : "w-6 text-[var(--color-text-secondary)] hover:text-[var(--color-negative)] hover:bg-[var(--color-negative)]/10"
+        }`}
+        title={confirming ? "Confirm close" : "Close position"}
+      >
+        {closePosition.isPending ? (
+          <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+        ) : confirming ? (
+          "Close"
+        ) : (
+          <X className="h-3.5 w-3.5" />
+        )}
+      </button>
+    </div>
   );
 }
 
@@ -63,6 +111,8 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
               <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 P&L
               </th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border)]">
@@ -71,7 +121,7 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
             ) : openPositions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]"
                 >
                   No open positions
@@ -116,6 +166,9 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
                       className={`px-4 py-3 text-right font-mono font-semibold ${pnlColor}`}
                     >
                       {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <CloseButton position={pos} />
                     </td>
                   </tr>
                 );

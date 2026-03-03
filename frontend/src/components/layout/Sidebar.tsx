@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ArrowUpDown,
   BarChart2,
+  Shield,
   Sparkles,
   Target,
   Settings,
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/strategies", icon: Target, label: "Strategies" },
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },
   { to: "/analytics", icon: BarChart2, label: "Analytics" },
+  { to: "/risk", icon: Shield, label: "Risk" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ] as const;
 

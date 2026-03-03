@@ -12,6 +12,7 @@ const pageTitles: Record<string, string> = {
   "/backtest": "Strategy Validation",
   "/trades": "Trades",
   "/analytics": "Analytics",
+  "/risk": "Risk Management",
   "/settings": "Settings",
 };
 

@@ -200,6 +200,23 @@ class PositionManagerDB:
         return list(result.scalars().all())
 
     # ------------------------------------------------------------------
+    # Check open position for symbol
+    # ------------------------------------------------------------------
+    @staticmethod
+    async def has_open_position(
+        db: AsyncSession, user_id: str, symbol: str,
+    ) -> bool:
+        """Check if the user has an open position for a specific symbol."""
+        result = await db.execute(
+            select(Position.id).where(
+                Position.user_id == uuid.UUID(user_id),
+                Position.symbol == symbol,
+                Position.is_open == True,  # noqa: E712
+            ).limit(1)
+        )
+        return result.scalar_one_or_none() is not None
+
+    # ------------------------------------------------------------------
     # Get single position
     # ------------------------------------------------------------------
     @staticmethod

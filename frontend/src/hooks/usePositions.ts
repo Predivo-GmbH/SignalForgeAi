@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export interface Position {
@@ -42,5 +42,72 @@ export function useAccountState() {
   return useQuery({
     queryKey: ["positions", "account"],
     queryFn: () => api.get<AccountState>("/positions/account"),
+  });
+}
+
+export interface DrawdownState {
+  peak_equity: number;
+  current_equity: number;
+  drawdown_pct: number;
+  level: number;
+  level_name: string;
+}
+
+export interface CPPIState {
+  floor: number;
+  peak_equity: number;
+  exposure_pct: number;
+  cushion: number;
+  multiplier: number;
+  max_drawdown_pct: number;
+}
+
+export interface CorrelationAlert {
+  symbol_a: string;
+  symbol_b: string;
+  correlation: number;
+  risk_level: string;
+}
+
+export interface CorrelationState {
+  matrix: Record<string, Record<string, number>>;
+  alerts: CorrelationAlert[];
+  max_correlation: number;
+  exposure_penalty: number;
+}
+
+export function useDrawdownState() {
+  return useQuery({
+    queryKey: ["positions", "drawdown"],
+    queryFn: () => api.get<DrawdownState>("/positions/drawdown"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useCPPIState() {
+  return useQuery({
+    queryKey: ["positions", "cppi"],
+    queryFn: () => api.get<CPPIState>("/positions/cppi"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useCorrelationState() {
+  return useQuery({
+    queryKey: ["positions", "correlations"],
+    queryFn: () => api.get<CorrelationState>("/positions/correlations"),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useClosePosition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ positionId, exitPrice }: { positionId: string; exitPrice: number }) =>
+      api.post(`/positions/${positionId}/close`, { exit_price: exitPrice, reason: "manual" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["positions"] });
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
+    },
   });
 }

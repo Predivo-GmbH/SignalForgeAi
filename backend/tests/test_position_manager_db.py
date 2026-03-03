@@ -453,3 +453,61 @@ class TestGetPosition:
         async with test_session() as db:
             found = await PositionManagerDB.get_position(db, str(uuid.uuid4()))
             assert found is None
+
+
+class TestHasOpenPosition:
+    async def test_returns_true_when_open_position_exists(self):
+        async with test_session() as db:
+            await PositionManagerDB.open_position(
+                db, user_id=USER_ID, symbol="BTC/USDT", direction="BUY",
+                quantity=0.01, entry_price=50000.0, stop_loss=49000.0,
+                take_profit=52000.0, broker="paper",
+            )
+            await db.flush()
+
+            result = await PositionManagerDB.has_open_position(db, USER_ID, "BTC/USDT")
+            assert result is True
+
+    async def test_returns_false_when_no_position(self):
+        async with test_session() as db:
+            result = await PositionManagerDB.has_open_position(db, USER_ID, "BTC/USDT")
+            assert result is False
+
+    async def test_returns_false_when_position_closed(self):
+        async with test_session() as db:
+            pos = await PositionManagerDB.open_position(
+                db, user_id=USER_ID, symbol="BTC/USDT", direction="BUY",
+                quantity=0.01, entry_price=50000.0, stop_loss=49000.0,
+                take_profit=52000.0, broker="paper",
+            )
+            await db.flush()
+            await PositionManagerDB.close_position(db, str(pos.id), exit_price=51000.0)
+            await db.flush()
+
+            result = await PositionManagerDB.has_open_position(db, USER_ID, "BTC/USDT")
+            assert result is False
+
+    async def test_returns_false_for_different_symbol(self):
+        async with test_session() as db:
+            await PositionManagerDB.open_position(
+                db, user_id=USER_ID, symbol="BTC/USDT", direction="BUY",
+                quantity=0.01, entry_price=50000.0, stop_loss=49000.0,
+                take_profit=52000.0, broker="paper",
+            )
+            await db.flush()
+
+            result = await PositionManagerDB.has_open_position(db, USER_ID, "ETH/USDT")
+            assert result is False
+
+    async def test_returns_false_for_different_user(self):
+        other_user = str(uuid.uuid4())
+        async with test_session() as db:
+            await PositionManagerDB.open_position(
+                db, user_id=USER_ID, symbol="BTC/USDT", direction="BUY",
+                quantity=0.01, entry_price=50000.0, stop_loss=49000.0,
+                take_profit=52000.0, broker="paper",
+            )
+            await db.flush()
+
+            result = await PositionManagerDB.has_open_position(db, other_user, "BTC/USDT")
+            assert result is False
