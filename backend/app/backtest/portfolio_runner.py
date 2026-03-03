@@ -60,6 +60,10 @@ def run_portfolio_backtest(
     per_symbol_results = []
     all_equity_curves = []
 
+    # Map primary TF to higher TF for MTF alignment
+    HIGHER_TF = {"1h": "4h", "4h": "1d"}
+    higher_tf = HIGHER_TF.get(primary_tf)
+
     for symbol in symbols:
         candles = _load_candles_for_symbol(symbol, primary_tf, n_bars)
 
@@ -72,9 +76,19 @@ def run_portfolio_backtest(
             per_symbol_results.append(_empty_symbol_result(symbol))
             continue
 
+        # Load higher TF candles for MTF alignment
+        htf_candles = None
+        if higher_tf:
+            htf_candles = _load_candles_for_symbol(
+                symbol, higher_tf, max(n_bars // 4, 300),
+            )
+            if htf_candles is not None and len(htf_candles) < 200:
+                htf_candles = None  # Not enough data, skip MTF
+
         engine = BacktestEngine(**engine_params, ai_enhanced=ai_enhanced)
         result = engine.run(
             candles, symbol, primary_tf, initial_capital=per_symbol_capital,
+            higher_tf_candles=htf_candles,
         )
 
         metrics = _sanitize_metrics(result.metrics)

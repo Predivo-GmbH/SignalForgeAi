@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from app.engine.layers.risk import RiskConfig
+from app.engine.layers.trend import Trend, TrendFilter
 from app.engine.pipeline import SignalPipeline
 
 logger = logging.getLogger(__name__)
@@ -92,11 +93,16 @@ class BacktestEngine:
         symbol: str,
         timeframe: str,
         initial_capital: float = 10000.0,
+        higher_tf_candles: pd.DataFrame | None = None,
     ) -> BacktestResult:
         trades: list[Trade] = []
         equity_curve = [initial_capital]
         capital = initial_capital
         open_trade: Trade | None = None
+
+        # Pre-compute higher timeframe trend for MTF alignment
+        htf_trend_filter = TrendFilter()
+        self._mtf_blocks = 0
 
         for i in range(self.lookback, len(candles)):
             window = candles.iloc[: i + 1]
@@ -167,6 +173,27 @@ class BacktestEngine:
             )
 
             if signal.action in ("BUY", "SELL") and signal.stop_loss and signal.take_profit_1:
+                # --- MTF alignment check ---
+                if higher_tf_candles is not None and len(higher_tf_candles) >= 200:
+                    # Map current bar timestamp to higher TF window
+                    current_time = current.get("time") or current.name
+                    htf_window = higher_tf_candles[
+                        higher_tf_candles.index <= i
+                    ] if not hasattr(higher_tf_candles, "time") else higher_tf_candles.iloc[:max(200, i // 4)]
+
+                    # Use the last 200+ higher TF bars available up to this point
+                    htf_slice = higher_tf_candles.iloc[:max(200, min(i // 4 + 1, len(higher_tf_candles)))]
+                    if len(htf_slice) >= 200:
+                        htf_trend = htf_trend_filter.evaluate(htf_slice)
+                        if signal.action == "BUY" and htf_trend.direction == Trend.BEARISH:
+                            self._mtf_blocks += 1
+                            equity_curve.append(capital)
+                            continue
+                        if signal.action == "SELL" and htf_trend.direction == Trend.BULLISH:
+                            self._mtf_blocks += 1
+                            equity_curve.append(capital)
+                            continue
+
                 size_factor = 1.0
 
                 if self.ai_enhanced and self._evaluator:
@@ -217,6 +244,9 @@ class BacktestEngine:
         if self.ai_enhanced:
             metrics["ai_calls"] = self._ai_calls
             metrics["ai_rejections"] = self._ai_rejections
+
+        if higher_tf_candles is not None:
+            metrics["mtf_blocks"] = self._mtf_blocks
 
         return BacktestResult(trades=trades, equity_curve=equity_curve, metrics=metrics)
 
