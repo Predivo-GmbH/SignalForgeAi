@@ -165,6 +165,18 @@ async def get_signal(
     return _signal_to_response(signal)
 
 
+_SORT_COLUMNS = {
+    "created_at": Signal.created_at,
+    "symbol": Signal.symbol,
+    "direction": Signal.direction,
+    "confluence_score": Signal.confluence_score,
+    "entry_price": Signal.entry_price,
+    "status": Signal.status,
+    "regime": Signal.regime,
+    "ai_quality_score": Signal.ai_quality_score,
+}
+
+
 @router.get("", response_model=SignalListResponse)
 async def list_signals(
     user_id: str = Depends(get_current_user),
@@ -172,12 +184,23 @@ async def list_signals(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     strategy_id: uuid.UUID | None = Query(default=None),
+    symbol: str | None = Query(default=None),
+    direction: str | None = Query(default=None),
+    signal_status: str | None = Query(default=None, alias="status"),
+    sort_by: str = Query(default="created_at"),
+    sort_dir: str = Query(default="desc"),
 ):
-    """List signals with pagination, scoped to the authenticated user."""
+    """List signals with pagination, filtering, and sorting."""
     uid = uuid.UUID(user_id)
     filters = [Signal.user_id == uid]
     if strategy_id:
         filters.append(Signal.strategy_id == strategy_id)
+    if symbol:
+        filters.append(Signal.symbol.ilike(f"%{symbol}%"))
+    if direction:
+        filters.append(func.upper(Signal.direction) == direction.upper())
+    if signal_status:
+        filters.append(func.lower(Signal.status) == signal_status.lower())
 
     count_q = select(func.count()).select_from(Signal)
     data_q = select(Signal)
@@ -188,8 +211,11 @@ async def list_signals(
     count_result = await db.execute(count_q)
     total = count_result.scalar() or 0
 
+    sort_col = _SORT_COLUMNS.get(sort_by, Signal.created_at)
+    order = sort_col.asc() if sort_dir == "asc" else sort_col.desc()
+
     result = await db.execute(
-        data_q.order_by(Signal.created_at.desc()).limit(limit).offset(offset)
+        data_q.order_by(order).limit(limit).offset(offset)
     )
     signals = result.scalars().all()
 

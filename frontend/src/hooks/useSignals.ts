@@ -31,13 +31,42 @@ interface SignalListResponse {
   offset: number;
 }
 
-export function useSignals(limit = 20, offset = 0, strategyId?: string) {
+export interface SignalQueryParams {
+  limit?: number;
+  offset?: number;
+  strategyId?: string;
+  symbol?: string;
+  direction?: string;
+  status?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+}
+
+export function useSignals(params: SignalQueryParams = {}) {
+  const {
+    limit = 20,
+    offset = 0,
+    strategyId,
+    symbol,
+    direction,
+    status,
+    sortBy,
+    sortDir,
+  } = params;
+
   return useQuery({
-    queryKey: ["signals", limit, offset, strategyId],
+    queryKey: ["signals", limit, offset, strategyId, symbol, direction, status, sortBy, sortDir],
     queryFn: () => {
-      let url = `/signals?limit=${limit}&offset=${offset}`;
-      if (strategyId) url += `&strategy_id=${strategyId}`;
-      return api.get<SignalListResponse>(url);
+      const p = new URLSearchParams();
+      p.set("limit", String(limit));
+      p.set("offset", String(offset));
+      if (strategyId) p.set("strategy_id", strategyId);
+      if (symbol) p.set("symbol", symbol);
+      if (direction) p.set("direction", direction);
+      if (status) p.set("status", status);
+      if (sortBy) p.set("sort_by", sortBy);
+      if (sortDir) p.set("sort_dir", sortDir);
+      return api.get<SignalListResponse>(`/signals?${p.toString()}`);
     },
     refetchInterval: 30_000,
   });

@@ -13,7 +13,7 @@ import { useStrategies } from "@/hooks/useStrategies";
 export function DashboardPage() {
   const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading } = useTradeStats();
-  const { data: signalsData, isLoading: signalsLoading } = useSignals(10, 0);
+  const { data: signalsData, isLoading: signalsLoading } = useSignals({ limit: 10 });
   const { data: positions, isLoading: positionsLoading } = usePositions();
   const { data: strategiesData, isLoading: strategiesLoading } = useStrategies();
 

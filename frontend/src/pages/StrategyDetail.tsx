@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -6,6 +6,11 @@ import {
   Trash2,
   Zap,
   Target,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Info,
 } from "lucide-react";
 import { useStrategy, useToggleStrategy, useDeleteStrategy } from "@/hooks/useStrategies";
 import { useSignals } from "@/hooks/useSignals";
@@ -15,9 +20,7 @@ import { StrategyBacktestForm } from "@/components/backtest/StrategyBacktestForm
 import { StrategyBacktestResults } from "@/components/backtest/StrategyBacktestResults";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Badge } from "@/components/ui/Badge";
-import { DataTable } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
-import type { Column } from "@/components/ui/DataTable";
 import type { Signal } from "@/hooks/useSignals";
 import type { StrategyBacktestResult } from "@/hooks/useStrategyBacktest";
 import { cn } from "@/lib/cn";
@@ -32,7 +35,7 @@ const TABS: { key: Tab; label: string; icon: typeof Zap; tip: string }[] = [
   { key: "strategy", label: "Strategy Validation", icon: Target, tip: "Validate this strategy against historical data across all its symbols." },
 ];
 
-/* ----- Signal table helpers ----- */
+/* ----- Helpers ----- */
 
 function formatTime(dateStr: string): string {
   const d = new Date(dateStr);
@@ -61,35 +64,161 @@ function ConfluenceBar({ score }: { score: number }) {
   );
 }
 
-type SignalRow = Signal & Record<string, unknown>;
+const TRIGGER_LABELS: Record<string, string> = {
+  macd_crossover: "MACD crossover",
+  rsi_midline_cross: "RSI midline cross",
+  engulfing_candle: "Engulfing candle",
+  zone_reclaim: "Zone reclaim",
+  stochastic_exit_extreme: "Stochastic extreme exit",
+  bollinger_squeeze: "Bollinger squeeze",
+  volume_spike: "Volume spike",
+};
 
-const signalColumns: Column<SignalRow>[] = [
-  { key: "created_at", header: "Time", render: (row) => <span className="text-xs text-[var(--color-text-secondary)] whitespace-nowrap">{formatTime(row.created_at)}</span> },
-  { key: "symbol", header: "Symbol", render: (row) => <span className="font-semibold text-[var(--color-text-primary)]">{row.symbol}</span> },
-  { key: "direction", header: "Direction", render: (row) => <Badge variant={row.direction.toUpperCase() === "LONG" ? "success" : "danger"}>{row.direction.toUpperCase()}</Badge> },
-  { key: "entry_price", header: "Entry", align: "right", render: (row) => <span className="font-mono">{formatPrice(row.entry_price)}</span> },
-  { key: "stop_loss", header: "SL", align: "right", render: (row) => <span className="font-mono text-[var(--color-text-secondary)]">{formatPrice(row.stop_loss)}</span> },
-  { key: "take_profit_1", header: "TP1", align: "right", render: (row) => <span className="font-mono text-[var(--color-text-secondary)]">{formatPrice(row.take_profit_1)}</span> },
-  { key: "position_size", header: "Size", align: "right" as const, render: (row: SignalRow) => <span className="font-mono text-[var(--color-text-secondary)]">{row.position_size != null ? row.position_size.toFixed(4) : "--"}</span> },
-  { key: "confluence_score", header: "Confluence", render: (row) => <ConfluenceBar score={row.confluence_score} /> },
-  { key: "regime", header: "Regime", render: (row) => {
-    const r = row.regime.toLowerCase();
-    let variant: "success" | "danger" | "warning" | "info" | "neutral" = "neutral";
-    if (r === "trending" || r === "bullish") variant = "success";
-    else if (r === "bearish" || r === "crisis") variant = "danger";
-    else if (r === "volatile" || r === "mixed") variant = "warning";
-    else if (r === "mean_reverting") variant = "info";
-    return <Badge variant={variant}>{row.regime}</Badge>;
-  }},
-  { key: "status", header: "Status", render: (row) => {
-    const s = row.status.toLowerCase();
-    let variant: "success" | "danger" | "warning" | "info" | "neutral" = "neutral";
-    if (s === "active" || s === "filled") variant = "success";
-    else if (s === "cancelled" || s === "expired" || s === "rejected") variant = "danger";
-    else if (s === "pending") variant = "warning";
-    return <Badge variant={variant}>{row.status}</Badge>;
-  }},
-];
+/* ----- Signal Reasoning Tooltip (hover) ----- */
+
+function SignalReasoningTooltip({ signal }: { signal: Signal }) {
+  const hasInfo = signal.ai_reasoning || signal.triggers?.length || signal.regime || signal.mtf_alignment;
+  if (!hasInfo) {
+    return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" /></span>;
+  }
+
+  return (
+    <div className="relative inline-flex group/tip">
+      <span
+        className={cn(
+          "p-0.5 rounded transition-colors cursor-help",
+          signal.ai_recommendation === "confirm"
+            ? "text-(--color-positive) hover:bg-(--color-positive)/10"
+            : signal.ai_recommendation === "caution"
+              ? "text-(--color-warning) hover:bg-(--color-warning)/10"
+              : signal.ai_recommendation === "reject"
+                ? "text-(--color-negative) hover:bg-(--color-negative)/10"
+                : "text-(--color-text-secondary) hover:bg-(--color-bg-elevated)",
+        )}
+      >
+        <Info className="w-3.5 h-3.5" />
+      </span>
+      <div className="absolute z-50 right-0 bottom-full mb-1 w-80 bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg p-3 text-xs space-y-2 invisible opacity-0 group-hover/tip:visible group-hover/tip:opacity-100 transition-all duration-150 pointer-events-none group-hover/tip:pointer-events-auto">
+        {/* Signal context */}
+        <div>
+          <p className="font-semibold text-(--color-text-primary) mb-1">
+            {signal.direction.toUpperCase()} {signal.symbol}
+          </p>
+          <p className="text-(--color-text-secondary)">
+            <span className="font-medium">Regime:</span>{" "}
+            <span className="capitalize">{signal.regime}</span>
+          </p>
+          {signal.triggers && signal.triggers.length > 0 && (
+            <p className="text-(--color-text-secondary)">
+              <span className="font-medium">Triggers:</span>{" "}
+              {signal.triggers.map((t) => TRIGGER_LABELS[t] || t).join(", ")}
+            </p>
+          )}
+          <p className="text-(--color-text-secondary)">
+            <span className="font-medium">Confluence:</span> {signal.confluence_score}/100
+          </p>
+          {signal.mtf_alignment && (
+            <p className="text-(--color-text-secondary)">
+              <span className="font-medium">MTF:</span>{" "}
+              <span className="capitalize">{signal.mtf_alignment}</span>
+              {signal.mtf_confidence != null && ` (${signal.mtf_confidence}%)`}
+            </p>
+          )}
+        </div>
+
+        {/* AI assessment */}
+        {(signal.ai_quality_score != null || signal.ai_reasoning) && (
+          <div className="border-t border-(--color-border) pt-2">
+            <p className="font-semibold text-(--color-text-primary) mb-1 flex items-center gap-1.5">
+              AI Assessment
+              {signal.ai_recommendation && (
+                <span
+                  className={cn(
+                    "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                    signal.ai_recommendation === "confirm"
+                      ? "bg-(--color-positive)/15 text-(--color-positive)"
+                      : signal.ai_recommendation === "caution"
+                        ? "bg-(--color-warning)/15 text-(--color-warning)"
+                        : "bg-(--color-negative)/15 text-(--color-negative)",
+                  )}
+                >
+                  {signal.ai_recommendation}
+                </span>
+              )}
+              {signal.ai_quality_score != null && (
+                <span className="text-(--color-text-secondary) font-normal">
+                  (score: {signal.ai_quality_score})
+                </span>
+              )}
+            </p>
+            {signal.ai_reasoning && (
+              <p className="text-(--color-text-secondary) leading-relaxed">
+                {signal.ai_reasoning}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ----- Sortable Header ----- */
+
+type SortKey = "created_at" | "symbol" | "direction" | "entry_price" | "confluence_score" | "status" | "ai_quality_score";
+
+function SortHeader({
+  label,
+  sortKey,
+  current,
+  dir,
+  onSort,
+  align,
+}: {
+  label: string;
+  sortKey: SortKey;
+  current: SortKey;
+  dir: "asc" | "desc";
+  onSort: (key: SortKey) => void;
+  align?: string;
+}) {
+  const isActive = current === sortKey;
+  const Icon = isActive ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th
+      onClick={() => onSort(sortKey)}
+      className={cn(
+        "px-3 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none transition-colors hover:text-(--color-text-primary)",
+        isActive ? "text-(--color-accent)" : "text-(--color-text-secondary)",
+        align,
+      )}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <Icon className="w-3 h-3" />
+      </span>
+    </th>
+  );
+}
+
+/* ----- Skeleton Row ----- */
+
+function SkeletonRow() {
+  return (
+    <tr>
+      {Array.from({ length: 11 }).map((_, i) => (
+        <td key={i} className="px-3 py-3">
+          <div className="h-4 bg-(--color-bg-elevated) rounded animate-pulse" />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+/* ----- Filter Select ----- */
+
+const selectClasses =
+  "h-8 rounded-lg border border-(--color-border) bg-(--color-bg-surface) px-2.5 text-xs text-(--color-text-primary) focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer";
 
 /* ----- Main Page ----- */
 export function StrategyDetailPage() {
@@ -99,14 +228,50 @@ export function StrategyDetailPage() {
   const [signalOffset, setSignalOffset] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Signal filters
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [dirFilter, setDirFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setSignalOffset(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const { data: strategy, isLoading: strategyLoading } = useStrategy(id!);
-  const { data: signalData, isLoading: signalsLoading } = useSignals(PAGE_SIZE, signalOffset, id);
+  const { data: signalData, isLoading: signalsLoading } = useSignals({
+    limit: PAGE_SIZE,
+    offset: signalOffset,
+    strategyId: id,
+    symbol: debouncedSearch || undefined,
+    direction: dirFilter || undefined,
+    status: statusFilter || undefined,
+    sortBy,
+    sortDir,
+  });
   const { data: stats } = useTradeStats(id);
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
 
   const strategyBtMutation = useRunStrategyBacktest();
   const strategyBtResult = (strategyBtMutation.data as StrategyBacktestResult) ?? null;
+
+  const handleSort = (key: SortKey) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("desc");
+    }
+    setSignalOffset(0);
+  };
 
   if (strategyLoading) {
     return (
@@ -142,7 +307,7 @@ export function StrategyDetailPage() {
     });
   };
 
-  const signals = (signalData?.signals ?? []) as SignalRow[];
+  const signals = signalData?.signals ?? [];
   const signalTotal = signalData?.total ?? 0;
 
   return (
@@ -303,21 +468,101 @@ export function StrategyDetailPage() {
 
       {/* Tab content */}
       {activeTab === "signals" && (
-        <div>
-          <DataTable
-            data={signals}
-            columns={signalColumns}
-            loading={signalsLoading}
-            emptyMessage="No signals generated by this strategy yet."
-          />
-          {signalTotal > PAGE_SIZE && (
-            <Pagination
-              total={signalTotal}
-              limit={PAGE_SIZE}
-              offset={signalOffset}
-              onChange={setSignalOffset}
-            />
-          )}
+        <div className="space-y-3">
+          {/* Filter toolbar */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-(--color-text-secondary) pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search symbol..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="h-8 w-44 rounded-lg border border-(--color-border) bg-(--color-bg-surface) pl-8 pr-3 text-xs text-(--color-text-primary) placeholder:text-(--color-text-secondary)/60 focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+              />
+            </div>
+            <select
+              value={dirFilter}
+              onChange={(e) => { setDirFilter(e.target.value); setSignalOffset(0); }}
+              className={selectClasses}
+            >
+              <option value="">All Directions</option>
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setSignalOffset(0); }}
+              className={selectClasses}
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="rejected">Rejected</option>
+              <option value="filled">Filled</option>
+              <option value="expired">Expired</option>
+              <option value="pending">Pending</option>
+            </select>
+            {(debouncedSearch || dirFilter || statusFilter) && (
+              <button
+                onClick={() => { setSearchInput(""); setDirFilter(""); setStatusFilter(""); setSignalOffset(0); }}
+                className="h-8 px-2.5 rounded-lg text-xs text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated) transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+            <span className="ml-auto text-xs text-(--color-text-secondary) tabular-nums">
+              {signalTotal} signal{signalTotal !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {/* Signals table */}
+          <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm min-w-[1000px]">
+                <thead>
+                  <tr className="border-b border-(--color-border) bg-(--color-bg-elevated)/50">
+                    <SortHeader label="Time" sortKey="created_at" current={sortBy} dir={sortDir} onSort={handleSort} />
+                    <SortHeader label="Symbol" sortKey="symbol" current={sortBy} dir={sortDir} onSort={handleSort} />
+                    <SortHeader label="Direction" sortKey="direction" current={sortBy} dir={sortDir} onSort={handleSort} />
+                    <SortHeader label="Entry" sortKey="entry_price" current={sortBy} dir={sortDir} onSort={handleSort} align="text-right" />
+                    <th className="px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider text-right">SL</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider text-right">TP1</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider text-right">Size</th>
+                    <SortHeader label="Confluence" sortKey="confluence_score" current={sortBy} dir={sortDir} onSort={handleSort} />
+                    <th className="px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">Regime</th>
+                    <SortHeader label="Status" sortKey="status" current={sortBy} dir={sortDir} onSort={handleSort} />
+                    <th className="px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider text-center whitespace-nowrap">Info</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--color-border)/50">
+                  {signalsLoading ? (
+                    Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
+                  ) : signals.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="px-3 py-16 text-center text-(--color-text-secondary)">
+                        {debouncedSearch || dirFilter || statusFilter
+                          ? "No signals match your filters."
+                          : "No signals generated by this strategy yet."}
+                      </td>
+                    </tr>
+                  ) : (
+                    signals.map((s) => <SignalRow key={s.id} signal={s} />)
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {signalTotal > PAGE_SIZE && (
+              <div className="border-t border-(--color-border)">
+                <Pagination
+                  total={signalTotal}
+                  limit={PAGE_SIZE}
+                  offset={signalOffset}
+                  onChange={setSignalOffset}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -336,5 +581,64 @@ export function StrategyDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/* ----- Signal Row ----- */
+
+function SignalRow({ signal }: { signal: Signal }) {
+  const isBuy = signal.direction.toUpperCase() === "BUY";
+  const statusLower = signal.status.toLowerCase();
+
+  let statusVariant: "success" | "danger" | "warning" | "neutral" = "neutral";
+  if (statusLower === "active" || statusLower === "filled") statusVariant = "success";
+  else if (statusLower === "cancelled" || statusLower === "expired" || statusLower === "rejected") statusVariant = "danger";
+  else if (statusLower === "pending") statusVariant = "warning";
+
+  const regimeLower = signal.regime.toLowerCase();
+  let regimeVariant: "success" | "danger" | "warning" | "info" | "neutral" = "neutral";
+  if (regimeLower === "trending" || regimeLower === "bullish") regimeVariant = "success";
+  else if (regimeLower === "bearish" || regimeLower === "crisis") regimeVariant = "danger";
+  else if (regimeLower === "volatile" || regimeLower === "mixed") regimeVariant = "warning";
+  else if (regimeLower === "mean_reverting") regimeVariant = "info";
+
+  return (
+    <tr className="hover:bg-(--color-bg-elevated)/50 transition-colors">
+      <td className="px-3 py-2.5 text-xs text-(--color-text-secondary) whitespace-nowrap">
+        {formatTime(signal.created_at)}
+      </td>
+      <td className="px-3 py-2.5 font-semibold text-(--color-text-primary) whitespace-nowrap">
+        {signal.symbol}
+      </td>
+      <td className="px-3 py-2.5">
+        <Badge variant={isBuy ? "success" : "danger"}>
+          {signal.direction.toUpperCase()}
+        </Badge>
+      </td>
+      <td className="px-3 py-2.5 font-mono tabular-nums text-right whitespace-nowrap">
+        {formatPrice(signal.entry_price)}
+      </td>
+      <td className="px-3 py-2.5 font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
+        {formatPrice(signal.stop_loss)}
+      </td>
+      <td className="px-3 py-2.5 font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
+        {formatPrice(signal.take_profit_1)}
+      </td>
+      <td className="px-3 py-2.5 font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
+        {signal.position_size != null ? signal.position_size.toFixed(4) : "--"}
+      </td>
+      <td className="px-3 py-2.5">
+        <ConfluenceBar score={signal.confluence_score} />
+      </td>
+      <td className="px-3 py-2.5">
+        <Badge variant={regimeVariant}>{signal.regime}</Badge>
+      </td>
+      <td className="px-3 py-2.5">
+        <Badge variant={statusVariant}>{signal.status}</Badge>
+      </td>
+      <td className="px-3 py-2.5 text-center">
+        <SignalReasoningTooltip signal={signal} />
+      </td>
+    </tr>
   );
 }
