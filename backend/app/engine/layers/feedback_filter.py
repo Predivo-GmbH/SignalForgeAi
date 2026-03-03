@@ -104,5 +104,6 @@ class FeedbackFilter:
                 FeedbackRule.is_active == True,  # noqa: E712
                 (FeedbackRule.expires_at.is_(None)) | (FeedbackRule.expires_at > now),
             )
+            .limit(100)
         )
         return list(result.scalars().all())

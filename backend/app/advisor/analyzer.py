@@ -235,7 +235,7 @@ class TechnicalAnalyzer:
             }
 
         except Exception as e:
-            logger.error("Failed to score %s: %s", symbol, e)
+            logger.exception("Failed to score %s", symbol)
             return {
                 "symbol": symbol,
                 "score": 0,

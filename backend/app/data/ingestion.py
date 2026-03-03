@@ -28,7 +28,7 @@ class CCXTIngestion:
         try:
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
         except Exception as e:
-            logger.error("Failed to fetch candles for %s %s: %s", symbol, timeframe, e)
+            logger.exception("Failed to fetch candles for %s %s", symbol, timeframe)
             raise
 
         if not ohlcv:

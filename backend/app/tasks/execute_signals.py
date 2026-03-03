@@ -162,7 +162,7 @@ async def _execute_async():
                 # --- Idempotency check: skip if an active order already exists ---
                 existing_order = await db.execute(
                     select(Order.id).where(
-                        Order.signal_id == str(sig.id),
+                        Order.signal_id == sig.id,
                         Order.status.notin_(["rejected", "cancelled", "failed"]),
                     ).limit(1)
                 )
