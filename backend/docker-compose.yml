@@ -61,6 +61,7 @@ services:
       SF_CELERY_RESULT_BACKEND: redis://redis:6379/2
       SF_DEBUG: "true"
       SF_ANTHROPIC_API_KEY: ${SF_ANTHROPIC_API_KEY:-}
+      SF_AI_MAX_DAILY_API_CALLS: "1500"
     depends_on:
       db:
         condition: service_healthy

@@ -161,22 +161,22 @@ async def _execute_async():
                     continue
 
                 # --- Position-aware safety check (defense-in-depth) ---
-                has_position = await PositionManagerDB.has_open_position(
-                    db, user_id, sig.symbol,
+                buy_position = await PositionManagerDB.find_open_position(
+                    db, user_id, sig.symbol, direction="BUY",
                 )
-                if sig.direction == "BUY" and has_position:
+                if sig.direction == "BUY" and buy_position:
                     logger.info(
                         "PositionFilter REJECT: BUY signal %s for %s — "
-                        "open position exists",
+                        "open BUY position exists",
                         sig.id, sig.symbol,
                     )
                     sig.status = "rejected"
                     await db.commit()
                     continue
-                if sig.direction == "SELL" and not has_position:
+                if sig.direction == "SELL" and not buy_position:
                     logger.info(
                         "PositionFilter REJECT: SELL signal %s for %s — "
-                        "no open position to close",
+                        "no open BUY position to close",
                         sig.id, sig.symbol,
                     )
                     sig.status = "rejected"
@@ -217,6 +217,50 @@ async def _execute_async():
                     )
                 else:
                     sig.status = "active"
+
+                    # --- Position management for filled orders ---
+                    if order.status == "filled" and order.filled_quantity and order.filled_quantity > 0:
+                        fill_price = order.average_fill_price or sig.entry_price
+
+                        if sig.direction == "SELL":
+                            # SELL = close existing BUY position (exit trade)
+                            buy_pos = await PositionManagerDB.find_open_position(
+                                db, user_id, sig.symbol, direction="BUY",
+                            )
+                            if buy_pos:
+                                result = await PositionManagerDB.close_position(
+                                    db, str(buy_pos.id), fill_price,
+                                    reason="sell_signal", user_id=user_id,
+                                )
+                                logger.info(
+                                    "Closed BUY position %s for %s — pnl=%.2f (sell signal)",
+                                    buy_pos.id, sig.symbol, result["pnl"],
+                                )
+                            else:
+                                logger.warning(
+                                    "SELL filled for %s but no BUY position found to close",
+                                    sig.symbol,
+                                )
+                        else:
+                            # BUY = open new position
+                            pos = await PositionManagerDB.open_position(
+                                db,
+                                user_id=user_id,
+                                symbol=sig.symbol,
+                                direction=sig.direction,
+                                quantity=order.filled_quantity,
+                                entry_price=fill_price,
+                                stop_loss=sig.stop_loss,
+                                take_profit=sig.take_profit_1,
+                                broker=order.broker or "paper",
+                                order_id=str(order.id),
+                                strategy_id=str(sig.strategy_id) if sig.strategy_id else None,
+                            )
+                            logger.info(
+                                "Opened position %s for %s %s — qty=%.6f entry=%.2f",
+                                pos.id, sig.direction, sig.symbol,
+                                order.filled_quantity, fill_price,
+                            )
 
                 logger.info(
                     "Executed signal %s -> order %s status=%s",

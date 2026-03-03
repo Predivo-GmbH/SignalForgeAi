@@ -194,19 +194,21 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                         continue
 
                     # --- Position-aware filter: prevent invalid signals ---
-                    has_position = await PositionManagerDB.has_open_position(
-                        db, str(active_strategy.user_id), symbol,
+                    # BUY: only allowed when no BUY position exists for this symbol
+                    # SELL: only allowed when a BUY position exists (to close it)
+                    buy_position = await PositionManagerDB.find_open_position(
+                        db, str(active_strategy.user_id), symbol, direction="BUY",
                     )
-                    if signal.action == "BUY" and has_position:
+                    if signal.action == "BUY" and buy_position:
                         logger.info(
-                            "PositionFilter SKIP: BUY %s %s — open position "
+                            "PositionFilter SKIP: BUY %s %s — open BUY position "
                             "already exists (strategy=%s)",
                             symbol, timeframe, active_strategy.name,
                         )
                         continue
-                    if signal.action == "SELL" and not has_position:
+                    if signal.action == "SELL" and not buy_position:
                         logger.info(
-                            "PositionFilter SKIP: SELL %s %s — no open "
+                            "PositionFilter SKIP: SELL %s %s — no open BUY "
                             "position to close (strategy=%s)",
                             symbol, timeframe, active_strategy.name,
                         )

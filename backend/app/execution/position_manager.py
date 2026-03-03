@@ -217,6 +217,26 @@ class PositionManagerDB:
         return result.scalar_one_or_none() is not None
 
     # ------------------------------------------------------------------
+    # Find open position for symbol (with optional direction filter)
+    # ------------------------------------------------------------------
+    @staticmethod
+    async def find_open_position(
+        db: AsyncSession, user_id: str, symbol: str, direction: str | None = None,
+    ) -> Position | None:
+        """Find the open position for a user+symbol, optionally filtered by direction."""
+        filters = [
+            Position.user_id == uuid.UUID(user_id),
+            Position.symbol == symbol,
+            Position.is_open == True,  # noqa: E712
+        ]
+        if direction:
+            filters.append(Position.direction == direction)
+        result = await db.execute(
+            select(Position).where(*filters).limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    # ------------------------------------------------------------------
     # Get single position
     # ------------------------------------------------------------------
     @staticmethod
