@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -90,8 +91,15 @@ function SkeletonRow() {
   );
 }
 
-/* ----- Reasoning Tooltip (hover) ----- */
+/* ----- Reasoning Tooltip (hover, portal) ----- */
 function ReasoningTooltip({ trade }: { trade: Trade }) {
+  const [show, setShow] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const hideTimer = useRef<number>(0);
+
+  const handleEnter = () => { clearTimeout(hideTimer.current); setShow(true); };
+  const handleLeave = () => { hideTimer.current = window.setTimeout(() => setShow(false), 120); };
+
   const hasReasoning = trade.ai_reasoning || trade.triggers?.length || trade.regime;
   if (!hasReasoning) {
     return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" /></span>;
@@ -107,9 +115,22 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
     volume_spike: "Volume spike",
   };
 
+  let tooltipStyle: React.CSSProperties = {};
+  if (show && triggerRef.current) {
+    const rect = triggerRef.current.getBoundingClientRect();
+    const openUp = rect.top > window.innerHeight / 2;
+    tooltipStyle = {
+      right: Math.max(8, window.innerWidth - rect.right),
+      ...(openUp
+        ? { bottom: window.innerHeight - rect.top + 6 }
+        : { top: rect.bottom + 6 }),
+    };
+  }
+
   return (
-    <div className="relative inline-flex group/tip">
+    <div className="relative inline-flex" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       <span
+        ref={triggerRef}
         className={cn(
           "p-0.5 rounded transition-colors cursor-help",
           trade.ai_recommendation === "confirm"
@@ -122,80 +143,88 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
       >
         <Info className="w-3.5 h-3.5" />
       </span>
-      <div className="absolute z-50 right-0 bottom-full mb-1 w-80 bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg p-3 text-xs space-y-2 invisible opacity-0 group-hover/tip:visible group-hover/tip:opacity-100 transition-all duration-150 pointer-events-none group-hover/tip:pointer-events-auto">
-        {/* Entry reasoning */}
-        <div>
-          <p className="font-semibold text-(--color-text-primary) mb-1">
-            Entry: {trade.direction === "long" ? "BUY" : "SELL"} {trade.symbol}
-          </p>
-          {trade.regime && (
-            <p className="text-(--color-text-secondary)">
-              <span className="font-medium">Regime:</span>{" "}
-              <span className="capitalize">{trade.regime}</span>
+      {show && createPortal(
+        <div
+          className="fixed z-[200] w-80 bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-xl p-3 text-xs space-y-2"
+          style={tooltipStyle}
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
+          {/* Entry reasoning */}
+          <div>
+            <p className="font-semibold text-(--color-text-primary) mb-1">
+              Entry: {trade.direction === "long" ? "BUY" : "SELL"} {trade.symbol}
             </p>
-          )}
-          {trade.triggers && trade.triggers.length > 0 && (
-            <p className="text-(--color-text-secondary)">
-              <span className="font-medium">Triggers:</span>{" "}
-              {trade.triggers.map((t) => triggerLabels[t] || t).join(", ")}
-            </p>
-          )}
-          {trade.confluence_score > 0 && (
-            <p className="text-(--color-text-secondary)">
-              <span className="font-medium">Confluence:</span> {trade.confluence_score}/100
-            </p>
-          )}
-        </div>
-
-        {/* AI assessment */}
-        {(trade.ai_quality_score != null || trade.ai_reasoning) && (
-          <div className="border-t border-(--color-border) pt-2">
-            <p className="font-semibold text-(--color-text-primary) mb-1 flex items-center gap-1.5">
-              AI Assessment
-              {trade.ai_recommendation && (
-                <span
-                  className={cn(
-                    "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
-                    trade.ai_recommendation === "confirm"
-                      ? "bg-(--color-positive)/15 text-(--color-positive)"
-                      : trade.ai_recommendation === "caution"
-                        ? "bg-(--color-warning)/15 text-(--color-warning)"
-                        : "bg-(--color-negative)/15 text-(--color-negative)",
-                  )}
-                >
-                  {trade.ai_recommendation}
-                </span>
-              )}
-              {trade.ai_quality_score != null && (
-                <span className="text-(--color-text-secondary) font-normal">
-                  (score: {trade.ai_quality_score})
-                </span>
-              )}
-            </p>
-            {trade.ai_reasoning && (
-              <p className="text-(--color-text-secondary) leading-relaxed">
-                {trade.ai_reasoning}
+            {trade.regime && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Regime:</span>{" "}
+                <span className="capitalize">{trade.regime}</span>
+              </p>
+            )}
+            {trade.triggers && trade.triggers.length > 0 && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Triggers:</span>{" "}
+                {trade.triggers.map((t) => triggerLabels[t] || t).join(", ")}
+              </p>
+            )}
+            {trade.confluence_score > 0 && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Confluence:</span> {trade.confluence_score}/100
               </p>
             )}
           </div>
-        )}
 
-        {/* Exit reasoning */}
-        {trade.exit_reason && (
-          <div className="border-t border-(--color-border) pt-2">
-            <p className="font-semibold text-(--color-text-primary) mb-1">Exit Reason</p>
-            <p className="text-(--color-text-secondary)">
-              {trade.exit_reason === "sell_signal"
-                ? "Pipeline generated a SELL signal \u2014 higher timeframe trend turned bearish, closing the position."
-                : trade.exit_reason === "stop_loss"
-                  ? `Price hit the stop-loss at ${formatPrice(trade.stop_loss)}, limiting the downside risk.`
-                  : trade.exit_reason === "take_profit"
-                    ? `Price reached the take-profit target at ${formatPrice(trade.take_profit)}.`
-                    : trade.exit_reason}
-            </p>
-          </div>
-        )}
-      </div>
+          {/* AI assessment */}
+          {(trade.ai_quality_score != null || trade.ai_reasoning) && (
+            <div className="border-t border-(--color-border) pt-2">
+              <p className="font-semibold text-(--color-text-primary) mb-1 flex items-center gap-1.5">
+                AI Assessment
+                {trade.ai_recommendation && (
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                      trade.ai_recommendation === "confirm"
+                        ? "bg-(--color-positive)/15 text-(--color-positive)"
+                        : trade.ai_recommendation === "caution"
+                          ? "bg-(--color-warning)/15 text-(--color-warning)"
+                          : "bg-(--color-negative)/15 text-(--color-negative)",
+                    )}
+                  >
+                    {trade.ai_recommendation}
+                  </span>
+                )}
+                {trade.ai_quality_score != null && (
+                  <span className="text-(--color-text-secondary) font-normal">
+                    (score: {trade.ai_quality_score})
+                  </span>
+                )}
+              </p>
+              {trade.ai_reasoning && (
+                <p className="text-(--color-text-secondary) leading-relaxed">
+                  {trade.ai_reasoning}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Exit reasoning */}
+          {trade.exit_reason && (
+            <div className="border-t border-(--color-border) pt-2">
+              <p className="font-semibold text-(--color-text-primary) mb-1">Exit Reason</p>
+              <p className="text-(--color-text-secondary)">
+                {trade.exit_reason === "sell_signal"
+                  ? "Pipeline generated a SELL signal \u2014 higher timeframe trend turned bearish, closing the position."
+                  : trade.exit_reason === "stop_loss"
+                    ? `Price hit the stop-loss at ${formatPrice(trade.stop_loss)}, limiting the downside risk.`
+                    : trade.exit_reason === "take_profit"
+                      ? `Price reached the take-profit target at ${formatPrice(trade.take_profit)}.`
+                      : trade.exit_reason}
+              </p>
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

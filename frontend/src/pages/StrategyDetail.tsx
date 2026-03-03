@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -77,14 +78,34 @@ const TRIGGER_LABELS: Record<string, string> = {
 /* ----- Signal Reasoning Tooltip (hover) ----- */
 
 function SignalReasoningTooltip({ signal }: { signal: Signal }) {
+  const [show, setShow] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const hideTimer = useRef<number>(0);
+
+  const handleEnter = () => { clearTimeout(hideTimer.current); setShow(true); };
+  const handleLeave = () => { hideTimer.current = window.setTimeout(() => setShow(false), 120); };
+
   const hasInfo = signal.ai_reasoning || signal.triggers?.length || signal.regime || signal.mtf_alignment;
   if (!hasInfo) {
     return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" /></span>;
   }
 
+  let tooltipStyle: React.CSSProperties = {};
+  if (show && triggerRef.current) {
+    const rect = triggerRef.current.getBoundingClientRect();
+    const openUp = rect.top > window.innerHeight / 2;
+    tooltipStyle = {
+      right: Math.max(8, window.innerWidth - rect.right),
+      ...(openUp
+        ? { bottom: window.innerHeight - rect.top + 6 }
+        : { top: rect.bottom + 6 }),
+    };
+  }
+
   return (
-    <div className="relative inline-flex group/tip">
+    <div className="relative inline-flex" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       <span
+        ref={triggerRef}
         className={cn(
           "p-0.5 rounded transition-colors cursor-help",
           signal.ai_recommendation === "confirm"
@@ -98,67 +119,75 @@ function SignalReasoningTooltip({ signal }: { signal: Signal }) {
       >
         <Info className="w-3.5 h-3.5" />
       </span>
-      <div className="absolute z-50 right-0 bottom-full mb-1 w-80 bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg p-3 text-xs space-y-2 invisible opacity-0 group-hover/tip:visible group-hover/tip:opacity-100 transition-all duration-150 pointer-events-none group-hover/tip:pointer-events-auto">
-        {/* Signal context */}
-        <div>
-          <p className="font-semibold text-(--color-text-primary) mb-1">
-            {signal.direction.toUpperCase()} {signal.symbol}
-          </p>
-          <p className="text-(--color-text-secondary)">
-            <span className="font-medium">Regime:</span>{" "}
-            <span className="capitalize">{signal.regime}</span>
-          </p>
-          {signal.triggers && signal.triggers.length > 0 && (
+      {show && createPortal(
+        <div
+          className="fixed z-[200] w-80 bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-xl p-3 text-xs space-y-2"
+          style={tooltipStyle}
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
+          {/* Signal context */}
+          <div>
+            <p className="font-semibold text-(--color-text-primary) mb-1">
+              {signal.direction.toUpperCase()} {signal.symbol}
+            </p>
             <p className="text-(--color-text-secondary)">
-              <span className="font-medium">Triggers:</span>{" "}
-              {signal.triggers.map((t) => TRIGGER_LABELS[t] || t).join(", ")}
+              <span className="font-medium">Regime:</span>{" "}
+              <span className="capitalize">{signal.regime}</span>
             </p>
-          )}
-          <p className="text-(--color-text-secondary)">
-            <span className="font-medium">Confluence:</span> {signal.confluence_score}/100
-          </p>
-          {signal.mtf_alignment && (
+            {signal.triggers && signal.triggers.length > 0 && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">Triggers:</span>{" "}
+                {signal.triggers.map((t) => TRIGGER_LABELS[t] || t).join(", ")}
+              </p>
+            )}
             <p className="text-(--color-text-secondary)">
-              <span className="font-medium">MTF:</span>{" "}
-              <span className="capitalize">{signal.mtf_alignment}</span>
-              {signal.mtf_confidence != null && ` (${signal.mtf_confidence}%)`}
+              <span className="font-medium">Confluence:</span> {signal.confluence_score}/100
             </p>
-          )}
-        </div>
-
-        {/* AI assessment */}
-        {(signal.ai_quality_score != null || signal.ai_reasoning) && (
-          <div className="border-t border-(--color-border) pt-2">
-            <p className="font-semibold text-(--color-text-primary) mb-1 flex items-center gap-1.5">
-              AI Assessment
-              {signal.ai_recommendation && (
-                <span
-                  className={cn(
-                    "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
-                    signal.ai_recommendation === "confirm"
-                      ? "bg-(--color-positive)/15 text-(--color-positive)"
-                      : signal.ai_recommendation === "caution"
-                        ? "bg-(--color-warning)/15 text-(--color-warning)"
-                        : "bg-(--color-negative)/15 text-(--color-negative)",
-                  )}
-                >
-                  {signal.ai_recommendation}
-                </span>
-              )}
-              {signal.ai_quality_score != null && (
-                <span className="text-(--color-text-secondary) font-normal">
-                  (score: {signal.ai_quality_score})
-                </span>
-              )}
-            </p>
-            {signal.ai_reasoning && (
-              <p className="text-(--color-text-secondary) leading-relaxed">
-                {signal.ai_reasoning}
+            {signal.mtf_alignment && (
+              <p className="text-(--color-text-secondary)">
+                <span className="font-medium">MTF:</span>{" "}
+                <span className="capitalize">{signal.mtf_alignment}</span>
+                {signal.mtf_confidence != null && ` (${signal.mtf_confidence}%)`}
               </p>
             )}
           </div>
-        )}
-      </div>
+
+          {/* AI assessment */}
+          {(signal.ai_quality_score != null || signal.ai_reasoning) && (
+            <div className="border-t border-(--color-border) pt-2">
+              <p className="font-semibold text-(--color-text-primary) mb-1 flex items-center gap-1.5">
+                AI Assessment
+                {signal.ai_recommendation && (
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                      signal.ai_recommendation === "confirm"
+                        ? "bg-(--color-positive)/15 text-(--color-positive)"
+                        : signal.ai_recommendation === "caution"
+                          ? "bg-(--color-warning)/15 text-(--color-warning)"
+                          : "bg-(--color-negative)/15 text-(--color-negative)",
+                    )}
+                  >
+                    {signal.ai_recommendation}
+                  </span>
+                )}
+                {signal.ai_quality_score != null && (
+                  <span className="text-(--color-text-secondary) font-normal">
+                    (score: {signal.ai_quality_score})
+                  </span>
+                )}
+              </p>
+              {signal.ai_reasoning && (
+                <p className="text-(--color-text-secondary) leading-relaxed">
+                  {signal.ai_reasoning}
+                </p>
+              )}
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
