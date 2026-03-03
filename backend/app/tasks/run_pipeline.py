@@ -15,7 +15,11 @@ def run_signal_pipeline(self):
     """Run the signal pipeline for all active symbols."""
     import asyncio
 
-    asyncio.run(_run_pipeline_async())
+    try:
+        asyncio.run(_run_pipeline_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("run_signal_pipeline transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=60)
 
 
 async def _run_pipeline_async():
@@ -39,13 +43,26 @@ async def _run_pipeline_async():
 
         logger.info("Running pipeline for %d active strategies", len(active_strategies))
 
+        pending_publishes: list[dict] = []
         for active_strategy in active_strategies:
-            await _run_strategy_pipeline(db, active_strategy)
+            await _run_strategy_pipeline(db, active_strategy, pending_publishes)
 
         await db.commit()
 
+        # Publish to Redis AFTER DB commit so WS clients only see committed signals
+        if pending_publishes:
+            try:
+                from app.core.redis_client import redis_client
 
-async def _run_strategy_pipeline(db, active_strategy):
+                for msg in pending_publishes:
+                    await redis_client.publish(
+                        "signalforge:signals", json.dumps(msg),
+                    )
+            except Exception:
+                pass  # Redis publish is best-effort
+
+
+async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[dict] | None = None):
     """Run the signal pipeline for a single strategy."""
     import pandas as pd
 
@@ -187,6 +204,24 @@ async def _run_strategy_pipeline(db, active_strategy):
                             original_size, position_size, cppi_exposure,
                         )
 
+                    # Dedup: skip if identical pending signal already exists
+                    from sqlalchemy import select as sa_select
+                    existing_sig = await db.execute(
+                        sa_select(SignalModel.id).where(
+                            SignalModel.strategy_id == active_strategy.id,
+                            SignalModel.symbol == symbol,
+                            SignalModel.timeframe == timeframe,
+                            SignalModel.direction == signal.action,
+                            SignalModel.status == "pending",
+                        ).limit(1)
+                    )
+                    if existing_sig.scalar_one_or_none():
+                        logger.info(
+                            "Skipping duplicate pending signal: %s %s %s (strategy=%s)",
+                            signal.action, symbol, timeframe, active_strategy.name,
+                        )
+                        continue
+
                     signal_row = SignalModel(
                         user_id=active_strategy.user_id,
                         strategy_id=active_strategy.id,
@@ -229,26 +264,19 @@ async def _run_strategy_pipeline(db, active_strategy):
                         )
                         continue
 
-                    # Publish to Redis for real-time WebSocket feed
-                    try:
-                        from app.core.redis_client import redis_client
-
-                        await redis_client.publish(
-                            "signalforge:signals",
-                            json.dumps({
-                                "strategy_id": str(active_strategy.id),
-                                "strategy_name": active_strategy.name,
-                                "symbol": symbol,
-                                "action": signal.action,
-                                "confluence_score": signal.confluence_score,
-                                "entry_price": entry_price,
-                                "regime": signal.regime,
-                                "ai_quality_score": signal_row.ai_quality_score,
-                                "ai_recommendation": signal_row.ai_recommendation,
-                            }),
-                        )
-                    except Exception:
-                        pass  # Redis publish is best-effort
+                    # Collect for post-commit Redis publish
+                    if pending_publishes is not None:
+                        pending_publishes.append({
+                            "strategy_id": str(active_strategy.id),
+                            "strategy_name": active_strategy.name,
+                            "symbol": symbol,
+                            "action": signal.action,
+                            "confluence_score": signal.confluence_score,
+                            "entry_price": entry_price,
+                            "regime": signal.regime,
+                            "ai_quality_score": signal_row.ai_quality_score,
+                            "ai_recommendation": signal_row.ai_recommendation,
+                        })
 
             except Exception as e:
                 logger.error(

@@ -19,7 +19,11 @@ def ingest_candles(self):
     """Fetch latest candles for all active symbols and store in DB."""
     import asyncio
 
-    asyncio.run(_ingest_async())
+    try:
+        asyncio.run(_ingest_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("ingest_candles transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=30)
 
 
 async def _ingest_async():

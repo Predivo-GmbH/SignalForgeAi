@@ -145,10 +145,10 @@ async def load_candles(symbol: str, timeframe: str, limit: int):
 
     # 1. Try database
     try:
-        from app.core.database import async_session
+        from app.core.database import task_session
         from app.data.storage import CandleStorage
 
-        async with async_session() as db:
+        async with task_session() as db:
             rows = await CandleStorage.load_candles_db(db, symbol, timeframe, limit=limit)
             if len(rows) >= 300:
                 logger.info("Loaded %d candles from DB for %s %s", len(rows), symbol, timeframe)
@@ -187,10 +187,10 @@ async def _persist_backtest(
     """Save a BacktestResult row to the database."""
     import uuid
 
-    from app.core.database import async_session
+    from app.core.database import task_session
     from app.models.backtest_result import BacktestResult
 
-    async with async_session() as db:
+    async with task_session() as db:
         row = BacktestResult(
             user_id=uuid.UUID(user_id),
             symbol=symbol,

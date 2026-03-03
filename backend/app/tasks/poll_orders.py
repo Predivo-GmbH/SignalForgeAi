@@ -12,7 +12,27 @@ def poll_order_status(self):
     """Query open orders, poll broker for status, update DB."""
     import asyncio
 
-    asyncio.run(_poll_async())
+    import redis
+
+    from app.config import settings
+
+    r = redis.from_url(settings.redis_url)
+    lock = r.lock("signalforge:lock:poll_orders", timeout=60, blocking=False)
+    if not lock.acquire(blocking=False):
+        logger.info("poll_order_status already running, skipping")
+        r.close()
+        return
+    try:
+        asyncio.run(_poll_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("poll_order_status transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=15)
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+        r.close()
 
 
 async def _poll_async():

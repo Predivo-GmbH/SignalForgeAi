@@ -136,7 +136,7 @@ async def trade_stats(
     total_pnl = sum(pnls)
     win_rate = round(len(wins) / len(closed_trades) * 100, 2) if closed_trades else 0.0
     profit_factor = (
-        round(sum(wins) / abs(sum(losses)), 2) if losses else float("inf") if wins else 0.0
+        round(sum(wins) / abs(sum(losses)), 2) if losses else 999.99 if wins else 0.0
     )
 
     return TradeStatsResponse(

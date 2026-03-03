@@ -12,7 +12,11 @@ def send_daily_summary(self):
     """Send daily trade summary email to users with daily_summary enabled."""
     import asyncio
 
-    asyncio.run(_send_summary_async())
+    try:
+        asyncio.run(_send_summary_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("send_daily_summary transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=60)
 
 
 async def _send_summary_async():

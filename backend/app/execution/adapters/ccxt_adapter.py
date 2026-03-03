@@ -88,16 +88,16 @@ class CCXTAdapter(BrokerAdapter):
             broker=f"ccxt:{self._exchange_id}",
         )
 
-    async def cancel_order(self, broker_order_id: str) -> bool:
+    async def cancel_order(self, broker_order_id: str, symbol: str = "") -> bool:
         try:
-            await self._exchange.cancel_order(broker_order_id)
+            await self._exchange.cancel_order(broker_order_id, symbol=symbol or None)
             return True
         except Exception as e:
             logger.error("CCXT cancel failed: %s", e)
             return False
 
-    async def get_order_status(self, broker_order_id: str) -> BrokerOrder:
-        resp = await self._exchange.fetch_order(broker_order_id)
+    async def get_order_status(self, broker_order_id: str, symbol: str = "") -> BrokerOrder:
+        resp = await self._exchange.fetch_order(broker_order_id, symbol=symbol or None)
         return BrokerOrder(
             broker_order_id=str(resp["id"]),
             symbol=resp["symbol"],

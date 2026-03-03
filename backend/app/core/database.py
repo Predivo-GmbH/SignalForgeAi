@@ -14,22 +14,25 @@ async def get_db():
         yield session
 
 
+# Module-level engine for Celery tasks — NullPool avoids cross-event-loop issues
+_task_engine = create_async_engine(
+    settings.database_url, poolclass=NullPool, echo=False,
+)
+_task_factory = async_sessionmaker(
+    _task_engine, class_=AsyncSession, expire_on_commit=False,
+)
+
+
 @asynccontextmanager
 async def task_session():
     """Create a fresh DB session for Celery tasks.
 
-    Each Celery task calls asyncio.run() with a new event loop, so we
-    need a separate engine with NullPool to avoid sharing connections
-    across event loops.
+    Uses a shared NullPool engine — NullPool already ensures no connection
+    reuse between callers, so sharing the engine object is safe.
     """
-    task_engine = create_async_engine(
-        settings.database_url, poolclass=NullPool, echo=False,
-    )
-    factory = async_sessionmaker(
-        task_engine, class_=AsyncSession, expire_on_commit=False,
-    )
-    async with factory() as session:
+    async with _task_factory() as session:
         try:
             yield session
-        finally:
-            await task_engine.dispose()
+        except Exception:
+            await session.rollback()
+            raise

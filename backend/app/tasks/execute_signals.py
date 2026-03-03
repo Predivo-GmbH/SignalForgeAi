@@ -17,7 +17,27 @@ def execute_pending_signals(self):
     """Query signals pending execution, run risk checks, place orders."""
     import asyncio
 
-    asyncio.run(_execute_async())
+    import redis
+
+    from app.config import settings
+
+    r = redis.from_url(settings.redis_url)
+    lock = r.lock("signalforge:lock:execute_signals", timeout=120, blocking=False)
+    if not lock.acquire(blocking=False):
+        logger.info("execute_pending_signals already running, skipping")
+        r.close()
+        return
+    try:
+        asyncio.run(_execute_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("execute_pending_signals transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=30)
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+        r.close()
 
 
 async def _execute_async():
@@ -140,8 +160,15 @@ async def _execute_async():
                     db, user_id, signal_dict
                 )
 
-                # Mark signal as active after successful execution
-                sig.status = "active"
+                # Only mark active if order was actually accepted
+                if order.status in ("rejected", "cancelled"):
+                    sig.status = "rejected"
+                    logger.warning(
+                        "Signal %s order rejected (status=%s), marking signal rejected",
+                        sig.id, order.status,
+                    )
+                else:
+                    sig.status = "active"
 
                 logger.info(
                     "Executed signal %s -> order %s status=%s",
@@ -150,6 +177,8 @@ async def _execute_async():
                     order.status,
                 )
             except Exception as e:
+                sig.status = "failed"
                 logger.error("Failed to execute signal %s: %s", sig.id, e)
 
-        await db.commit()
+            # Commit after each signal to prevent stuck "pending" state
+            await db.commit()

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.models.strategy import Strategy
 from app.models.trade import Trade
 
 router = APIRouter(tags=["analytics"])
@@ -62,6 +63,7 @@ class CorrelationResponse(BaseModel):
     symbol_b: str
     correlation: float
     data_points: int
+    is_synthetic: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -111,8 +113,14 @@ async def get_equity_curve(
             calmar_ratio=None,
         )
 
-    # Build equity curve
-    initial_equity = 10_000.0
+    # Build equity curve — use configured equity if available
+    strat_res = await db.execute(
+        select(Strategy.config).where(
+            Strategy.user_id == uid, Strategy.is_active == True  # noqa: E712
+        ).limit(1)
+    )
+    strat_cfg = strat_res.scalar_one_or_none() or {}
+    initial_equity = float(strat_cfg.get("account_equity", 10_000.0)) if isinstance(strat_cfg, dict) else 10_000.0
     equity = initial_equity
     peak = equity
     points: list[EquityPoint] = []
@@ -160,7 +168,6 @@ async def compare_strategies(
 ):
     """Compare performance metrics across all active strategies."""
     from app.models.signal import Signal
-    from app.models.strategy import Strategy
 
     # Get all strategies for this user
     uid = uuid.UUID(user_id)
@@ -302,6 +309,7 @@ async def get_correlation(
         symbol_b=symbol_b,
         correlation=round(corr, 4),
         data_points=n,
+        is_synthetic=True,
     )
 
 

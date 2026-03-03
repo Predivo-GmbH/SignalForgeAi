@@ -60,13 +60,13 @@ class PaperAdapter(BrokerAdapter):
         self._orders[order_id] = order
         return order
 
-    async def cancel_order(self, broker_order_id: str) -> bool:
+    async def cancel_order(self, broker_order_id: str, symbol: str = "") -> bool:
         if broker_order_id in self._orders:
             self._orders[broker_order_id].status = OrderStatus.CANCELLED
             return True
         return False
 
-    async def get_order_status(self, broker_order_id: str) -> BrokerOrder:
+    async def get_order_status(self, broker_order_id: str, symbol: str = "") -> BrokerOrder:
         return self._orders[broker_order_id]
 
     async def get_positions(self) -> list[BrokerPosition]:

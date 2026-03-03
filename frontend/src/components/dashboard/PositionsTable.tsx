@@ -79,7 +79,7 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
               </tr>
             ) : (
               openPositions.map((pos) => {
-                const pnl = pos.pnl ?? 0;
+                const pnl = pos.unrealized_pnl ?? 0;
                 const pnlColor =
                   pnl >= 0
                     ? "text-[var(--color-positive)]"

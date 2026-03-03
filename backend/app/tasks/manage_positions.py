@@ -15,7 +15,27 @@ def manage_positions(self):
     """Trail stops, check SL/TP, close positions as needed."""
     import asyncio
 
-    asyncio.run(_manage_async())
+    import redis
+
+    from app.config import settings
+
+    r = redis.from_url(settings.redis_url)
+    lock = r.lock("signalforge:lock:manage_positions", timeout=120, blocking=False)
+    if not lock.acquire(blocking=False):
+        logger.info("manage_positions already running, skipping")
+        r.close()
+        return
+    try:
+        asyncio.run(_manage_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("manage_positions transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=30)
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+        r.close()
 
 
 async def _manage_async():

@@ -136,6 +136,6 @@ class DrawdownBreaker:
                 "drawdown_pct": state.drawdown_pct,
                 "level": state.level,
             })
-            await redis_client.set(key, data)
+            await redis_client.set(key, data, ex=7 * 86400)  # 7 day TTL
         except Exception as e:
             logger.warning("Failed to save drawdown state to Redis: %s", e)

@@ -82,11 +82,11 @@ class BrokerAdapter(ABC):
         """Place an order and return the broker response."""
 
     @abstractmethod
-    async def cancel_order(self, broker_order_id: str) -> bool:
+    async def cancel_order(self, broker_order_id: str, symbol: str = "") -> bool:
         """Cancel an order by its broker-assigned ID."""
 
     @abstractmethod
-    async def get_order_status(self, broker_order_id: str) -> BrokerOrder:
+    async def get_order_status(self, broker_order_id: str, symbol: str = "") -> BrokerOrder:
         """Poll current status of an order."""
 
     @abstractmethod

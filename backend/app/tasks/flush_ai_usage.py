@@ -28,6 +28,7 @@ async def _flush_async() -> dict:
     queue_key = "ai_usage_queue"
     queue_len = r.llen(queue_key)
     if queue_len == 0:
+        r.close()
         return {"flushed": 0}
 
     # Cap batch size to prevent unbounded memory usage
@@ -69,6 +70,7 @@ async def _flush_async() -> dict:
 
     # Only trim after successful DB commit
     r.ltrim(queue_key, batch_size, -1)
+    r.close()
 
     logger.info("Flushed %d AI usage records to database", len(items))
     return {"flushed": len(items)}

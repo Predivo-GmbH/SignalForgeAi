@@ -154,6 +154,6 @@ class CPPIManager:
                 "multiplier": state.multiplier,
                 "max_drawdown_pct": state.max_drawdown_pct,
             })
-            await redis_client.set(key, data)
+            await redis_client.set(key, data, ex=7 * 86400)  # 7 day TTL
         except Exception as e:
             logger.warning("Failed to save CPPI state to Redis: %s", e)

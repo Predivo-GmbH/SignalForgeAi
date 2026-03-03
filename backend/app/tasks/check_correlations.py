@@ -12,7 +12,11 @@ def check_correlations(self):
     """For each user with 2+ open positions, compute correlation matrix."""
     import asyncio
 
-    asyncio.run(_check_correlations_async())
+    try:
+        asyncio.run(_check_correlations_async())
+    except (ConnectionError, OSError, TimeoutError) as exc:
+        logger.warning("check_correlations transient error: %s — retrying", exc)
+        self.retry(exc=exc, countdown=60)
 
 
 async def _check_correlations_async():

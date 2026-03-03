@@ -19,7 +19,7 @@ class Order(Base, UUIDMixin):
         Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True
     )
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
-    direction: Mapped[str] = mapped_column(String(4), nullable=False)  # BUY / SELL
+    direction: Mapped[str] = mapped_column(String(10), nullable=False)  # BUY / SELL
     order_type: Mapped[str] = mapped_column(
         String(10), nullable=False
     )  # market / limit / stop

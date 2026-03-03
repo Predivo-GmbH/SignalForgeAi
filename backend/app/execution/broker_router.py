@@ -68,11 +68,11 @@ class BrokerRouter:
 
     async def cancel_order(self, symbol: str, broker_order_id: str) -> bool:
         adapter = self._resolve(symbol)
-        return await adapter.cancel_order(broker_order_id)
+        return await adapter.cancel_order(broker_order_id, symbol=symbol)
 
     async def get_order_status(self, symbol: str, broker_order_id: str) -> BrokerOrder:
         adapter = self._resolve(symbol)
-        return await adapter.get_order_status(broker_order_id)
+        return await adapter.get_order_status(broker_order_id, symbol=symbol)
 
     async def get_positions(self) -> list[BrokerPosition]:
         positions: list[BrokerPosition] = []

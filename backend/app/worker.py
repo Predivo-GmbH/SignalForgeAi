@@ -70,10 +70,7 @@ celery_app.conf.beat_schedule = {
         "task": "manage_positions",
         "schedule": 60.0,
     },
-    "reconcile-broker-state-5m": {
-        "task": "reconcile_broker_state",
-        "schedule": 300.0,
-    },
+    # reconcile-broker-state: disabled (no-op until live broker sync is implemented)
     "send-daily-summary": {
         "task": "send_daily_summary",
         "schedule": crontab(hour=17, minute=0),

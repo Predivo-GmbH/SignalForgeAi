@@ -81,18 +81,22 @@ class PositionManagerDB:
         ]
         if user_id:
             filters.append(Position.user_id == uuid.UUID(user_id))
-        result = await db.execute(select(Position).where(*filters))
+        result = await db.execute(
+            select(Position).where(*filters).with_for_update()
+        )
         pos = result.scalar_one_or_none()
         if not pos:
             raise ValueError(f"No open position found with id {position_id}")
 
         # --- PnL ---
-        if pos.direction == "BUY":
-            pnl = (exit_price - pos.entry_price) * pos.quantity
+        if pos.entry_price and pos.entry_price > 0:
+            if pos.direction == "BUY":
+                pnl = (exit_price - pos.entry_price) * pos.quantity
+            else:
+                pnl = (pos.entry_price - exit_price) * pos.quantity
+            pnl = round(pnl, 2)
         else:
-            pnl = (pos.entry_price - exit_price) * pos.quantity
-
-        pnl = round(pnl, 2)
+            pnl = 0.0  # Cannot calculate PnL without a valid entry price
 
         # --- Close the position ---
         pos.is_open = False
@@ -100,13 +104,19 @@ class PositionManagerDB:
         pos.current_price = exit_price
         pos.unrealized_pnl = 0.0
 
+        # --- Resolve signal_id from Order linked to this position ---
+        signal_id = None
+        if pos.order_id:
+            from app.models.order import Order
+            order_result = await db.execute(
+                select(Order.signal_id).where(Order.id == pos.order_id)
+            )
+            signal_id = order_result.scalar_one_or_none()
+
         # --- Create a Trade record ---
-        # Trade.position_size maps to the position's quantity.
-        # confluence_score defaults to 0 when created from the position manager
-        # (it is not available at close-time; the signal pipeline sets it).
         trade = Trade(
             user_id=pos.user_id,
-            signal_id=None,
+            signal_id=signal_id,
             symbol=pos.symbol,
             direction=pos.direction,
             entry_price=pos.entry_price,
