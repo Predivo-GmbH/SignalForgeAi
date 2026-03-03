@@ -90,7 +90,7 @@ export function EquityCurve({ points }: EquityCurveProps) {
     if (!seriesRef.current || !points.length) return;
 
     const data = points.map((p) => ({
-      time: p.date as Time,
+      time: p.date.slice(0, 10) as Time,
       value: p.equity,
     }));
 
