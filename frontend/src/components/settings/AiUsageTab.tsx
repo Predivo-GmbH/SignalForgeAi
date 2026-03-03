@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DollarSign,
   Activity,
   Zap,
   Clock,
   CreditCard,
+  Check,
   Loader2,
   RefreshCw,
   Cloud,
   Database,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/cn";
 import { useAiUsage, useUpdateCredit } from "@/hooks/useAiUsage";
 import type {
@@ -263,7 +265,26 @@ function CreditSection({
 
 export function AiUsageTab() {
   const [days, setDays] = useState(30);
-  const { data, isLoading, isFetching, isError, error, refetch } = useAiUsage(days);
+  const { data, isLoading, isError, error } = useAiUsage(days);
+  const queryClient = useQueryClient();
+  const [refreshState, setRefreshState] = useState<"idle" | "loading" | "done">("idle");
+
+  const handleRefresh = useCallback(async () => {
+    if (refreshState === "loading") return;
+    setRefreshState("loading");
+    const start = Date.now();
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["ai-usage"] });
+    } finally {
+      // Guarantee spinner is visible for at least 600ms
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(600 - elapsed, 0);
+      setTimeout(() => {
+        setRefreshState("done");
+        setTimeout(() => setRefreshState("idle"), 1200);
+      }, remaining);
+    }
+  }, [queryClient, refreshState]);
 
   if (isLoading) {
     return (
@@ -327,20 +348,24 @@ export function AiUsageTab() {
             ))}
           </div>
           <button
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={handleRefresh}
+            disabled={refreshState === "loading"}
             className={cn(
-              "p-1.5 rounded-lg hover:bg-(--color-bg-elevated) transition-colors",
-              isFetching && "opacity-50 cursor-not-allowed",
+              "p-2 rounded-lg hover:bg-(--color-bg-elevated) transition-colors",
+              refreshState === "loading" && "opacity-50 cursor-not-allowed",
             )}
             title="Refresh"
           >
-            <RefreshCw
-              className={cn(
-                "w-4 h-4 text-(--color-text-secondary)",
-                isFetching && "animate-spin",
-              )}
-            />
+            {refreshState === "done" ? (
+              <Check className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <RefreshCw
+                className={cn(
+                  "w-4 h-4 text-(--color-text-secondary)",
+                  refreshState === "loading" && "animate-spin",
+                )}
+              />
+            )}
           </button>
         </div>
       </div>
