@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.jwt import create_access_token, create_refresh_token, decode_token
-from app.auth.schemas import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
+from app.auth.dependencies import get_current_user
+from app.auth.schemas import LoginRequest, ProfileResponse, RefreshRequest, RegisterRequest, TokenResponse
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.security import hash_password, verify_password
@@ -67,4 +68,25 @@ async def refresh(body: RefreshRequest, request: Request, db: AsyncSession = Dep
     return TokenResponse(
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id),
+    )
+
+
+@router.get("/me", response_model=ProfileResponse)
+async def get_profile(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the authenticated user's profile."""
+    result = await db.execute(
+        select(User).where(User.id == uuid.UUID(user_id))
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return ProfileResponse(
+        id=str(user.id),
+        email=user.email,
+        is_active=user.is_active,
+        created_at=user.created_at.isoformat() if user.created_at else "",
+        updated_at=user.updated_at.isoformat() if user.updated_at else None,
     )

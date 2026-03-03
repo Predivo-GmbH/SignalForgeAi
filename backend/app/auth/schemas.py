@@ -19,3 +19,11 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class ProfileResponse(BaseModel):
+    id: str
+    email: str
+    is_active: bool
+    created_at: str
+    updated_at: str | None = None

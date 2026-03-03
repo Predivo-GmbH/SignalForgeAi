@@ -11,6 +11,10 @@ import {
   Bell,
   Save,
   DollarSign,
+  User,
+  Mail,
+  Calendar,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -22,8 +26,10 @@ import { useAlertConfig, useUpdateAlertConfig } from "@/hooks/useAlertConfig";
 import type { ConnectBrokerRequest } from "@/hooks/useBrokerConnections";
 import type { AlertConfig } from "@/hooks/useAlertConfig";
 import { AiUsageTab } from "@/components/settings/AiUsageTab";
+import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/lib/auth";
 
-type Tab = "connections" | "alerts" | "ai-usage";
+type Tab = "profile" | "connections" | "alerts" | "ai-usage";
 
 /* ---- Broker metadata ---- */
 
@@ -482,10 +488,123 @@ function AlertsTab() {
   );
 }
 
+/* ---- Profile Tab ---- */
+
+function ProfileTab() {
+  const { data: profile, isLoading } = useProfile();
+  const logout = useAuth((s) => s.logout);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
+      </div>
+    );
+  }
+
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "—";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-(--color-text-primary)">
+          Profile
+        </h2>
+        <p className="text-sm text-(--color-text-secondary) mt-0.5">
+          Your account information
+        </p>
+      </div>
+
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+        {/* Avatar + email header */}
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-(--color-accent)/15 flex items-center justify-center">
+            <span className="text-xl font-bold text-(--color-accent)">
+              {profile?.email?.charAt(0).toUpperCase() ?? "?"}
+            </span>
+          </div>
+          <div>
+            <p className="text-base font-semibold text-(--color-text-primary)">
+              {profile?.email ?? "—"}
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-(--color-positive)" />
+              <span className="text-xs text-(--color-positive)">Active account</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-(--color-border)" />
+
+        {/* Info rows */}
+        <div className="grid gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+              <Mail className="w-4 h-4 text-(--color-text-secondary)" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+                Email
+              </p>
+              <p className="text-sm text-(--color-text-primary)">
+                {profile?.email ?? "—"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-(--color-text-secondary)" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+                Member since
+              </p>
+              <p className="text-sm text-(--color-text-primary)">
+                {memberSince}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
+              <Shield className="w-4 h-4 text-(--color-text-secondary)" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+                Account ID
+              </p>
+              <p className="text-sm font-mono text-(--color-text-primary)">
+                {profile?.id ?? "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-(--color-border)" />
+
+        {/* Logout */}
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 text-sm font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors"
+        >
+          Log out
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Main Page ---- */
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("connections");
+  const [activeTab, setActiveTab] = useState<Tab>("profile");
 
   return (
     <div className="p-6 space-y-6 max-w-[900px] mx-auto">
@@ -501,6 +620,18 @@ export function SettingsPage() {
       {/* Tab bar */}
       <div className="border-b border-(--color-border)">
         <div className="flex gap-6">
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={cn(
+              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              activeTab === "profile"
+                ? "border-(--color-accent) text-(--color-accent)"
+                : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
+            )}
+          >
+            <User className="w-3.5 h-3.5" />
+            Profile
+          </button>
           <button
             onClick={() => setActiveTab("connections")}
             className={cn(
@@ -541,6 +672,7 @@ export function SettingsPage() {
       </div>
 
       {/* Tab content */}
+      {activeTab === "profile" && <ProfileTab />}
       {activeTab === "connections" && <ConnectionsTab />}
       {activeTab === "alerts" && <AlertsTab />}
       {activeTab === "ai-usage" && <AiUsageTab />}
