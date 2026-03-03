@@ -39,7 +39,7 @@ class SignalResponse(BaseModel):
     position_size: float | None = None
     confluence_score: int
     regime: str
-    triggers: dict | None
+    triggers: list[str] | None
     status: str
     strategy_id: str | None = None
     created_at: str
