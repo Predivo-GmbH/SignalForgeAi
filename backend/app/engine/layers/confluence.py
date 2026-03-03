@@ -148,14 +148,19 @@ class ConfluenceScorer:
     def _check_rsi_confirmation(
         self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
     ) -> tuple[bool, dict]:
-        """RSI confirms: oversold (<40) in uptrend or overbought (>60) in downtrend."""
+        """RSI confirms trend momentum (not extreme against direction).
+
+        Bullish: RSI 35-65 (not overbought, room to run).
+        Bearish: RSI 35-65 (not oversold, room to fall).
+        This avoids the contradiction of requiring oversold in an uptrend.
+        """
         rsi = compute_rsi(candles["close"], period=14)
         rsi_val = float(rsi.dropna().iloc[-1]) if len(rsi.dropna()) > 0 else 50.0
 
         if trend.direction == Trend.BULLISH:
-            hit = rsi_val < 40  # Oversold in uptrend = buying opportunity
+            hit = 35 <= rsi_val <= 65  # Healthy momentum, not overextended
         elif trend.direction == Trend.BEARISH:
-            hit = rsi_val > 60  # Overbought in downtrend = selling opportunity
+            hit = 35 <= rsi_val <= 65  # Room to fall, not already oversold
         else:
             hit = False
 
@@ -164,22 +169,26 @@ class ConfluenceScorer:
     def _check_macd_momentum(
         self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
     ) -> tuple[bool, dict]:
-        """MACD histogram aligned with trend direction."""
+        """MACD confirms momentum: histogram aligned OR rising in trend direction."""
         macd_line, signal_line, histogram = compute_macd(candles["close"])
         hist_clean = histogram.dropna()
-        if len(hist_clean) == 0:
-            return False, {"histogram": 0}
+        if len(hist_clean) < 2:
+            return False, {"histogram": 0, "rising": False}
 
         hist_val = float(hist_clean.iloc[-1])
+        hist_prev = float(hist_clean.iloc[-2])
+        rising = hist_val > hist_prev
 
         if trend.direction == Trend.BULLISH:
-            hit = hist_val > 0
+            # Positive histogram OR rising histogram (momentum recovering)
+            hit = hist_val > 0 or rising
         elif trend.direction == Trend.BEARISH:
-            hit = hist_val < 0
+            # Negative histogram OR falling histogram (momentum increasing)
+            hit = hist_val < 0 or not rising
         else:
             hit = False
 
-        return hit, {"histogram": hist_val}
+        return hit, {"histogram": hist_val, "rising": rising}
 
     def _check_candlestick_pattern(
         self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
@@ -232,7 +241,7 @@ class ConfluenceScorer:
     def _check_stochastic_cross(
         self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
     ) -> tuple[bool, dict]:
-        """Stochastic %K/%D cross in trend direction."""
+        """Stochastic %K/%D cross or momentum in trend direction."""
         slow_k, slow_d = compute_stochastic(candles)
         k_clean = slow_k.dropna()
         d_clean = slow_d.dropna()
@@ -245,15 +254,19 @@ class ConfluenceScorer:
         k_prev = float(k_clean.iloc[-2])
         d_prev = float(d_clean.iloc[-2])
 
-        # Bullish cross: %K crosses above %D in oversold territory
-        bullish_cross = k_prev < d_prev and k_now > d_now and k_now < 30
-        # Bearish cross: %K crosses below %D in overbought territory
-        bearish_cross = k_prev > d_prev and k_now < d_now and k_now > 70
+        # Bullish: %K crosses above %D, or %K rising in lower half
+        bullish = (k_prev < d_prev and k_now > d_now and k_now < 50) or (
+            k_now > k_prev and k_now < 50
+        )
+        # Bearish: %K crosses below %D, or %K falling in upper half
+        bearish = (k_prev > d_prev and k_now < d_now and k_now > 50) or (
+            k_now < k_prev and k_now > 50
+        )
 
         if trend.direction == Trend.BULLISH:
-            hit = bullish_cross
+            hit = bullish
         elif trend.direction == Trend.BEARISH:
-            hit = bearish_cross
+            hit = bearish
         else:
             hit = False
 
@@ -342,7 +355,7 @@ class ConfluenceScorer:
     def _check_williams_r_extreme(
         self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
     ) -> tuple[bool, dict]:
-        """Williams %R at extreme levels confirming entry direction."""
+        """Williams %R confirms trend momentum (not overextended against direction)."""
         wr = compute_williams_r(candles)
         wr_clean = wr.dropna()
         if len(wr_clean) == 0:
@@ -351,9 +364,9 @@ class ConfluenceScorer:
         wr_val = float(wr_clean.iloc[-1])
 
         if trend.direction == Trend.BULLISH:
-            hit = wr_val < -80  # Oversold territory = buying opportunity
+            hit = wr_val < -30  # Not overbought, has room to run
         elif trend.direction == Trend.BEARISH:
-            hit = wr_val > -20  # Overbought territory = selling opportunity
+            hit = wr_val > -70  # Not oversold, has room to fall
         else:
             hit = False
 
@@ -362,7 +375,7 @@ class ConfluenceScorer:
     def _check_cci_momentum(
         self, zone: EntryZone, candles: pd.DataFrame, trend: TrendResult
     ) -> tuple[bool, dict]:
-        """CCI confirms momentum direction. >100 = strong up, <-100 = strong down."""
+        """CCI confirms momentum direction. >0 = bullish momentum, <0 = bearish."""
         cci = compute_cci(candles)
         cci_clean = cci.dropna()
         if len(cci_clean) == 0:
@@ -371,9 +384,9 @@ class ConfluenceScorer:
         cci_val = float(cci_clean.iloc[-1])
 
         if trend.direction == Trend.BULLISH:
-            hit = cci_val > 100  # Strong upward momentum
+            hit = cci_val > -50  # Not deep negative = momentum supportive
         elif trend.direction == Trend.BEARISH:
-            hit = cci_val < -100  # Strong downward momentum
+            hit = cci_val < 50  # Not deep positive = momentum supportive
         else:
             hit = False
 

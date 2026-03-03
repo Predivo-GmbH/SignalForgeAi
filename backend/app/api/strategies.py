@@ -434,9 +434,13 @@ async def delete_strategy(
 ):
     """Delete a strategy. Active strategies are deactivated first.
 
-    Any signals referencing this strategy have their strategy_id set to NULL
+    All dependent records have their strategy_id set to NULL
     so they are preserved as historical records.
     """
+    from sqlalchemy import update
+
+    from app.models.ai_insight import AIInsight, FeedbackRule
+    from app.models.position import Position
     from app.models.signal import Signal as SignalModel
 
     strategy = await _get_user_strategy(strategy_id, user_id, db)
@@ -444,21 +448,22 @@ async def delete_strategy(
         strategy.is_active = False
         await db.flush()
 
-    # Detach signals so FK constraint doesn't block deletion
-    from sqlalchemy import update
-    await db.execute(
-        update(SignalModel)
-        .where(SignalModel.strategy_id == strategy_id)
-        .values(strategy_id=None)
-    )
-    await db.flush()
+    # Detach all dependent tables so FK constraints don't block deletion
+    for model, col in [
+        (SignalModel, SignalModel.strategy_id),
+        (FeedbackRule, FeedbackRule.strategy_id),
+        (AIInsight, AIInsight.strategy_id),
+        (Position, Position.strategy_id),
+    ]:
+        await db.execute(
+            update(model).where(col == strategy_id).values(strategy_id=None)
+        )
 
-    # Detach feedback rules so FK constraint doesn't block deletion
-    from app.models.ai_insight import FeedbackRule
+    # Detach backtest results (no SQLAlchemy model, use raw SQL)
+    from sqlalchemy import text
     await db.execute(
-        update(FeedbackRule)
-        .where(FeedbackRule.strategy_id == strategy.id)
-        .values(strategy_id=None)
+        text("UPDATE backtest_results SET strategy_id = NULL WHERE strategy_id = :sid"),
+        {"sid": str(strategy_id)},
     )
     await db.flush()
 
