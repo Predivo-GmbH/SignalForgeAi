@@ -69,6 +69,7 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
     from app.data.storage import CandleStorage
     from app.engine.layers.feedback_filter import FeedbackFilter
     from app.engine.layers.risk import RiskConfig
+    from app.engine.layers.trend import Trend, TrendFilter
     from app.engine.pipeline import SignalPipeline
     from app.execution.position_manager import PositionManagerDB
     from app.models.signal import Signal as SignalModel
@@ -213,6 +214,44 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             symbol, timeframe, active_strategy.name,
                         )
                         continue
+
+                    # --- Multi-timeframe alignment gate ---
+                    # Before spending AI credits, verify higher TFs don't contradict.
+                    # Hierarchy: 1h → 4h → 1d.  Only block on explicit conflict.
+                    HIGHER_TF = {"1h": "4h", "4h": "1d"}
+                    higher_tf = HIGHER_TF.get(timeframe)
+                    if higher_tf:
+                        htf_candles = await CandleStorage.load_candles_db(
+                            db, symbol, higher_tf, limit=300,
+                        )
+                        if len(htf_candles) >= 200:
+                            htf_df = pd.DataFrame(htf_candles)
+                            htf_trend = TrendFilter(
+                                slope_threshold=cfg.get("ema_slope_threshold", 0.001),
+                            ).evaluate(htf_df)
+
+                            if (
+                                signal.action == "BUY"
+                                and htf_trend.direction == Trend.BEARISH
+                            ):
+                                logger.info(
+                                    "MTF SKIP: BUY %s %s blocked — %s trend "
+                                    "is BEARISH (strategy=%s)",
+                                    symbol, timeframe, higher_tf,
+                                    active_strategy.name,
+                                )
+                                continue
+                            if (
+                                signal.action == "SELL"
+                                and htf_trend.direction == Trend.BULLISH
+                            ):
+                                logger.info(
+                                    "MTF SKIP: SELL %s %s blocked — %s trend "
+                                    "is BULLISH (strategy=%s)",
+                                    symbol, timeframe, higher_tf,
+                                    active_strategy.name,
+                                )
+                                continue
 
                     entry_price = float(df["close"].iloc[-1])
 
