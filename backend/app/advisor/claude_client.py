@@ -120,13 +120,16 @@ class ClaudeClient:
 
             r = redis.from_url(settings.redis_url)
 
-            # Credit hard stop
-            if settings.ai_prepaid_credit_usd > 0:
+            # Credit hard stop — check Redis value first, then config fallback
+            prepaid = float(r.get("ai_prepaid_credit") or 0)
+            if prepaid <= 0:
+                prepaid = settings.ai_prepaid_credit_usd
+            if prepaid > 0:
                 cumulative = float(r.get("ai_cumulative_cost") or 0)
-                if cumulative >= settings.ai_prepaid_credit_usd:
+                if cumulative >= prepaid:
                     logger.warning(
                         "AI prepaid credit exhausted ($%.4f / $%.2f)",
-                        cumulative, settings.ai_prepaid_credit_usd,
+                        cumulative, prepaid,
                     )
                     return False
 
@@ -149,13 +152,16 @@ class ClaudeClient:
         try:
             from app.core.redis_client import redis_client as aredis
 
-            # Credit hard stop
-            if settings.ai_prepaid_credit_usd > 0:
+            # Credit hard stop — check Redis value first, then config fallback
+            prepaid = float(await aredis.get("ai_prepaid_credit") or 0)
+            if prepaid <= 0:
+                prepaid = settings.ai_prepaid_credit_usd
+            if prepaid > 0:
                 cumulative = float(await aredis.get("ai_cumulative_cost") or 0)
-                if cumulative >= settings.ai_prepaid_credit_usd:
+                if cumulative >= prepaid:
                     logger.warning(
                         "AI prepaid credit exhausted ($%.4f / $%.2f)",
-                        cumulative, settings.ai_prepaid_credit_usd,
+                        cumulative, prepaid,
                     )
                     return False
 

@@ -346,15 +346,10 @@ async def _query_local(
         for r in recent_rows
     ]
 
-    # Credit — for Anthropic source we use total from their API
-    # For local, use all-time local sum
+    # Credit — use Redis cumulative cost (tracks spending since last
+    # credit update, reset to 0 when credit is replenished).
     prepaid = await _get_prepaid_credit()
-    all_time_q = select(
-        func.coalesce(func.sum(AIInsight.cost_usd), 0.0),
-    )
-    all_time_spent = float(
-        (await db.execute(all_time_q)).scalar() or 0,
-    )
+    spent_since_update = await _get_cumulative_cost()
 
     return {
         "total_calls": total_calls,
@@ -368,8 +363,8 @@ async def _query_local(
         "recent_calls": recent_calls,
         "credit": CreditInfo(
             prepaid_usd=round(prepaid, 2),
-            spent_usd=round(all_time_spent, 6),
-            remaining_usd=round(max(prepaid - all_time_spent, 0), 2),
+            spent_usd=round(spent_since_update, 6),
+            remaining_usd=round(max(prepaid - spent_since_update, 0), 2),
         ),
     }
 
@@ -413,3 +408,20 @@ async def _get_prepaid_credit() -> float:
     from app.config import settings as _settings
 
     return _settings.ai_prepaid_credit_usd
+
+
+async def _get_cumulative_cost() -> float:
+    """Read cumulative cost since last credit update from Redis.
+
+    This counter is incremented on every AI API call and reset to 0
+    when the prepaid credit is replenished via PUT /ai-usage/credit.
+    """
+    try:
+        from app.core.redis_client import redis_client
+
+        val = await redis_client.get("ai_cumulative_cost")
+        if val is not None:
+            return float(val)
+    except Exception as e:
+        logger.debug("Redis read failed for cumulative cost: %s", e)
+    return 0.0

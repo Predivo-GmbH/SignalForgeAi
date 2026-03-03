@@ -263,7 +263,7 @@ function CreditSection({
 
 export function AiUsageTab() {
   const [days, setDays] = useState(30);
-  const { data, isLoading, isError, error, refetch } = useAiUsage(days);
+  const { data, isLoading, isFetching, isError, error, refetch } = useAiUsage(days);
 
   if (isLoading) {
     return (
@@ -328,10 +328,19 @@ export function AiUsageTab() {
           </div>
           <button
             onClick={() => refetch()}
-            className="p-1.5 rounded-lg hover:bg-(--color-bg-elevated) transition-colors"
+            disabled={isFetching}
+            className={cn(
+              "p-1.5 rounded-lg hover:bg-(--color-bg-elevated) transition-colors",
+              isFetching && "opacity-50 cursor-not-allowed",
+            )}
             title="Refresh"
           >
-            <RefreshCw className="w-4 h-4 text-(--color-text-secondary)" />
+            <RefreshCw
+              className={cn(
+                "w-4 h-4 text-(--color-text-secondary)",
+                isFetching && "animate-spin",
+              )}
+            />
           </button>
         </div>
       </div>
