@@ -5,7 +5,6 @@ is configured. Falls back to local ai_insights table otherwise.
 """
 
 import logging
-import uuid as _uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -107,7 +106,7 @@ async def get_ai_usage(
         anthropic_data = await _fetch_anthropic_data(days)
 
     # Always query local DB for per-feature breakdown + recent calls
-    local = await _query_local(db, days, user_id=_user_id)
+    local = await _query_local(db, days)
 
     if anthropic_data is not None:
         # Merge: Anthropic for costs, local for feature breakdown
@@ -237,11 +236,10 @@ def _build_response_from_anthropic(
 
 
 async def _query_local(
-    db: AsyncSession, days: int, *, user_id: str,
+    db: AsyncSession, days: int,
 ) -> dict:
-    """Query local ai_insights table for all data, filtered by user."""
+    """Query local ai_insights table for all deployment-wide AI usage."""
     cutoff = datetime.now(UTC) - timedelta(days=days)
-    uid = _uuid.UUID(user_id)
 
     # Summary
     summary_q = select(
@@ -249,7 +247,7 @@ async def _query_local(
         func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
         func.coalesce(func.avg(AIInsight.cost_usd), 0.0).label("avg_c"),
         func.coalesce(func.avg(AIInsight.latency_ms), 0.0).label("lat"),
-    ).where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
+    ).where(AIInsight.created_at >= cutoff)
     row = (await db.execute(summary_q)).one()
 
     total_calls = row.total_calls or 0
@@ -265,7 +263,7 @@ async def _query_local(
             func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
             func.coalesce(func.avg(AIInsight.latency_ms), 0.0).label("lat"),
         )
-        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
+        .where(AIInsight.created_at >= cutoff)
         .group_by(AIInsight.model_used)
         .order_by(func.sum(AIInsight.cost_usd).desc())
     )
@@ -290,7 +288,7 @@ async def _query_local(
             func.count(AIInsight.id).label("calls"),
             func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
         )
-        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
+        .where(AIInsight.created_at >= cutoff)
         .group_by(AIInsight.insight_type)
         .order_by(func.sum(AIInsight.cost_usd).desc())
     )
@@ -312,7 +310,7 @@ async def _query_local(
             func.coalesce(func.sum(AIInsight.cost_usd), 0.0).label("cost"),
             func.count(AIInsight.id).label("calls"),
         )
-        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
+        .where(AIInsight.created_at >= cutoff)
         .group_by(date_expr)
         .order_by(date_expr)
     )
@@ -329,7 +327,7 @@ async def _query_local(
     # Recent calls (last 20)
     recent_q = (
         select(AIInsight)
-        .where(AIInsight.created_at >= cutoff, AIInsight.user_id == uid)
+        .where(AIInsight.created_at >= cutoff)
         .order_by(AIInsight.created_at.desc())
         .limit(20)
     )
@@ -353,7 +351,7 @@ async def _query_local(
     prepaid = await _get_prepaid_credit()
     all_time_q = select(
         func.coalesce(func.sum(AIInsight.cost_usd), 0.0),
-    ).where(AIInsight.user_id == uid)
+    )
     all_time_spent = float(
         (await db.execute(all_time_q)).scalar() or 0,
     )
