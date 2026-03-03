@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 import time
 import uuid
 from datetime import UTC, datetime
@@ -13,6 +14,28 @@ from typing import Any
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Regex to strip markdown code fences (```json ... ``` or ``` ... ```)
+_CODE_FENCE_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?\s*```", re.DOTALL)
+
+
+def _extract_json(raw: str) -> dict:
+    """Parse JSON from raw text, stripping markdown code fences if present."""
+    text = raw.strip()
+    # Try direct parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Try extracting from code fences
+    m = _CODE_FENCE_RE.search(text)
+    if m:
+        return json.loads(m.group(1).strip())
+    # Try finding the first { ... } block
+    start = text.find("{")
+    if start >= 0:
+        return json.loads(text[start:])
+    raise json.JSONDecodeError("No JSON found in response", text, 0)
 
 
 class ModelTier(str, Enum):
@@ -279,7 +302,7 @@ class ClaudeClient:
             latency_ms = int((time.monotonic() - t0) * 1000)
 
             raw = message.content[0].text
-            result = json.loads(raw)
+            result = _extract_json(raw)
 
             if ttl > 0:
                 key = self._cache_key(tier, system_prompt, user_message)
@@ -346,7 +369,7 @@ class ClaudeClient:
             latency_ms = int((time.monotonic() - t0) * 1000)
 
             raw = message.content[0].text
-            result = json.loads(raw)
+            result = _extract_json(raw)
 
             if ttl > 0:
                 key = self._cache_key(tier, system_prompt, user_message)

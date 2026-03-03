@@ -152,7 +152,7 @@ class InvestmentPlanner:
             ModelTier.DEEP,
             PLANNER_SYSTEM_PROMPT,
             _build_advisor_user_message(scored_cryptos, investment_amount, market_profile),
-            max_tokens=1500,
+            max_tokens=2500,
             cache_ttl=0,
             insight_type="investment_plan",
         )
