@@ -17,6 +17,11 @@ export interface Signal {
   position_size: number | null;
   status: string;
   created_at: string;
+  ai_quality_score: number | null;
+  ai_reasoning: string | null;
+  ai_recommendation: string | null;
+  mtf_confidence: number | null;
+  mtf_alignment: string | null;
 }
 
 interface SignalListResponse {

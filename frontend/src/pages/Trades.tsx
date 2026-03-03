@@ -210,7 +210,7 @@ export function TradesPage() {
             />
             <StatCard
               label="Profit Factor"
-              value={stats?.profit_factor?.toFixed(2) ?? "0.00"}
+              value={stats?.profit_factor != null ? (Number.isFinite(stats.profit_factor) ? stats.profit_factor.toFixed(2) : "\u221E") : "0.00"}
               icon={TrendingUp}
               valueColor={
                 stats && stats.profit_factor >= 1

@@ -220,7 +220,7 @@ function StrategyCard({
               <div className="flex items-center gap-1">
                 <Target className="w-3 h-3 text-(--color-accent)" />
                 <p className="text-sm font-semibold font-mono text-(--color-text-primary)">
-                  {(metrics.win_rate * 100).toFixed(0)}%
+                  {metrics.win_rate.toFixed(0)}%
                 </p>
               </div>
             </div>
@@ -247,7 +247,7 @@ function StrategyCard({
               <span className="text-(--color-text-secondary)">
                 Profit Factor:{" "}
                 <span className="font-mono font-semibold text-(--color-text-primary)">
-                  {metrics.profit_factor.toFixed(2)}
+                  {Number.isFinite(metrics.profit_factor) ? metrics.profit_factor.toFixed(2) : "\u221E"}
                 </span>
               </span>
             )}

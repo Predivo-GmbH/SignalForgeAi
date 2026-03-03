@@ -3,6 +3,7 @@ import {
   createChart,
   CandlestickSeries,
   type IChartApi,
+  type ISeriesApi,
   type CandlestickData,
   type Time,
   ColorType,
@@ -35,11 +36,13 @@ interface CandleResponse {
 export function PriceChart() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const [symbol, setSymbol] = useState(SYMBOLS[0]);
   const [timeframe, setTimeframe] = useState<(typeof TIMEFRAMES)[number]>("1h");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Chart creation — runs once on mount
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -76,8 +79,31 @@ export function PriceChart() {
       wickUpColor: "#00D68F",
       wickDownColor: "#FF4D6A",
     });
+    seriesRef.current = series;
 
-    // Fetch real candle data from the API
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        chart.applyOptions({ width, height });
+      }
+    });
+    observer.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+    };
+  }, []);
+
+  // Data fetching — runs when symbol or timeframe changes
+  useEffect(() => {
+    const series = seriesRef.current;
+    const chart = chartRef.current;
+    if (!series || !chart) return;
+
+    let cancelled = false;
     const urlSymbol = symbol.replace("/", "-");
     setLoading(true);
     setError(null);
@@ -85,6 +111,7 @@ export function PriceChart() {
     api
       .get<CandleResponse>(`/market/candles/${urlSymbol}/${timeframe}?limit=500`)
       .then((data) => {
+        if (cancelled) return;
         if (data.candles.length === 0) {
           setError("No candle data available");
           return;
@@ -100,24 +127,14 @@ export function PriceChart() {
         chart.timeScale().fitContent();
       })
       .catch((err) => {
-        setError(err.message || "Failed to load candles");
+        if (!cancelled) setError(err.message || "Failed to load candles");
       })
       .finally(() => {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       });
 
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        chart.applyOptions({ width, height });
-      }
-    });
-    observer.observe(containerRef.current);
-
     return () => {
-      observer.disconnect();
-      chart.remove();
-      chartRef.current = null;
+      cancelled = true;
     };
   }, [symbol, timeframe]);
 

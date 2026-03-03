@@ -7,13 +7,20 @@ export interface Position {
   direction: string;
   entry_price: number;
   quantity: number;
-  stop_loss: number;
-  take_profit: number;
+  stop_loss: number | null;
+  take_profit: number | null;
   is_open: boolean;
-  pnl: number | null;
-  exit_price: number | null;
-  exit_reason: string | null;
-  order_id: string;
+  unrealized_pnl: number | null;
+  current_price: number | null;
+  opened_at: string | null;
+  closed_at: string | null;
+  broker: string;
+  strategy_id: string | null;
+  order_id: string | null;
+  bracket_status: string | null;
+  break_even_applied: boolean;
+  trailing_activated: boolean;
+  original_stop_loss: number | null;
 }
 
 export interface AccountState {
@@ -27,6 +34,7 @@ export function usePositions() {
   return useQuery({
     queryKey: ["positions"],
     queryFn: () => api.get<Position[]>("/positions"),
+    refetchInterval: 15_000,
   });
 }
 

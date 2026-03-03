@@ -269,7 +269,7 @@ export function StrategyDetailPage() {
                 "text-sm font-semibold font-mono",
                 stats.profit_factor >= 1 ? "text-(--color-positive)" : "text-(--color-negative)",
               )}>
-                {stats.profit_factor.toFixed(2)}
+                {Number.isFinite(stats.profit_factor) ? stats.profit_factor.toFixed(2) : "\u221E"}
               </p>
             </div>
           </div>
