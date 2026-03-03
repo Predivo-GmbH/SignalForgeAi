@@ -89,9 +89,15 @@ export function EquityCurve({ points }: EquityCurveProps) {
   useEffect(() => {
     if (!seriesRef.current || !points.length) return;
 
-    const data = points.map((p) => ({
-      time: p.date.slice(0, 10) as Time,
-      value: p.equity,
+    // Deduplicate by date (keep last point per day) since lightweight-charts
+    // requires unique, ascending time values and the API returns full datetimes.
+    const byDate = new Map<string, number>();
+    for (const p of points) {
+      byDate.set(p.date.slice(0, 10), p.equity);
+    }
+    const data = Array.from(byDate, ([time, value]) => ({
+      time: time as Time,
+      value,
     }));
 
     seriesRef.current.setData(data);
