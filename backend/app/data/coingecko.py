@@ -20,6 +20,80 @@ _coin_map: dict[str, str] = {}
 _coin_map_ts: float = 0
 _CACHE_TTL = 3600 * 6  # 6 hours
 
+# Manual overrides for top coins whose symbols collide with shorter CoinGecko IDs.
+# Without these, e.g. "BTC" might resolve to a lesser-known coin instead of "bitcoin".
+_SYMBOL_OVERRIDES: dict[str, str] = {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "BNB": "binancecoin",
+    "SOL": "solana",
+    "XRP": "ripple",
+    "ADA": "cardano",
+    "DOGE": "dogecoin",
+    "AVAX": "avalanche-2",
+    "DOT": "polkadot",
+    "MATIC": "matic-network",
+    "POL": "matic-network",
+    "LINK": "chainlink",
+    "SHIB": "shiba-inu",
+    "LTC": "litecoin",
+    "UNI": "uniswap",
+    "ATOM": "cosmos",
+    "XLM": "stellar",
+    "FIL": "filecoin",
+    "NEAR": "near",
+    "APT": "aptos",
+    "ARB": "arbitrum",
+    "OP": "optimism",
+    "TAO": "bittensor",
+    "RENDER": "render-token",
+    "FET": "fetch-ai",
+    "INJ": "injective-protocol",
+    "SUI": "sui",
+    "SEI": "sei-network",
+    "TIA": "celestia",
+    "PEPE": "pepe",
+    "WIF": "dogwifcoin",
+    "BONK": "bonk",
+    "FLOKI": "floki",
+    "CRO": "crypto-com-chain",
+    "ALGO": "algorand",
+    "VET": "vechain",
+    "HBAR": "hedera-hashgraph",
+    "ICP": "internet-computer",
+    "GRT": "the-graph",
+    "SAND": "the-sandbox",
+    "MANA": "decentraland",
+    "AAVE": "aave",
+    "MKR": "maker",
+    "SNX": "havven",
+    "COMP": "compound-governance-token",
+    "CRV": "curve-dao-token",
+    "LDO": "lido-dao",
+    "RPL": "rocket-pool",
+    "IMX": "immutable-x",
+    "RNDR": "render-token",
+    "FTM": "fantom",
+    "RUNE": "thorchain",
+    "EGLD": "elrond-erd-2",
+    "THETA": "theta-token",
+    "AXS": "axie-infinity",
+    "GALA": "gala",
+    "ENS": "ethereum-name-service",
+    "CAKE": "pancakeswap-token",
+    "1INCH": "1inch",
+    "JASMY": "jasmycoin",
+    "TRX": "tron",
+    "TON": "the-open-network",
+    "KAS": "kaspa",
+    "STX": "blockstack",
+    "PENDLE": "pendle",
+    "JUP": "jupiter-exchange-solana",
+    "W": "wormhole",
+    "ENA": "ethena",
+    "STRK": "starknet",
+}
+
 
 async def _ensure_coin_map() -> dict[str, str]:
     """Fetch and cache the CoinGecko coins list (symbol → id)."""
@@ -42,6 +116,9 @@ async def _ensure_coin_map() -> dict[str, str]:
             # primary/popular coin, e.g. "bitcoin" over "bitcoin-wrapped")
             if sym not in mapping or len(cg_id) < len(mapping[sym]):
                 mapping[sym] = cg_id
+
+        # Apply manual overrides for well-known coins
+        mapping.update(_SYMBOL_OVERRIDES)
 
         _coin_map = mapping
         _coin_map_ts = time.time()

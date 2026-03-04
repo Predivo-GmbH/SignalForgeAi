@@ -899,16 +899,19 @@ function combineHoldings(holdings: HoldingItem[], totalValue: number | null): Co
     if (totalValue && totalValue > 0) {
       c.allocPct = (c.totalValue / totalValue) * 100;
     }
-    // PnL from weighted average cost
+    // PnL from weighted average cost (no cost basis → treat today's price as purchase price → PNL = 0)
     const withCost = c.sources.filter((s) => s.avgPrice != null && s.avgPrice! > 0);
     if (withCost.length > 0) {
       const totalCostQty = withCost.reduce((sum, s) => sum + s.qty, 0);
       const weightedCost = withCost.reduce((sum, s) => sum + s.qty * (s.avgPrice ?? 0), 0);
       c.avgCost = totalCostQty > 0 ? weightedCost / totalCostQty : null;
-      if (c.avgCost != null && c.currentPrice != null) {
-        c.pnlPct = ((c.currentPrice - c.avgCost) / c.avgCost) * 100;
-        c.pnlUsd = (c.currentPrice - c.avgCost) * c.totalQty;
-      }
+    } else if (c.currentPrice != null) {
+      // No purchase price recorded — use current price as cost basis (purchased today)
+      c.avgCost = c.currentPrice;
+    }
+    if (c.avgCost != null && c.currentPrice != null && c.avgCost > 0) {
+      c.pnlPct = ((c.currentPrice - c.avgCost) / c.avgCost) * 100;
+      c.pnlUsd = (c.currentPrice - c.avgCost) * c.totalQty;
     }
   }
   return result;
@@ -1414,15 +1417,15 @@ export function HoldingsCard() {
                         {c.marketCapRank ?? "—"}
                       </td>
 
-                      {/* Coin: icon + name + symbol */}
+                      {/* Coin: icon + name + symbol inline */}
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-2.5">
                           <CoinIcon symbol={c.symbol} imageUrl={c.imageUrl} size={28} />
-                          <div className="min-w-0">
-                            <span className="font-semibold text-(--color-text-primary) text-sm block truncate">
+                          <div className="min-w-0 flex items-baseline gap-1.5">
+                            <span className="font-semibold text-(--color-text-primary) text-sm truncate">
                               {c.name}
                             </span>
-                            <span className="text-[11px] text-(--color-text-secondary) font-mono">
+                            <span className="text-[11px] text-(--color-text-secondary) font-mono shrink-0">
                               {c.symbol}
                             </span>
                           </div>
