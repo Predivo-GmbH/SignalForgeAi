@@ -44,6 +44,7 @@ celery_app.conf.include = [
     "app.tasks.feedback_synthesis",
     "app.tasks.pattern_analysis",
     "app.tasks.flush_ai_usage",
+    "app.tasks.simulation_snapshot",
 ]
 
 # ---------------------------------------------------------------------------
@@ -98,5 +99,9 @@ celery_app.conf.beat_schedule = {
     "flush-ai-usage-1m": {
         "task": "flush_ai_usage",
         "schedule": 60.0,
+    },
+    "snapshot-simulation-1h": {
+        "task": "snapshot_simulation",
+        "schedule": 3600.0,
     },
 }

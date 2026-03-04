@@ -21,6 +21,7 @@ from app.api.holdings import router as holdings_router
 from app.api.market import router as market_router
 from app.api.positions import router as positions_router
 from app.api.regime import router as regime_router
+from app.api.simulation import router as simulation_router
 from app.api.signals import router as signals_router
 from app.api.strategies import router as strategies_router
 from app.api.trades import router as trades_router
@@ -141,6 +142,7 @@ app.include_router(advisor_router, prefix="/api")
 app.include_router(ai_usage_router, prefix="/api")
 app.include_router(holdings_router, prefix="/api")
 app.include_router(regime_router, prefix="/api")
+app.include_router(simulation_router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------

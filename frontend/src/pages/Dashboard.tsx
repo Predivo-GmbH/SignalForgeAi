@@ -10,6 +10,7 @@ import { RecentTradesCard } from "@/components/portfolio/RecentTradesCard";
 import { PerformanceSummary } from "@/components/portfolio/PerformanceSummary";
 import { PositionsTable } from "@/components/dashboard/PositionsTable";
 import { RegimeWidget } from "@/components/dashboard/RegimeWidget";
+import { SimulationCard } from "@/components/dashboard/SimulationCard";
 
 export function PortfolioPage() {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ export function PortfolioPage() {
         <PortfolioEquitySection />
         <div className="flex flex-col gap-4">
           <RegimeWidget />
+          <SimulationCard />
           <ActiveStrategyCard />
           <RecentTradesCard />
         </div>
