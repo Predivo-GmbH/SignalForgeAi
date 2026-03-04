@@ -1,0 +1,2676 @@
+{
+  "BTC/USD": {
+    "period": "2021-01-01 to 2026-03-04",
+    "bars": 11330,
+    "start_price": 29352.385,
+    "end_price": 68367.83,
+    "net_return_pct": 132.92086827015933,
+    "total_absolute_movement_usd": 4834434.31,
+    "swing_opportunity_ratio": 123.91078225559131,
+    "avg_quarterly_sor": 48.57697480856853,
+    "swings_10pct": 112,
+    "total_swing_magnitude_10pct": 2652.923072839961,
+    "swings_20pct": 40,
+    "total_swing_magnitude_20pct": 1703.255971184745,
+    "top_swings": [
+      {
+        "start_idx": 8068,
+        "end_idx": 8676,
+        "start_price": 53527.3,
+        "end_price": 106843.39,
+        "change_pct": 99.60541630158815,
+        "direction": "UP",
+        "start_date": "2024-09-06",
+        "end_date": "2024-12-17",
+        "bars": 608
+      },
+      {
+        "start_idx": 5902,
+        "end_idx": 6632,
+        "start_price": 25014.61,
+        "end_price": 47053.92,
+        "change_pct": 88.10575099911611,
+        "direction": "UP",
+        "start_date": "2023-09-11",
+        "end_date": "2024-01-11",
+        "bars": 730
+      },
+      {
+        "start_idx": 184,
+        "end_idx": 310,
+        "start_price": 32854.6075,
+        "end_price": 58102.0175,
+        "change_pct": 76.84587313971109,
+        "direction": "UP",
+        "start_date": "2021-01-31",
+        "end_date": "2021-02-21",
+        "bars": 126
+      },
+      {
+        "start_idx": 6704,
+        "end_idx": 6953,
+        "start_price": 38825.2,
+        "end_price": 68285.06,
+        "change_pct": 75.87819251414031,
+        "direction": "UP",
+        "start_date": "2024-01-23",
+        "end_date": "2024-03-04",
+        "bars": 249
+      },
+      {
+        "start_idx": 1583,
+        "end_idx": 1755,
+        "start_price": 40685.64,
+        "end_price": 66886.11,
+        "change_pct": 64.39734019177283,
+        "direction": "UP",
+        "start_date": "2021-09-21",
+        "end_date": "2021-10-20",
+        "bars": 172
+      },
+      {
+        "start_idx": 4138,
+        "end_idx": 4659,
+        "start_price": 15707.34,
+        "end_price": 25077.42,
+        "change_pct": 59.654148952018595,
+        "direction": "UP",
+        "start_date": "2022-11-21",
+        "end_date": "2023-02-16",
+        "bars": 521
+      },
+      {
+        "start_idx": 4790,
+        "end_idx": 5000,
+        "start_price": 19756.95,
+        "end_price": 30832.69,
+        "change_pct": 56.05996877048328,
+        "direction": "UP",
+        "start_date": "2023-03-10",
+        "end_date": "2023-04-14",
+        "bars": 210
+      },
+      {
+        "start_idx": 9354,
+        "end_idx": 9612,
+        "start_price": 75017.6,
+        "end_price": 111757.17,
+        "change_pct": 48.97460062705284,
+        "direction": "UP",
+        "start_date": "2025-04-09",
+        "end_date": "2025-05-22",
+        "bars": 258
+      },
+      {
+        "start_idx": 3093,
+        "end_idx": 3202,
+        "start_price": 32043.49,
+        "end_price": 18037.58,
+        "change_pct": -43.70906539830711,
+        "direction": "DOWN",
+        "start_date": "2022-05-31",
+        "end_date": "2022-06-18",
+        "bars": 109
+      },
+      {
+        "start_idx": 1200,
+        "end_idx": 1272,
+        "start_price": 29605.21,
+        "end_price": 42476.91,
+        "change_pct": 43.477820289064,
+        "direction": "UP",
+        "start_date": "2021-07-20",
+        "end_date": "2021-08-01",
+        "bars": 72
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 22.877316857899384,
+      "10-20% (mild correction)": 15.657546337157987,
+      "20-40% (correction)": 22.488967343336274,
+      "40-60% (bear market)": 19.36451897616946,
+      "60%+ (deep bear)": 19.611650485436893
+    },
+    "declining_quarters": 8,
+    "rising_quarters": 7,
+    "total_quarters": 21,
+    "quarterly_volatility": {
+      "2021-Q1": {
+        "start_price": 29352.385,
+        "end_price": 58793.155,
+        "net_return_pct": 100.30111692797708,
+        "total_absolute_movement": 383908.2400000001,
+        "swing_opportunity_ratio": 13.040020352728549,
+        "annualized_volatility": 0.9009024514701743,
+        "max_intra_quarter_range_pct": 110.70651771220383,
+        "bars": 540
+      },
+      "2021-Q2": {
+        "start_price": 59128.76,
+        "end_price": 35041.1075,
+        "net_return_pct": -40.73762497302498,
+        "total_absolute_movement": 369207.58749999997,
+        "swing_opportunity_ratio": 15.327669954554514,
+        "annualized_volatility": 0.8305004055006673,
+        "max_intra_quarter_range_pct": 110.04386811036109,
+        "bars": 546
+      },
+      "2021-Q3": {
+        "start_price": 34138.2775,
+        "end_price": 43821.91,
+        "net_return_pct": 28.365908326804153,
+        "total_absolute_movement": 232311.10749999998,
+        "swing_opportunity_ratio": 23.990078877941706,
+        "annualized_volatility": 0.5711724662997699,
+        "max_intra_quarter_range_pct": 78.0026471691976,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 43632.4525,
+        "end_price": 46195.56,
+        "net_return_pct": 5.874314536869084,
+        "total_absolute_movement": 290144.4524999999,
+        "swing_opportunity_ratio": 113.20026666848742,
+        "annualized_volatility": 0.5414920985530534,
+        "max_intra_quarter_range_pct": 57.028744831613565,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 46817.3,
+        "end_price": 45526.92,
+        "net_return_pct": -2.7562033692673533,
+        "total_absolute_movement": 210937.69999999995,
+        "swing_opportunity_ratio": 163.469443109781,
+        "annualized_volatility": 0.5443986949166582,
+        "max_intra_quarter_range_pct": 42.402914515632695,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 44611.81,
+        "end_price": 19949.77,
+        "net_return_pct": -55.28141539202287,
+        "total_absolute_movement": 172969.80000000005,
+        "swing_opportunity_ratio": 7.013604713965271,
+        "annualized_volatility": 0.6027164251157555,
+        "max_intra_quarter_range_pct": 158.95009197464404,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 19708.29,
+        "end_price": 19426.02,
+        "net_return_pct": -1.4322399355804103,
+        "total_absolute_movement": 105969.76999999995,
+        "swing_opportunity_ratio": 375.4198816735742,
+        "annualized_volatility": 0.5133190783972145,
+        "max_intra_quarter_range_pct": 34.85386688454883,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 19416.22,
+        "end_price": 16528.89,
+        "net_return_pct": -14.870711188892594,
+        "total_absolute_movement": 52834.770000000026,
+        "swing_opportunity_ratio": 18.298833178057233,
+        "annualized_volatility": 0.35763014987099345,
+        "max_intra_quarter_range_pct": 36.56309725262202,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 16522.15,
+        "end_price": 28473.2,
+        "net_return_pct": 72.33350381154993,
+        "total_absolute_movement": 88328.90999999997,
+        "swing_opportunity_ratio": 7.390891176925875,
+        "annualized_volatility": 0.4520935172772978,
+        "max_intra_quarter_range_pct": 73.92815906312647,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 28552.61,
+        "end_price": 30477.68,
+        "net_return_pct": 6.742185740638069,
+        "total_absolute_movement": 86064.52999999996,
+        "swing_opportunity_ratio": 44.70722103611815,
+        "annualized_volatility": 0.33748589967421916,
+        "max_intra_quarter_range_pct": 25.339581591837838,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 30400.0,
+        "end_price": 26969.98,
+        "net_return_pct": -11.282960526315792,
+        "total_absolute_movement": 58722.559999999954,
+        "swing_opportunity_ratio": 17.120180057259127,
+        "annualized_volatility": 0.2508698431093438,
+        "max_intra_quarter_range_pct": 26.54964438781976,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 27054.31,
+        "end_price": 42278.29,
+        "net_return_pct": 56.27192118372266,
+        "total_absolute_movement": 114689.98000000005,
+        "swing_opportunity_ratio": 7.533508320426068,
+        "annualized_volatility": 0.3264487556631329,
+        "max_intra_quarter_range_pct": 65.70843113287488,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 42343.28,
+        "end_price": 71320.68,
+        "net_return_pct": 68.43447177450588,
+        "total_absolute_movement": 231436.54000000004,
+        "swing_opportunity_ratio": 7.986794536431843,
+        "annualized_volatility": 0.45097935089946145,
+        "max_intra_quarter_range_pct": 89.10480821734342,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 70626.57,
+        "end_price": 62722.89,
+        "net_return_pct": -11.190802554902506,
+        "total_absolute_movement": 246313.73999999982,
+        "swing_opportunity_ratio": 31.164437325397735,
+        "annualized_volatility": 0.4009091073157512,
+        "max_intra_quarter_range_pct": 27.36902076967551,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 63389.08,
+        "end_price": 63352.44,
+        "net_return_pct": -0.057801753866753416,
+        "total_absolute_movement": 268286.3800000001,
+        "swing_opportunity_ratio": 7322.226528384399,
+        "annualized_volatility": 0.4547942833711092,
+        "max_intra_quarter_range_pct": 35.50656821975294,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 63722.21,
+        "end_price": 93466.28,
+        "net_return_pct": 46.67771252754731,
+        "total_absolute_movement": 344355.65,
+        "swing_opportunity_ratio": 11.577287506383627,
+        "annualized_volatility": 0.4194031088892944,
+        "max_intra_quarter_range_pct": 79.03393778550222,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 93720.91,
+        "end_price": 82567.08,
+        "net_return_pct": -11.901111502225065,
+        "total_absolute_movement": 392052.4700000001,
+        "swing_opportunity_ratio": 35.14958269939564,
+        "annualized_volatility": 0.46172270696410805,
+        "max_intra_quarter_range_pct": 37.53687703973244,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 82973.75,
+        "end_price": 107180.63,
+        "net_return_pct": 29.17414242456199,
+        "total_absolute_movement": 315750.53999999986,
+        "swing_opportunity_ratio": 13.043834645357014,
+        "annualized_volatility": 0.35093053385510053,
+        "max_intra_quarter_range_pct": 48.97460062705284,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 107231.01,
+        "end_price": 114036.93,
+        "net_return_pct": 6.346969966989959,
+        "total_absolute_movement": 280102.1999999998,
+        "swing_opportunity_ratio": 41.15567035757103,
+        "annualized_volatility": 0.24639669643024312,
+        "max_intra_quarter_range_pct": 16.95525051547223,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 114195.01,
+        "end_price": 87553.51,
+        "net_return_pct": -23.329828510019833,
+        "total_absolute_movement": 367904.3200000001,
+        "swing_opportunity_ratio": 13.80944466340109,
+        "annualized_volatility": 0.3788381688068151,
+        "max_intra_quarter_range_pct": 52.49187572549562,
+        "bars": 552
+      },
+      "2026-Q1": {
+        "start_price": 87740.43,
+        "end_price": 68367.83,
+        "net_return_pct": -22.07944501753638,
+        "total_absolute_movement": 215827.1399999998,
+        "swing_opportunity_ratio": 11.140845317613532,
+        "annualized_volatility": 0.4257162460597819,
+        "max_intra_quarter_range_pct": 54.68952264712522,
+        "bars": 374
+      }
+    }
+  },
+  "ETH/USD": {
+    "period": "2021-01-01 to 2026-03-04",
+    "bars": 11329,
+    "start_price": 746.17,
+    "end_price": 1977.48,
+    "net_return_pct": 165.0173552943699,
+    "total_absolute_movement_usd": 307663.45000000007,
+    "swing_opportunity_ratio": 249.86676791384792,
+    "avg_quarterly_sor": 28.723324764771625,
+    "swings_10pct": 184,
+    "total_swing_magnitude_10pct": 4379.611191812966,
+    "swings_20pct": 48,
+    "total_swing_magnitude_20pct": 2576.886917023676,
+    "top_swings": [
+      {
+        "start_idx": 673,
+        "end_idx": 786,
+        "start_price": 2133.68,
+        "end_price": 4336.59,
+        "change_pct": 103.24462899778788,
+        "direction": "UP",
+        "start_date": "2021-04-23",
+        "end_date": "2021-05-12",
+        "bars": 113
+      },
+      {
+        "start_idx": 1200,
+        "end_idx": 1349,
+        "start_price": 1728.73,
+        "end_price": 3324.51,
+        "change_pct": 92.30938318881492,
+        "direction": "UP",
+        "start_date": "2021-07-20",
+        "end_date": "2021-08-13",
+        "bars": 149
+      },
+      {
+        "start_idx": 0,
+        "end_idx": 55,
+        "start_price": 746.17,
+        "end_price": 1348.46,
+        "change_pct": 80.71753085757939,
+        "direction": "UP",
+        "start_date": "2021-01-01",
+        "end_date": "2021-01-10",
+        "bars": 55
+      },
+      {
+        "start_idx": 9363,
+        "end_idx": 9562,
+        "start_price": 1495.06,
+        "end_price": 2692.32,
+        "change_pct": 80.08106698058943,
+        "direction": "UP",
+        "start_date": "2025-04-10",
+        "end_date": "2025-05-13",
+        "bars": 199
+      },
+      {
+        "start_idx": 9801,
+        "end_idx": 10015,
+        "start_price": 2175.44,
+        "end_price": 3894.19,
+        "change_pct": 79.0070054793513,
+        "direction": "UP",
+        "start_date": "2025-06-22",
+        "end_date": "2025-07-28",
+        "bars": 214
+      },
+      {
+        "start_idx": 6706,
+        "end_idx": 6957,
+        "start_price": 2183.58,
+        "end_price": 3784.95,
+        "change_pct": 73.33690544885005,
+        "direction": "UP",
+        "start_date": "2024-01-23",
+        "end_date": "2024-03-05",
+        "bars": 251
+      },
+      {
+        "start_idx": 1625,
+        "end_idx": 1881,
+        "start_price": 2805.65,
+        "end_price": 4849.04,
+        "change_pct": 72.83125122520627,
+        "direction": "UP",
+        "start_date": "2021-09-28",
+        "end_date": "2021-11-10",
+        "bars": 256
+      },
+      {
+        "start_idx": 498,
+        "end_idx": 629,
+        "start_price": 1571.72,
+        "end_price": 2517.03,
+        "change_pct": 60.14493675718322,
+        "direction": "UP",
+        "start_date": "2021-03-25",
+        "end_date": "2021-04-15",
+        "bars": 131
+      },
+      {
+        "start_idx": 3347,
+        "end_idx": 3404,
+        "start_price": 1037.34,
+        "end_price": 1639.27,
+        "change_pct": 58.026298031503664,
+        "direction": "UP",
+        "start_date": "2022-07-12",
+        "end_date": "2022-07-22",
+        "bars": 57
+      },
+      {
+        "start_idx": 6088,
+        "end_idx": 6433,
+        "start_price": 1530.88,
+        "end_price": 2383.33,
+        "change_pct": 55.68365907190634,
+        "direction": "UP",
+        "start_date": "2023-10-12",
+        "end_date": "2023-12-09",
+        "bars": 345
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 8.509135846058786,
+      "10-20% (mild correction)": 7.82946420690264,
+      "20-40% (correction)": 26.95736605172566,
+      "40-60% (bear market)": 26.304175125783384,
+      "60%+ (deep bear)": 30.399858769529526
+    },
+    "declining_quarters": 8,
+    "rising_quarters": 10,
+    "total_quarters": 21,
+    "quarterly_volatility": {
+      "2021-Q1": {
+        "start_price": 746.17,
+        "end_price": 1920.0,
+        "net_return_pct": 157.3140169130359,
+        "total_absolute_movement": 15221.829999999994,
+        "swing_opportunity_ratio": 12.967661416048317,
+        "annualized_volatility": 1.041178323722862,
+        "max_intra_quarter_range_pct": 177.24792081930028,
+        "bars": 540
+      },
+      "2021-Q2": {
+        "start_price": 1923.29,
+        "end_price": 2276.72,
+        "net_return_pct": 18.376323903311505,
+        "total_absolute_movement": 31236.65,
+        "swing_opportunity_ratio": 88.38143338143342,
+        "annualized_volatility": 1.146648459329599,
+        "max_intra_quarter_range_pct": 147.47140998424985,
+        "bars": 546
+      },
+      "2021-Q3": {
+        "start_price": 2185.82,
+        "end_price": 3000.46,
+        "net_return_pct": 37.26930854324692,
+        "total_absolute_movement": 21249.260000000002,
+        "swing_opportunity_ratio": 26.084233526465685,
+        "annualized_volatility": 0.7366317164653992,
+        "max_intra_quarter_range_pct": 129.6385207637977,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 3003.13,
+        "end_price": 3675.8,
+        "net_return_pct": 22.398963747823107,
+        "total_absolute_movement": 25507.75,
+        "swing_opportunity_ratio": 37.920154013111926,
+        "annualized_volatility": 0.6217772778395632,
+        "max_intra_quarter_range_pct": 61.46620359424999,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 3722.96,
+        "end_price": 3283.08,
+        "net_return_pct": -11.815329737628126,
+        "total_absolute_movement": 19724.059999999998,
+        "swing_opportunity_ratio": 44.83963808311356,
+        "annualized_volatility": 0.6941724556611777,
+        "max_intra_quarter_range_pct": 71.88520088059695,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 3250.89,
+        "end_price": 1070.08,
+        "net_return_pct": -67.0834756020659,
+        "total_absolute_movement": 14952.75,
+        "swing_opportunity_ratio": 6.856512029933832,
+        "annualized_volatility": 0.7938063721363638,
+        "max_intra_quarter_range_pct": 286.3135648898427,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 1053.11,
+        "end_price": 1328.95,
+        "net_return_pct": 26.19289532907295,
+        "total_absolute_movement": 11041.799999999996,
+        "swing_opportunity_ratio": 40.029727378190216,
+        "annualized_volatility": 0.7371703093882986,
+        "max_intra_quarter_range_pct": 94.60622136484204,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 1330.0,
+        "end_price": 1195.25,
+        "net_return_pct": -10.131578947368421,
+        "total_absolute_movement": 5924.99,
+        "swing_opportunity_ratio": 43.97024118738404,
+        "annualized_volatility": 0.5544778797970162,
+        "max_intra_quarter_range_pct": 52.34576784001182,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 1193.09,
+        "end_price": 1822.01,
+        "net_return_pct": 52.71354214686236,
+        "total_absolute_movement": 6922.179999999998,
+        "swing_opportunity_ratio": 11.006455511034785,
+        "annualized_volatility": 0.4787493137006201,
+        "max_intra_quarter_range_pct": 54.37728922378027,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 1826.66,
+        "end_price": 1933.57,
+        "net_return_pct": 5.852758586710162,
+        "total_absolute_movement": 6318.009999999998,
+        "swing_opportunity_ratio": 59.0965297914134,
+        "annualized_volatility": 0.3749077442147807,
+        "max_intra_quarter_range_pct": 29.655994862856623,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 1919.36,
+        "end_price": 1670.84,
+        "net_return_pct": -12.948066022007335,
+        "total_absolute_movement": 3841.7600000000016,
+        "swing_opportunity_ratio": 15.458554643489466,
+        "annualized_volatility": 0.2512634116920435,
+        "max_intra_quarter_range_pct": 30.636649595757394,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 1674.45,
+        "end_price": 2281.07,
+        "net_return_pct": 36.228015169160024,
+        "total_absolute_movement": 7463.66,
+        "swing_opportunity_ratio": 12.303682700867096,
+        "annualized_volatility": 0.3813517883138512,
+        "max_intra_quarter_range_pct": 57.77983904682274,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 2273.53,
+        "end_price": 3645.48,
+        "net_return_pct": 60.34448632742914,
+        "total_absolute_movement": 14456.309999999998,
+        "swing_opportunity_ratio": 10.537053099602755,
+        "annualized_volatility": 0.5095168442576232,
+        "max_intra_quarter_range_pct": 86.21758763132105,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 3610.99,
+        "end_price": 3432.37,
+        "net_return_pct": -4.946565900210189,
+        "total_absolute_movement": 15352.28,
+        "swing_opportunity_ratio": 85.94938976598371,
+        "annualized_volatility": 0.5046618668554029,
+        "max_intra_quarter_range_pct": 38.147135162289636,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 3494.18,
+        "end_price": 2601.27,
+        "net_return_pct": -25.554207281822915,
+        "total_absolute_movement": 14127.850000000006,
+        "swing_opportunity_ratio": 15.822255322484917,
+        "annualized_volatility": 0.5489061983071059,
+        "max_intra_quarter_range_pct": 59.27752629326846,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 2628.0,
+        "end_price": 3330.32,
+        "net_return_pct": 26.72450532724506,
+        "total_absolute_movement": 16950.879999999997,
+        "swing_opportunity_ratio": 24.135550746098634,
+        "annualized_volatility": 0.5413943220043551,
+        "max_intra_quarter_range_pct": 74.14561600690602,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 3347.42,
+        "end_price": 1822.03,
+        "net_return_pct": -45.569124878264454,
+        "total_absolute_movement": 16498.590000000004,
+        "swing_opportunity_ratio": 10.815981486701764,
+        "annualized_volatility": 0.6870348047150162,
+        "max_intra_quarter_range_pct": 106.54608335928117,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 1834.59,
+        "end_price": 2486.15,
+        "net_return_pct": 35.5152922451338,
+        "total_absolute_movement": 12905.419999999998,
+        "swing_opportunity_ratio": 19.806955614218175,
+        "annualized_volatility": 0.6365258277239938,
+        "max_intra_quarter_range_pct": 102.17786996274974,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 2486.0,
+        "end_price": 4145.99,
+        "net_return_pct": 66.77353177795655,
+        "total_absolute_movement": 19379.83000000001,
+        "swing_opportunity_ratio": 11.674666714859734,
+        "annualized_volatility": 0.49256922724152774,
+        "max_intra_quarter_range_pct": 101.14311157717768,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 4129.32,
+        "end_price": 2966.84,
+        "net_return_pct": -28.15185066790657,
+        "total_absolute_movement": 19137.740000000013,
+        "swing_opportunity_ratio": 16.462855274929478,
+        "annualized_volatility": 0.5943442563151647,
+        "max_intra_quarter_range_pct": 76.03411990389807,
+        "bars": 551
+      },
+      "2026-Q1": {
+        "start_price": 2974.8,
+        "end_price": 1977.48,
+        "net_return_pct": -33.525615167406215,
+        "total_absolute_movement": 9045.979999999996,
+        "swing_opportunity_ratio": 9.070288372839203,
+        "annualized_volatility": 0.5631840912010657,
+        "max_intra_quarter_range_pct": 84.70436594997807,
+        "bars": 374
+      }
+    }
+  },
+  "SOL/USD": {
+    "period": "2021-06-17 to 2026-03-04",
+    "bars": 10323,
+    "start_price": 39.278,
+    "end_price": 85.94,
+    "net_return_pct": 118.79932786801773,
+    "total_absolute_movement_usd": 15923.991999999998,
+    "swing_opportunity_ratio": 341.2625262526252,
+    "avg_quarterly_sor": 77.41730643114582,
+    "swings_10pct": 242,
+    "total_swing_magnitude_10pct": 6358.158128719539,
+    "swings_20pct": 79,
+    "total_swing_magnitude_20pct": 4651.970527244304,
+    "top_swings": [
+      {
+        "start_idx": 194,
+        "end_idx": 363,
+        "start_price": 22.888,
+        "end_price": 74.073,
+        "change_pct": 223.63247116392864,
+        "direction": "UP",
+        "start_date": "2021-07-20",
+        "end_date": "2021-08-17",
+        "bars": 169
+      },
+      {
+        "start_idx": 3360,
+        "end_idx": 3457,
+        "start_price": 8.78,
+        "end_price": 24.25,
+        "change_pct": 176.1958997722096,
+        "direction": "UP",
+        "start_date": "2022-12-29",
+        "end_date": "2023-01-14",
+        "bars": 97
+      },
+      {
+        "start_idx": 5084,
+        "end_idx": 5206,
+        "start_price": 21.13,
+        "end_price": 44.5,
+        "change_pct": 110.60104117368672,
+        "direction": "UP",
+        "start_date": "2023-10-13",
+        "end_date": "2023-11-02",
+        "bars": 122
+      },
+      {
+        "start_idx": 4335,
+        "end_idx": 4546,
+        "start_price": 14.46,
+        "end_price": 28.93,
+        "change_pct": 100.06915629322266,
+        "direction": "UP",
+        "start_date": "2023-06-10",
+        "end_date": "2023-07-15",
+        "bars": 211
+      },
+      {
+        "start_idx": 8337,
+        "end_idx": 8557,
+        "start_price": 97.03,
+        "end_price": 183.76,
+        "change_pct": 89.38472637328661,
+        "direction": "UP",
+        "start_date": "2025-04-07",
+        "end_date": "2025-05-13",
+        "bars": 220
+      },
+      {
+        "start_idx": 418,
+        "end_idx": 448,
+        "start_price": 67.254,
+        "end_price": 124.803,
+        "change_pct": 85.56963154607902,
+        "direction": "UP",
+        "start_date": "2021-08-26",
+        "end_date": "2021-08-31",
+        "bars": 30
+      },
+      {
+        "start_idx": 5481,
+        "end_idx": 5525,
+        "start_price": 68.87,
+        "end_price": 123.16,
+        "change_pct": 78.82967910556118,
+        "direction": "UP",
+        "start_date": "2023-12-18",
+        "end_date": "2023-12-25",
+        "bars": 44
+      },
+      {
+        "start_idx": 1615,
+        "end_idx": 1738,
+        "start_price": 78.75,
+        "end_price": 139.12,
+        "change_pct": 76.66031746031746,
+        "direction": "UP",
+        "start_date": "2022-03-13",
+        "end_date": "2022-04-03",
+        "bars": 123
+      },
+      {
+        "start_idx": 5952,
+        "end_idx": 6028,
+        "start_price": 119.72,
+        "end_price": 207.86,
+        "change_pct": 73.62178416304712,
+        "direction": "UP",
+        "start_date": "2024-03-05",
+        "end_date": "2024-03-18",
+        "bars": 76
+      },
+      {
+        "start_idx": 451,
+        "end_idx": 489,
+        "start_price": 108.29,
+        "end_price": 187.946,
+        "change_pct": 73.5580386000554,
+        "direction": "UP",
+        "start_date": "2021-08-31",
+        "end_date": "2021-09-07",
+        "bars": 38
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 4.456068972198005,
+      "10-20% (mild correction)": 5.773515450934806,
+      "20-40% (correction)": 20.40104620749782,
+      "40-60% (bear market)": 25.874261358132326,
+      "60%+ (deep bear)": 43.49510801123704
+    },
+    "declining_quarters": 9,
+    "rising_quarters": 8,
+    "total_quarters": 20,
+    "quarterly_volatility": {
+      "2021-Q2": {
+        "start_price": 39.278,
+        "end_price": 35.565,
+        "net_return_pct": -9.453128978053876,
+        "total_absolute_movement": 84.72900000000001,
+        "swing_opportunity_ratio": 22.819552922165364,
+        "annualized_volatility": 1.8456394678175045,
+        "max_intra_quarter_range_pct": 78.25277966870885,
+        "bars": 80
+      },
+      "2021-Q3": {
+        "start_price": 33.768,
+        "end_price": 141.358,
+        "net_return_pct": 318.6152570480929,
+        "total_absolute_movement": 1147.7879999999998,
+        "swing_opportunity_ratio": 10.668166186448552,
+        "annualized_volatility": 1.258245024161203,
+        "max_intra_quarter_range_pct": 822.9072002796224,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 139.582,
+        "end_price": 169.88,
+        "net_return_pct": 21.706237193907526,
+        "total_absolute_movement": 1787.0420000000004,
+        "swing_opportunity_ratio": 58.98217704138888,
+        "annualized_volatility": 0.879821106950806,
+        "max_intra_quarter_range_pct": 85.3842185955209,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 172.89,
+        "end_price": 122.86,
+        "net_return_pct": -28.9374746948927,
+        "total_absolute_movement": 1031.4299999999998,
+        "swing_opportunity_ratio": 20.616230261842897,
+        "annualized_volatility": 0.9407921704447157,
+        "max_intra_quarter_range_pct": 131.08961960025792,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 122.02,
+        "end_price": 33.74,
+        "net_return_pct": -72.34879527946238,
+        "total_absolute_movement": 711.9799999999998,
+        "swing_opportunity_ratio": 8.065020389669233,
+        "annualized_volatility": 1.1711207517484643,
+        "max_intra_quarter_range_pct": 419.68621591333584,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 33.6,
+        "end_price": 33.26,
+        "net_return_pct": -1.011904761904772,
+        "total_absolute_movement": 314.32000000000005,
+        "swing_opportunity_ratio": 924.4705882352849,
+        "annualized_volatility": 0.8093654425864902,
+        "max_intra_quarter_range_pct": 56.847290640394085,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 33.06,
+        "end_price": 9.97,
+        "net_return_pct": -69.84271022383545,
+        "total_absolute_movement": 161.14999999999992,
+        "swing_opportunity_ratio": 6.979211779991334,
+        "annualized_volatility": 1.0553317290708546,
+        "max_intra_quarter_range_pct": 323.9179954441914,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 9.96,
+        "end_price": 21.17,
+        "net_return_pct": 112.55020080321285,
+        "total_absolute_movement": 176.00999999999996,
+        "swing_opportunity_ratio": 15.701159678858158,
+        "annualized_volatility": 0.9555244156163459,
+        "max_intra_quarter_range_pct": 171.1950970377937,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 21.05,
+        "end_price": 18.85,
+        "net_return_pct": -10.451306413301658,
+        "total_absolute_movement": 117.1,
+        "swing_opportunity_ratio": 53.22727272727274,
+        "annualized_volatility": 0.648918370682733,
+        "max_intra_quarter_range_pct": 78.56154910096818,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 18.29,
+        "end_price": 21.37,
+        "net_return_pct": 16.839803171131777,
+        "total_absolute_movement": 126.92,
+        "swing_opportunity_ratio": 41.20779220779218,
+        "annualized_volatility": 0.6124287263164085,
+        "max_intra_quarter_range_pct": 65.40880503144655,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 21.21,
+        "end_price": 101.69,
+        "net_return_pct": 379.44365865157937,
+        "total_absolute_movement": 553.4400000000002,
+        "swing_opportunity_ratio": 6.876739562624257,
+        "annualized_volatility": 0.928147575687741,
+        "max_intra_quarter_range_pct": 482.8679602460956,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 103.07,
+        "end_price": 202.38,
+        "net_return_pct": 96.35199379062773,
+        "total_absolute_movement": 1074.19,
+        "swing_opportunity_ratio": 10.816534085187795,
+        "annualized_volatility": 0.8493463578237449,
+        "max_intra_quarter_range_pct": 159.50062421972538,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 202.64,
+        "end_price": 146.37,
+        "net_return_pct": -27.76845637583892,
+        "total_absolute_movement": 1121.4899999999998,
+        "swing_opportunity_ratio": 19.930513595166165,
+        "annualized_volatility": 0.7393308616203934,
+        "max_intra_quarter_range_pct": 68.24975091331783,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 147.45,
+        "end_price": 152.5,
+        "net_return_pct": 3.4248897931502285,
+        "total_absolute_movement": 1044.1499999999999,
+        "swing_opportunity_ratio": 206.76237623762327,
+        "annualized_volatility": 0.7051468575736647,
+        "max_intra_quarter_range_pct": 65.82169339541299,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 154.99,
+        "end_price": 188.82,
+        "net_return_pct": 21.827214659010245,
+        "total_absolute_movement": 1327.4499999999998,
+        "swing_opportunity_ratio": 39.23884126514929,
+        "annualized_volatility": 0.650653296473389,
+        "max_intra_quarter_range_pct": 93.82561227500737,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 190.02,
+        "end_price": 124.54,
+        "net_return_pct": -34.45953057572887,
+        "total_absolute_movement": 1503.2199999999998,
+        "swing_opportunity_ratio": 22.956933414783137,
+        "annualized_volatility": 0.8403745759676825,
+        "max_intra_quarter_range_pct": 141.74560216508794,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 126.02,
+        "end_price": 154.88,
+        "net_return_pct": 22.901126805269005,
+        "total_absolute_movement": 987.8399999999993,
+        "swing_opportunity_ratio": 34.228690228690205,
+        "annualized_volatility": 0.6810615799978105,
+        "max_intra_quarter_range_pct": 90.67298773575182,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 153.98,
+        "end_price": 208.74,
+        "net_return_pct": 35.56306013768024,
+        "total_absolute_movement": 1119.12,
+        "swing_opportunity_ratio": 20.43681519357194,
+        "annualized_volatility": 0.5519438761333557,
+        "max_intra_quarter_range_pct": 70.76775036084952,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 206.74,
+        "end_price": 124.45,
+        "net_return_pct": -39.803618071007065,
+        "total_absolute_movement": 1072.3699999999997,
+        "swing_opportunity_ratio": 13.031595576619269,
+        "annualized_volatility": 0.6777479372107439,
+        "max_intra_quarter_range_pct": 101.41288620308111,
+        "bars": 551
+      },
+      "2026-Q1": {
+        "start_price": 124.98,
+        "end_price": 85.94,
+        "net_return_pct": -31.236997919667154,
+        "total_absolute_movement": 442.32,
+        "swing_opportunity_ratio": 11.329918032786884,
+        "annualized_volatility": 0.6237734512692564,
+        "max_intra_quarter_range_pct": 91.94727225267552,
+        "bars": 374
+      }
+    }
+  },
+  "BNB/USD": {
+    "period": "2021-01-01 to 2026-03-04",
+    "bars": 11330,
+    "start_price": 38.00840334,
+    "end_price": 635.28,
+    "net_return_pct": 1571.419855017777,
+    "total_absolute_movement_usd": 50806.29392004,
+    "swing_opportunity_ratio": 85.0639712388027,
+    "avg_quarterly_sor": 34.258662892746656,
+    "swings_10pct": 165,
+    "total_swing_magnitude_10pct": 4243.301321841792,
+    "swings_20pct": 48,
+    "total_swing_magnitude_20pct": 3085.405640361861,
+    "top_swings": [
+      {
+        "start_idx": 125,
+        "end_idx": 241,
+        "start_price": 38.61457619,
+        "end_price": 142.62639759,
+        "change_pct": 269.35896146630733,
+        "direction": "UP",
+        "start_date": "2021-01-21",
+        "end_date": "2021-02-10",
+        "bars": 116
+      },
+      {
+        "start_idx": 248,
+        "end_idx": 299,
+        "start_price": 118.57880564,
+        "end_price": 333.60339997,
+        "change_pct": 181.33476144363027,
+        "direction": "UP",
+        "start_date": "2021-02-11",
+        "end_date": "2021-02-19",
+        "bars": 51
+      },
+      {
+        "start_idx": 501,
+        "end_idx": 611,
+        "start_price": 231.14460315,
+        "end_price": 596.64245045,
+        "change_pct": 158.12519190111146,
+        "direction": "UP",
+        "start_date": "2021-03-25",
+        "end_date": "2021-04-12",
+        "bars": 110
+      },
+      {
+        "start_idx": 1200,
+        "end_idx": 1487,
+        "start_price": 259.51927086,
+        "end_price": 505.02025726,
+        "change_pct": 94.59836473278229,
+        "direction": "UP",
+        "start_date": "2021-07-20",
+        "end_date": "2021-09-05",
+        "bars": 287
+      },
+      {
+        "start_idx": 6958,
+        "end_idx": 7019,
+        "start_price": 377.17,
+        "end_price": 632.93,
+        "change_pct": 67.8102712304796,
+        "direction": "UP",
+        "start_date": "2024-03-05",
+        "end_date": "2024-03-15",
+        "bars": 61
+      },
+      {
+        "start_idx": 6363,
+        "end_idx": 6548,
+        "start_price": 222.91265225,
+        "end_price": 336.2891516,
+        "change_pct": 50.861401632262,
+        "direction": "UP",
+        "start_date": "2023-11-27",
+        "end_date": "2023-12-28",
+        "bars": 185
+      },
+      {
+        "start_idx": 855,
+        "end_idx": 865,
+        "start_price": 236.62015575,
+        "end_price": 356.94529896,
+        "change_pct": 50.851603418404046,
+        "direction": "UP",
+        "start_date": "2021-05-23",
+        "end_date": "2021-05-25",
+        "bars": 10
+      },
+      {
+        "start_idx": 1799,
+        "end_idx": 1862,
+        "start_price": 449.158,
+        "end_price": 664.4097,
+        "change_pct": 47.92338108193554,
+        "direction": "UP",
+        "start_date": "2021-10-27",
+        "end_date": "2021-11-07",
+        "bars": 63
+      },
+      {
+        "start_idx": 2756,
+        "end_idx": 2977,
+        "start_price": 457.489375,
+        "end_price": 242.63095,
+        "change_pct": -46.964680873736135,
+        "direction": "DOWN",
+        "start_date": "2022-04-05",
+        "end_date": "2022-05-12",
+        "bars": 221
+      },
+      {
+        "start_idx": 673,
+        "end_idx": 786,
+        "start_price": 466.29059418,
+        "end_price": 683.9079708,
+        "change_pct": 46.669904848218785,
+        "direction": "UP",
+        "start_date": "2021-04-23",
+        "end_date": "2021-05-12",
+        "bars": 113
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 11.350397175639895,
+      "10-20% (mild correction)": 20.450132391879965,
+      "20-40% (correction)": 22.01235657546337,
+      "40-60% (bear market)": 29.849955869373346,
+      "60%+ (deep bear)": 16.337157987643426
+    },
+    "declining_quarters": 8,
+    "rising_quarters": 9,
+    "total_quarters": 21,
+    "quarterly_volatility": {
+      "2021-Q1": {
+        "start_price": 38.00840334,
+        "end_price": 302.70831715,
+        "net_return_pct": 696.424712825098,
+        "total_absolute_movement": 2067.9175254300008,
+        "swing_opportunity_ratio": 7.81230902445378,
+        "annualized_volatility": 1.365461892375608,
+        "max_intra_quarter_range_pct": 817.489200424721,
+        "bars": 540
+      },
+      "2021-Q2": {
+        "start_price": 306.60035923,
+        "end_price": 303.6662376,
+        "net_return_pct": -0.9569857117482782,
+        "total_absolute_movement": 5691.21495867,
+        "swing_opportunity_ratio": 1939.6656568289616,
+        "annualized_volatility": 1.3352088487790092,
+        "max_intra_quarter_range_pct": 189.0320009435629,
+        "bars": 546
+      },
+      "2021-Q3": {
+        "start_price": 291.57502813,
+        "end_price": 385.79,
+        "net_return_pct": 32.31242828792384,
+        "total_absolute_movement": 2688.63860405,
+        "swing_opportunity_ratio": 28.53727545299112,
+        "annualized_volatility": 0.713436960986123,
+        "max_intra_quarter_range_pct": 94.59836473278229,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 385.5578,
+        "end_price": 511.9693,
+        "net_return_pct": 32.786653518616404,
+        "total_absolute_movement": 3236.2569000000003,
+        "swing_opportunity_ratio": 25.600969057403802,
+        "annualized_volatility": 0.5834881246328285,
+        "max_intra_quarter_range_pct": 72.32427926500257,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 516.6528,
+        "end_price": 428.691225,
+        "net_return_pct": -17.025277904232784,
+        "total_absolute_movement": 2510.4302250000005,
+        "swing_opportunity_ratio": 28.540078153443716,
+        "annualized_volatility": 0.6109703188068569,
+        "max_intra_quarter_range_pct": 58.261628383157735,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 418.900675,
+        "end_price": 219.485425,
+        "net_return_pct": -47.60442317262917,
+        "total_absolute_movement": 2134.93475,
+        "swing_opportunity_ratio": 10.70597534541616,
+        "annualized_volatility": 0.733437390218945,
+        "max_intra_quarter_range_pct": 138.1827690418205,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 220.916875,
+        "end_price": 284.816325,
+        "net_return_pct": 28.924657747399333,
+        "total_absolute_movement": 1417.759999999999,
+        "swing_opportunity_ratio": 22.187358420142882,
+        "annualized_volatility": 0.492306118169881,
+        "max_intra_quarter_range_pct": 55.72282560952604,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 283.635675,
+        "end_price": 245.9774,
+        "net_return_pct": -13.276988164482484,
+        "total_absolute_movement": 1251.9824750000002,
+        "swing_opportunity_ratio": 33.24587955768022,
+        "annualized_volatility": 0.5187929942821367,
+        "max_intra_quarter_range_pct": 57.34183122639544,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 245.1221,
+        "end_price": 317.01026667,
+        "net_return_pct": 29.327492980029152,
+        "total_absolute_movement": 1265.2302049700004,
+        "swing_opportunity_ratio": 17.599978738893046,
+        "annualized_volatility": 0.4502018962445632,
+        "max_intra_quarter_range_pct": 41.52355948482346,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 315.12136667,
+        "end_price": 235.81333139,
+        "net_return_pct": -25.167457261967446,
+        "total_absolute_movement": 973.5380506399997,
+        "swing_opportunity_ratio": 12.275402450746475,
+        "annualized_volatility": 0.39226157479129903,
+        "max_intra_quarter_range_pct": 55.686951125281695,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 237.16666667,
+        "end_price": 214.49586542,
+        "net_return_pct": -9.55901668995701,
+        "total_absolute_movement": 539.2325179500001,
+        "swing_opportunity_ratio": 23.78533127275331,
+        "annualized_volatility": 0.2570524960378572,
+        "max_intra_quarter_range_pct": 27.189111150032847,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 215.14125364,
+        "end_price": 311.83800119,
+        "net_return_pct": 44.94570237645102,
+        "total_absolute_movement": 973.9995144899996,
+        "swing_opportunity_ratio": 10.072722600999207,
+        "annualized_volatility": 0.44033820712415567,
+        "max_intra_quarter_range_pct": 64.03379770064552,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 309.19064598,
+        "end_price": 606.94,
+        "net_return_pct": 96.29959958079067,
+        "total_absolute_movement": 2219.4263135800015,
+        "swing_opportunity_ratio": 7.454008828616706,
+        "annualized_volatility": 0.5471352457479925,
+        "max_intra_quarter_range_pct": 118.02695979923811,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 597.77,
+        "end_price": 581.31,
+        "net_return_pct": -2.7535674255984808,
+        "total_absolute_movement": 2566.4000000000005,
+        "swing_opportunity_ratio": 155.91737545564976,
+        "annualized_volatility": 0.4475224187356861,
+        "max_intra_quarter_range_pct": 37.30686032138442,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 584.39,
+        "end_price": 567.53,
+        "net_return_pct": -2.8850596348329054,
+        "total_absolute_movement": 2545.3200000000006,
+        "swing_opportunity_ratio": 150.96797153024903,
+        "annualized_volatility": 0.4975819081227173,
+        "max_intra_quarter_range_pct": 41.73649368084813,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 576.71,
+        "end_price": 701.02,
+        "net_return_pct": 21.555027656881265,
+        "total_absolute_movement": 3252.789999999999,
+        "swing_opportunity_ratio": 26.166760518059693,
+        "annualized_volatility": 0.5277275543611377,
+        "max_intra_quarter_range_pct": 45.38241415192508,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 704.11,
+        "end_price": 604.78,
+        "net_return_pct": -14.107170754569603,
+        "total_absolute_movement": 2858.289999999999,
+        "swing_opportunity_ratio": 28.775697171045987,
+        "annualized_volatility": 0.490757130038264,
+        "max_intra_quarter_range_pct": 37.82827236958526,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 608.99,
+        "end_price": 657.08,
+        "net_return_pct": 7.896681390499028,
+        "total_absolute_movement": 1876.0299999999988,
+        "swing_opportunity_ratio": 39.010813058847944,
+        "annualized_volatility": 0.30763721698160057,
+        "max_intra_quarter_range_pct": 30.465800996527243,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 655.98,
+        "end_price": 1009.08,
+        "net_return_pct": 53.827860605506274,
+        "total_absolute_movement": 3029.2799999999984,
+        "swing_opportunity_ratio": 8.579099405267625,
+        "annualized_volatility": 0.34657937970899366,
+        "max_intra_quarter_range_pct": 66.3440993404143,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 1004.91,
+        "end_price": 863.36,
+        "net_return_pct": -14.08583853280393,
+        "total_absolute_movement": 5473.410000000001,
+        "swing_opportunity_ratio": 38.66767926527731,
+        "annualized_volatility": 0.5725208407084428,
+        "max_intra_quarter_range_pct": 66.43325497958679,
+        "bars": 552
+      },
+      "2026-Q1": {
+        "start_price": 867.75,
+        "end_price": 635.28,
+        "net_return_pct": -26.78997407087295,
+        "total_absolute_movement": 2155.1299999999997,
+        "swing_opportunity_ratio": 9.270572546995309,
+        "annualized_volatility": 0.42765385751501234,
+        "max_intra_quarter_range_pct": 63.70134210932278,
+        "bars": 374
+      }
+    }
+  },
+  "ADA/USD": {
+    "period": "2021-01-01 to 2026-03-04",
+    "bars": 11330,
+    "start_price": 0.18345241,
+    "end_price": 0.261,
+    "net_return_pct": 42.27122990643731,
+    "total_absolute_movement_usd": 127.63060559000002,
+    "swing_opportunity_ratio": 1645.8358743321362,
+    "avg_quarterly_sor": 37.54669858800001,
+    "swings_10pct": 230,
+    "total_swing_magnitude_10pct": 6051.9345616071405,
+    "swings_20pct": 93,
+    "total_swing_magnitude_20pct": 4402.973258409073,
+    "top_swings": [
+      {
+        "start_idx": 161,
+        "end_idx": 250,
+        "start_price": 0.31218579,
+        "end_price": 0.95693903,
+        "change_pct": 206.52869562064308,
+        "direction": "UP",
+        "start_date": "2021-01-27",
+        "end_date": "2021-02-11",
+        "bars": 89
+      },
+      {
+        "start_idx": 1202,
+        "end_idx": 1354,
+        "start_price": 1.043645,
+        "end_price": 2.20780815,
+        "change_pct": 111.54781079773295,
+        "direction": "UP",
+        "start_date": "2021-07-20",
+        "end_date": "2021-08-14",
+        "bars": 152
+      },
+      {
+        "start_idx": 8473,
+        "end_idx": 8535,
+        "start_price": 0.534,
+        "end_price": 1.105,
+        "change_pct": 106.92883895131085,
+        "direction": "UP",
+        "start_date": "2024-11-13",
+        "end_date": "2024-11-23",
+        "bars": 62
+      },
+      {
+        "start_idx": 9115,
+        "end_idx": 9131,
+        "start_price": 0.593,
+        "end_price": 1.136,
+        "change_pct": 91.56829679595278,
+        "direction": "UP",
+        "start_date": "2025-02-28",
+        "end_date": "2025-03-02",
+        "bars": 16
+      },
+      {
+        "start_idx": 8367,
+        "end_idx": 8458,
+        "start_price": 0.325,
+        "end_price": 0.613,
+        "change_pct": 88.61538461538461,
+        "direction": "UP",
+        "start_date": "2024-10-26",
+        "end_date": "2024-11-10",
+        "bars": 91
+      },
+      {
+        "start_idx": 0,
+        "end_idx": 36,
+        "start_price": 0.18345241,
+        "end_price": 0.33969432,
+        "change_pct": 85.16754290663174,
+        "direction": "UP",
+        "start_date": "2021-01-01",
+        "end_date": "2021-01-07",
+        "bars": 36
+      },
+      {
+        "start_idx": 673,
+        "end_idx": 786,
+        "start_price": 1.0041193,
+        "end_price": 1.81500433,
+        "change_pct": 80.7558454458549,
+        "direction": "UP",
+        "start_date": "2021-04-23",
+        "end_date": "2021-05-12",
+        "bars": 113
+      },
+      {
+        "start_idx": 6303,
+        "end_idx": 6433,
+        "start_price": 0.355,
+        "end_price": 0.624,
+        "change_pct": 75.77464788732395,
+        "direction": "UP",
+        "start_date": "2023-11-17",
+        "end_date": "2023-12-09",
+        "bars": 130
+      },
+      {
+        "start_idx": 9801,
+        "end_idx": 9975,
+        "start_price": 0.523,
+        "end_price": 0.911,
+        "change_pct": 74.18738049713193,
+        "direction": "UP",
+        "start_date": "2025-06-22",
+        "end_date": "2025-07-21",
+        "bars": 174
+      },
+      {
+        "start_idx": 6794,
+        "end_idx": 6951,
+        "start_price": 0.475,
+        "end_price": 0.789,
+        "change_pct": 66.10526315789475,
+        "direction": "UP",
+        "start_date": "2024-02-07",
+        "end_date": "2024-03-04",
+        "bars": 157
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 4.289496910856134,
+      "10-20% (mild correction)": 3.4951456310679614,
+      "20-40% (correction)": 6.557811120917917,
+      "40-60% (bear market)": 5.8693733451015,
+      "60%+ (deep bear)": 79.78817299205649
+    },
+    "declining_quarters": 12,
+    "rising_quarters": 6,
+    "total_quarters": 21,
+    "quarterly_volatility": {
+      "2021-Q1": {
+        "start_price": 0.18345241,
+        "end_price": 1.19232518,
+        "net_return_pct": 549.9370490690201,
+        "total_absolute_movement": 9.84171805,
+        "swing_opportunity_ratio": 9.755162734742063,
+        "annualized_volatility": 1.3593779587454984,
+        "max_intra_quarter_range_pct": 746.9079106392459,
+        "bars": 540
+      },
+      "2021-Q2": {
+        "start_price": 1.18789679,
+        "end_price": 1.38517498,
+        "net_return_pct": 16.607351047728653,
+        "total_absolute_movement": 19.63134023,
+        "swing_opportunity_ratio": 99.51095065298398,
+        "annualized_volatility": 1.3099139682394891,
+        "max_intra_quarter_range_pct": 140.18291452021688,
+        "bars": 546
+      },
+      "2021-Q3": {
+        "start_price": 1.33822048,
+        "end_price": 2.1152836,
+        "net_return_pct": 58.06689791505808,
+        "total_absolute_movement": 17.89894002,
+        "swing_opportunity_ratio": 23.034087655581953,
+        "annualized_volatility": 0.8754294185076725,
+        "max_intra_quarter_range_pct": 192.22798173708495,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 2.10090259,
+        "end_price": 1.308,
+        "net_return_pct": -37.74104490965476,
+        "total_absolute_movement": 12.611843390000008,
+        "swing_opportunity_ratio": 15.905917762231056,
+        "annualized_volatility": 0.7138231039862813,
+        "max_intra_quarter_range_pct": 92.69647595356552,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 1.325,
+        "end_price": 1.142,
+        "net_return_pct": -13.811320754716986,
+        "total_absolute_movement": 9.011000000000001,
+        "swing_opportunity_ratio": 49.24043715846994,
+        "annualized_volatility": 0.8157402623733008,
+        "max_intra_quarter_range_pct": 109.81675392670157,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 1.123,
+        "end_price": 0.46,
+        "net_return_pct": -59.038290293855745,
+        "total_absolute_movement": 6.277000000000001,
+        "swing_opportunity_ratio": 9.467571644042234,
+        "annualized_volatility": 0.9937676498239858,
+        "max_intra_quarter_range_pct": 181.29330254041568,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 0.454,
+        "end_price": 0.435,
+        "net_return_pct": -4.185022026431722,
+        "total_absolute_movement": 3.1050000000000004,
+        "swing_opportunity_ratio": 163.42105263157882,
+        "annualized_volatility": 0.6205925528910043,
+        "max_intra_quarter_range_pct": 42.06730769230769,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 0.434,
+        "end_price": 0.246,
+        "net_return_pct": -43.31797235023041,
+        "total_absolute_movement": 1.7519999999999996,
+        "swing_opportunity_ratio": 9.31914893617021,
+        "annualized_volatility": 0.5701638437528302,
+        "max_intra_quarter_range_pct": 81.66666666666667,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 0.245,
+        "end_price": 0.399,
+        "net_return_pct": 62.85714285714287,
+        "total_absolute_movement": 2.11,
+        "swing_opportunity_ratio": 13.701298701298699,
+        "annualized_volatility": 0.6170983027327046,
+        "max_intra_quarter_range_pct": 71.0204081632653,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 0.398,
+        "end_price": 0.287,
+        "net_return_pct": -27.889447236180914,
+        "total_absolute_movement": 1.847,
+        "swing_opportunity_ratio": 16.639639639639633,
+        "annualized_volatility": 0.5802152938936471,
+        "max_intra_quarter_range_pct": 90.00000000000001,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 0.286,
+        "end_price": 0.254,
+        "net_return_pct": -11.188811188811181,
+        "total_absolute_movement": 1.0600000000000005,
+        "swing_opportunity_ratio": 33.12500000000004,
+        "annualized_volatility": 0.4425202619200064,
+        "max_intra_quarter_range_pct": 51.68067226890757,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 0.255,
+        "end_price": 0.594,
+        "net_return_pct": 132.94117647058823,
+        "total_absolute_movement": 2.835000000000001,
+        "swing_opportunity_ratio": 8.362831858407082,
+        "annualized_volatility": 0.6635196733325913,
+        "max_intra_quarter_range_pct": 177.17842323651453,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 0.596,
+        "end_price": 0.65,
+        "net_return_pct": 9.060402684563767,
+        "total_absolute_movement": 4.240000000000002,
+        "swing_opportunity_ratio": 78.51851851851849,
+        "annualized_volatility": 0.73690825829836,
+        "max_intra_quarter_range_pct": 73.58078602620087,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 0.645,
+        "end_price": 0.392,
+        "net_return_pct": -39.224806201550386,
+        "total_absolute_movement": 2.623,
+        "swing_opportunity_ratio": 10.367588932806324,
+        "annualized_volatility": 0.6290354620346552,
+        "max_intra_quarter_range_pct": 75.2717391304348,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 0.399,
+        "end_price": 0.374,
+        "net_return_pct": -6.265664160401007,
+        "total_absolute_movement": 2.295,
+        "swing_opportunity_ratio": 91.79999999999991,
+        "annualized_volatility": 0.6394452068278358,
+        "max_intra_quarter_range_pct": 52.70270270270272,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 0.382,
+        "end_price": 0.844,
+        "net_return_pct": 120.94240837696336,
+        "total_absolute_movement": 7.193999999999999,
+        "swing_opportunity_ratio": 15.571428571428571,
+        "annualized_volatility": 0.9959498431109903,
+        "max_intra_quarter_range_pct": 299.07692307692304,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 0.852,
+        "end_price": 0.662,
+        "net_return_pct": -22.30046948356807,
+        "total_absolute_movement": 8.097999999999999,
+        "swing_opportunity_ratio": 42.621052631578955,
+        "annualized_volatility": 1.1392575746049354,
+        "max_intra_quarter_range_pct": 91.90556492411467,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 0.668,
+        "end_price": 0.572,
+        "net_return_pct": -14.37125748502995,
+        "total_absolute_movement": 4.531999999999998,
+        "swing_opportunity_ratio": 47.20833333333327,
+        "annualized_volatility": 0.6807601702277153,
+        "max_intra_quarter_range_pct": 61.53846153846153,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 0.569,
+        "end_price": 0.807,
+        "net_return_pct": 41.82776801405977,
+        "total_absolute_movement": 5.356,
+        "swing_opportunity_ratio": 22.50420168067226,
+        "annualized_volatility": 0.6393620136168214,
+        "max_intra_quarter_range_pct": 84.62962962962962,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 0.798,
+        "end_price": 0.334,
+        "net_return_pct": -58.1453634085213,
+        "total_absolute_movement": 3.6979999999999995,
+        "swing_opportunity_ratio": 7.969827586206895,
+        "annualized_volatility": 0.7395124382128644,
+        "max_intra_quarter_range_pct": 165.25679758308155,
+        "bars": 552
+      },
+      "2026-Q1": {
+        "start_price": 0.332,
+        "end_price": 0.261,
+        "net_return_pct": -21.3855421686747,
+        "total_absolute_movement": 1.4509999999999996,
+        "swing_opportunity_ratio": 20.436619718309853,
+        "annualized_volatility": 0.6413782771226256,
+        "max_intra_quarter_range_pct": 74.28571428571429,
+        "bars": 374
+      }
+    }
+  },
+  "DOGE/USD": {
+    "period": "2021-01-01 to 2026-03-04",
+    "bars": 11330,
+    "start_price": 0.00492,
+    "end_price": 0.089229,
+    "net_return_pct": 1713.59756097561,
+    "total_absolute_movement_usd": 28.337320519999995,
+    "swing_opportunity_ratio": 336.1126394572346,
+    "avg_quarterly_sor": 52.86659097252031,
+    "swings_10pct": 298,
+    "total_swing_magnitude_10pct": 8503.645103737417,
+    "swings_20pct": 110,
+    "total_swing_magnitude_20pct": 6511.152564094288,
+    "top_swings": [
+      {
+        "start_idx": 161,
+        "end_idx": 171,
+        "start_price": 0.0075,
+        "end_price": 0.05398,
+        "change_pct": 619.7333333333333,
+        "direction": "UP",
+        "start_date": "2021-01-27",
+        "end_date": "2021-01-29",
+        "bars": 10
+      },
+      {
+        "start_idx": 622,
+        "end_idx": 633,
+        "start_price": 0.116,
+        "end_price": 0.37001,
+        "change_pct": 218.97413793103448,
+        "direction": "UP",
+        "start_date": "2021-04-14",
+        "end_date": "2021-04-16",
+        "bars": 11
+      },
+      {
+        "start_idx": 8415,
+        "end_idx": 8475,
+        "start_price": 0.14579,
+        "end_price": 0.4206,
+        "change_pct": 188.49715343987927,
+        "direction": "UP",
+        "start_date": "2024-11-03",
+        "end_date": "2024-11-13",
+        "bars": 60
+      },
+      {
+        "start_idx": 688,
+        "end_idx": 746,
+        "start_price": 0.24984,
+        "end_price": 0.65885,
+        "change_pct": 163.7087736151137,
+        "direction": "UP",
+        "start_date": "2021-04-25",
+        "end_date": "2021-05-05",
+        "bars": 58
+      },
+      {
+        "start_idx": 0,
+        "end_idx": 10,
+        "start_price": 0.00492,
+        "end_price": 0.01186,
+        "change_pct": 141.05691056910572,
+        "direction": "UP",
+        "start_date": "2021-01-01",
+        "end_date": "2021-01-02",
+        "bars": 10
+      },
+      {
+        "start_idx": 578,
+        "end_idx": 620,
+        "start_price": 0.05849,
+        "end_price": 0.14099,
+        "change_pct": 141.04975209437512,
+        "direction": "UP",
+        "start_date": "2021-04-07",
+        "end_date": "2021-04-14",
+        "bars": 42
+      },
+      {
+        "start_idx": 1288,
+        "end_idx": 1364,
+        "start_price": 0.194786,
+        "end_price": 0.349225,
+        "change_pct": 79.2864990297044,
+        "direction": "UP",
+        "start_date": "2021-08-03",
+        "end_date": "2021-08-16",
+        "bars": 76
+      },
+      {
+        "start_idx": 3991,
+        "end_idx": 3999,
+        "start_price": 0.073842,
+        "end_price": 0.132135,
+        "change_pct": 78.94287803688957,
+        "direction": "UP",
+        "start_date": "2022-10-28",
+        "end_date": "2022-10-29",
+        "bars": 8
+      },
+      {
+        "start_idx": 7044,
+        "end_idx": 7096,
+        "start_price": 0.12743,
+        "end_price": 0.22699,
+        "change_pct": 78.12916895550501,
+        "direction": "UP",
+        "start_date": "2024-03-20",
+        "end_date": "2024-03-28",
+        "bars": 52
+      },
+      {
+        "start_idx": 195,
+        "end_idx": 206,
+        "start_price": 0.0306,
+        "end_price": 0.05399,
+        "change_pct": 76.43790849673205,
+        "direction": "UP",
+        "start_date": "2021-02-02",
+        "end_date": "2021-02-04",
+        "bars": 11
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 1.0414827890556044,
+      "10-20% (mild correction)": 0.6266548984995587,
+      "20-40% (correction)": 5.648720211827008,
+      "40-60% (bear market)": 7.255075022065313,
+      "60%+ (deep bear)": 85.42806707855252
+    },
+    "declining_quarters": 12,
+    "rising_quarters": 6,
+    "total_quarters": 21,
+    "quarterly_volatility": {
+      "2021-Q1": {
+        "start_price": 0.00492,
+        "end_price": 0.05381,
+        "net_return_pct": 993.6991869918697,
+        "total_absolute_movement": 0.61163,
+        "swing_opportunity_ratio": 12.510329310697486,
+        "annualized_volatility": 2.64118226899761,
+        "max_intra_quarter_range_pct": 1593.801652892562,
+        "bars": 540
+      },
+      "2021-Q2": {
+        "start_price": 0.05412,
+        "end_price": 0.254062,
+        "net_return_pct": 369.4419807834442,
+        "total_absolute_movement": 6.27194,
+        "swing_opportunity_ratio": 31.368796951115822,
+        "annualized_volatility": 2.200950751599861,
+        "max_intra_quarter_range_pct": 1220.1368343195265,
+        "bars": 546
+      },
+      "2021-Q3": {
+        "start_price": 0.243164,
+        "end_price": 0.20421,
+        "net_return_pct": -16.019641065289267,
+        "total_absolute_movement": 2.0949359999999997,
+        "swing_opportunity_ratio": 53.7797402063973,
+        "annualized_volatility": 0.9031604729407317,
+        "max_intra_quarter_range_pct": 112.2703152827333,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 0.202534,
+        "end_price": 0.1696,
+        "net_return_pct": -16.26097346618345,
+        "total_absolute_movement": 1.9301364599999995,
+        "swing_opportunity_ratio": 58.60619602842048,
+        "annualized_volatility": 1.1906058437834521,
+        "max_intra_quarter_range_pct": 112.46861384540905,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 0.1705,
+        "end_price": 0.138138,
+        "net_return_pct": -18.980645161290322,
+        "total_absolute_movement": 0.9919479999999998,
+        "swing_opportunity_ratio": 30.651628453124026,
+        "annualized_volatility": 0.7274411383229483,
+        "max_intra_quarter_range_pct": 76.13763981851669,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 0.135068,
+        "end_price": 0.066386,
+        "net_return_pct": -50.84994225131045,
+        "total_absolute_movement": 0.9170560000000003,
+        "swing_opportunity_ratio": 13.352202906147177,
+        "annualized_volatility": 0.9786637170913927,
+        "max_intra_quarter_range_pct": 243.86977373584608,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 0.066019,
+        "end_price": 0.06168,
+        "net_return_pct": -6.572350383980363,
+        "total_absolute_movement": 0.41702100000000014,
+        "swing_opportunity_ratio": 96.1099331643237,
+        "annualized_volatility": 0.6035225120711831,
+        "max_intra_quarter_range_pct": 53.4953224751092,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 0.061652,
+        "end_price": 0.070085,
+        "net_return_pct": 13.678388373450979,
+        "total_absolute_movement": 0.7689900600000001,
+        "swing_opportunity_ratio": 91.18819637139813,
+        "annualized_volatility": 1.0697924644262493,
+        "max_intra_quarter_range_pct": 155.8238611408795,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 0.06986,
+        "end_price": 0.076835,
+        "net_return_pct": 9.984254222731169,
+        "total_absolute_movement": 0.4607199999999997,
+        "swing_opportunity_ratio": 66.05304659498208,
+        "annualized_volatility": 0.5964976980257106,
+        "max_intra_quarter_range_pct": 52.276625604241374,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 0.07763,
+        "end_price": 0.06647787,
+        "net_return_pct": -14.36574777792092,
+        "total_absolute_movement": 0.36618226999999987,
+        "swing_opportunity_ratio": 32.83518664147562,
+        "annualized_volatility": 0.6751720155248728,
+        "max_intra_quarter_range_pct": 66.36382393855287,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 0.06973753,
+        "end_price": 0.06203813,
+        "net_return_pct": -11.040540151049239,
+        "total_absolute_movement": 0.27465912000000015,
+        "swing_opportunity_ratio": 35.672795282749284,
+        "annualized_volatility": 0.4591084822228678,
+        "max_intra_quarter_range_pct": 38.01513196480939,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 0.06207203,
+        "end_price": 0.0895507,
+        "net_return_pct": 44.26900489640825,
+        "total_absolute_movement": 0.45829355000000005,
+        "swing_opportunity_ratio": 16.678156184415045,
+        "annualized_volatility": 0.5719059781703492,
+        "max_intra_quarter_range_pct": 81.4507050547106,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 0.0892047,
+        "end_price": 0.22011,
+        "net_return_pct": 146.74708843816526,
+        "total_absolute_movement": 1.1205605,
+        "swing_opportunity_ratio": 8.560085038573687,
+        "annualized_volatility": 0.973568720549051,
+        "max_intra_quarter_range_pct": 198.75242335741444,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 0.21597,
+        "end_price": 0.12426,
+        "net_return_pct": -42.464231143214334,
+        "total_absolute_movement": 1.1597699999999995,
+        "swing_opportunity_ratio": 12.64605822701995,
+        "annualized_volatility": 0.7763046148104625,
+        "max_intra_quarter_range_pct": 86.74448767833981,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 0.12644,
+        "end_price": 0.11429,
+        "net_return_pct": -9.609300854160072,
+        "total_absolute_movement": 0.7476900000000001,
+        "swing_opportunity_ratio": 61.53827160493831,
+        "annualized_volatility": 0.7065837209554672,
+        "max_intra_quarter_range_pct": 67.84828075150658,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 0.11767,
+        "end_price": 0.31544,
+        "net_return_pct": 168.0717260134274,
+        "total_absolute_movement": 2.9152499999999995,
+        "swing_opportunity_ratio": 14.740607776710318,
+        "annualized_volatility": 1.0729103904340032,
+        "max_intra_quarter_range_pct": 352.1935732153165,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 0.31829,
+        "end_price": 0.16665,
+        "net_return_pct": -47.642087404568166,
+        "total_absolute_movement": 2.2074999999999996,
+        "swing_opportunity_ratio": 14.55750461619625,
+        "annualized_volatility": 0.8731160019859648,
+        "max_intra_quarter_range_pct": 170.37277568515393,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 0.16849,
+        "end_price": 0.16521,
+        "net_return_pct": -1.946703068431364,
+        "total_absolute_movement": 1.3401199999999998,
+        "swing_opportunity_ratio": 408.5731707317066,
+        "annualized_volatility": 0.7312520172303344,
+        "max_intra_quarter_range_pct": 89.93115969437932,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 0.16498,
+        "end_price": 0.23304,
+        "net_return_pct": 41.253485270941944,
+        "total_absolute_movement": 1.6296600000000003,
+        "swing_opportunity_ratio": 23.944460769908904,
+        "annualized_volatility": 0.6955369784592034,
+        "max_intra_quarter_range_pct": 88.24684787429511,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 0.2308,
+        "end_price": 0.11734,
+        "net_return_pct": -49.15944540727903,
+        "total_absolute_movement": 1.1252,
+        "swing_opportunity_ratio": 9.917151419002291,
+        "annualized_volatility": 0.7041802969180976,
+        "max_intra_quarter_range_pct": 129.21895006402048,
+        "bars": 552
+      },
+      "2026-Q1": {
+        "start_price": 0.11811,
+        "end_price": 0.089229,
+        "net_return_pct": -24.45262890525781,
+        "total_absolute_movement": 0.488519,
+        "swing_opportunity_ratio": 16.91489214362383,
+        "annualized_volatility": 0.6249019342137352,
+        "max_intra_quarter_range_pct": 73.06908267270668,
+        "bars": 374
+      }
+    }
+  },
+  "LINK/USD": {
+    "period": "2021-01-01 to 2026-03-04",
+    "bars": 11329,
+    "start_price": 11.5089,
+    "end_price": 8.802,
+    "net_return_pct": -23.520058389594148,
+    "total_absolute_movement_usd": 2868.3456400000005,
+    "swing_opportunity_ratio": 1059.6422623665446,
+    "avg_quarterly_sor": 43.543301852691485,
+    "swings_10pct": 288,
+    "total_swing_magnitude_10pct": 6827.477992547002,
+    "swings_20pct": 102,
+    "total_swing_magnitude_20pct": 4371.5269809633255,
+    "top_swings": [
+      {
+        "start_idx": 6090,
+        "end_idx": 6269,
+        "start_price": 7.125,
+        "end_price": 16.475,
+        "change_pct": 131.22807017543863,
+        "direction": "UP",
+        "start_date": "2023-10-13",
+        "end_date": "2023-11-11",
+        "bars": 179
+      },
+      {
+        "start_idx": 1200,
+        "end_idx": 1364,
+        "start_price": 13.5024,
+        "end_price": 30.31882,
+        "change_pct": 124.54393293044201,
+        "direction": "UP",
+        "start_date": "2021-07-20",
+        "end_date": "2021-08-16",
+        "bars": 164
+      },
+      {
+        "start_idx": 9802,
+        "end_idx": 9974,
+        "start_price": 11.232,
+        "end_price": 20.052,
+        "change_pct": 78.52564102564104,
+        "direction": "UP",
+        "start_date": "2025-06-22",
+        "end_date": "2025-07-21",
+        "bars": 172
+      },
+      {
+        "start_idx": 684,
+        "end_idx": 773,
+        "start_price": 31.1,
+        "end_price": 52.33984,
+        "change_pct": 68.29530546623795,
+        "direction": "UP",
+        "start_date": "2021-04-25",
+        "end_date": "2021-05-09",
+        "bars": 89
+      },
+      {
+        "start_idx": 63,
+        "end_idx": 91,
+        "start_price": 13.39388,
+        "end_price": 22.29797,
+        "change_pct": 66.47879479284569,
+        "direction": "UP",
+        "start_date": "2021-01-11",
+        "end_date": "2021-01-16",
+        "bars": 28
+      },
+      {
+        "start_idx": 5343,
+        "end_idx": 5585,
+        "start_price": 5.03,
+        "end_price": 8.359,
+        "change_pct": 66.18290258449304,
+        "direction": "UP",
+        "start_date": "2023-06-10",
+        "end_date": "2023-07-20",
+        "bars": 242
+      },
+      {
+        "start_idx": 8552,
+        "end_idx": 8616,
+        "start_price": 16.55,
+        "end_price": 26.641,
+        "change_pct": 60.9728096676737,
+        "direction": "UP",
+        "start_date": "2024-11-26",
+        "end_date": "2024-12-07",
+        "bars": 64
+      },
+      {
+        "start_idx": 10048,
+        "end_idx": 10110,
+        "start_price": 15.581,
+        "end_price": 24.54,
+        "change_pct": 57.49951864450292,
+        "direction": "UP",
+        "start_date": "2025-08-02",
+        "end_date": "2025-08-13",
+        "bars": 62
+      },
+      {
+        "start_idx": 6717,
+        "end_idx": 6826,
+        "start_price": 13.582,
+        "end_price": 20.623,
+        "change_pct": 51.84067147695479,
+        "direction": "UP",
+        "start_date": "2024-01-25",
+        "end_date": "2024-02-12",
+        "bars": 109
+      },
+      {
+        "start_idx": 855,
+        "end_idx": 865,
+        "start_price": 17.5273,
+        "end_price": 26.58339,
+        "change_pct": 51.66848288099138,
+        "direction": "UP",
+        "start_date": "2021-05-23",
+        "end_date": "2021-05-25",
+        "bars": 10
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 3.1600317768558566,
+      "10-20% (mild correction)": 2.4450525200812074,
+      "20-40% (correction)": 2.806955600670845,
+      "40-60% (bear market)": 14.670315120487246,
+      "60%+ (deep bear)": 76.91764498190484
+    },
+    "declining_quarters": 11,
+    "rising_quarters": 9,
+    "total_quarters": 21,
+    "quarterly_volatility": {
+      "2021-Q1": {
+        "start_price": 11.5089,
+        "end_price": 29.4,
+        "net_return_pct": 155.4544743633188,
+        "total_absolute_movement": 288.81302000000005,
+        "swing_opportunity_ratio": 16.142831910838353,
+        "annualized_volatility": 1.1542185295045528,
+        "max_intra_quarter_range_pct": 214.68776281391877,
+        "bars": 540
+      },
+      "2021-Q2": {
+        "start_price": 29.68574,
+        "end_price": 19.50085,
+        "net_return_pct": -34.30903187860569,
+        "total_absolute_movement": 493.74955000000006,
+        "swing_opportunity_ratio": 48.47863354439764,
+        "annualized_volatility": 1.525641482059606,
+        "max_intra_quarter_range_pct": 223.70967223213162,
+        "bars": 546
+      },
+      "2021-Q3": {
+        "start_price": 18.52006,
+        "end_price": 24.0,
+        "net_return_pct": 29.58921299391038,
+        "total_absolute_movement": 243.30266000000003,
+        "swing_opportunity_ratio": 44.3987817384862,
+        "annualized_volatility": 0.9882165025332451,
+        "max_intra_quarter_range_pct": 163.63350219220288,
+        "bars": 552
+      },
+      "2021-Q4": {
+        "start_price": 23.76181,
+        "end_price": 19.51,
+        "net_return_pct": -17.893460136243824,
+        "total_absolute_movement": 230.74968999999996,
+        "swing_opportunity_ratio": 54.2709316738048,
+        "annualized_volatility": 0.8834556351555066,
+        "max_intra_quarter_range_pct": 120.41555812608446,
+        "bars": 552
+      },
+      "2022-Q1": {
+        "start_price": 19.76,
+        "end_price": 16.93,
+        "net_return_pct": -14.321862348178147,
+        "total_absolute_movement": 169.57,
+        "swing_opportunity_ratio": 59.9187279151943,
+        "annualized_volatility": 0.9452222261239452,
+        "max_intra_quarter_range_pct": 139.77947413061918,
+        "bars": 540
+      },
+      "2022-Q2": {
+        "start_price": 16.46,
+        "end_price": 6.277,
+        "net_return_pct": -61.86512758201701,
+        "total_absolute_movement": 91.69699999999997,
+        "swing_opportunity_ratio": 9.004910144358242,
+        "annualized_volatility": 0.9810667673068684,
+        "max_intra_quarter_range_pct": 232.04775022956835,
+        "bars": 546
+      },
+      "2022-Q3": {
+        "start_price": 6.174,
+        "end_price": 7.583,
+        "net_return_pct": 22.821509556203427,
+        "total_absolute_movement": 57.614999999999995,
+        "swing_opportunity_ratio": 40.89070262597587,
+        "annualized_volatility": 0.7490247418723937,
+        "max_intra_quarter_range_pct": 57.79352226720646,
+        "bars": 552
+      },
+      "2022-Q4": {
+        "start_price": 7.637,
+        "end_price": 5.569,
+        "net_return_pct": -27.07869582296713,
+        "total_absolute_movement": 45.43199999999999,
+        "swing_opportunity_ratio": 21.96905222437137,
+        "annualized_volatility": 0.7131487895944246,
+        "max_intra_quarter_range_pct": 65.17807713600298,
+        "bars": 552
+      },
+      "2023-Q1": {
+        "start_price": 5.549,
+        "end_price": 7.591,
+        "net_return_pct": 36.79942331951702,
+        "total_absolute_movement": 41.928000000000004,
+        "swing_opportunity_ratio": 20.532810969637612,
+        "annualized_volatility": 0.6145753906184138,
+        "max_intra_quarter_range_pct": 51.393412956930874,
+        "bars": 540
+      },
+      "2023-Q2": {
+        "start_price": 7.577,
+        "end_price": 6.311,
+        "net_return_pct": -16.708459812590736,
+        "total_absolute_movement": 31.099999999999994,
+        "swing_opportunity_ratio": 24.565560821484986,
+        "annualized_volatility": 0.5041549137830412,
+        "max_intra_quarter_range_pct": 73.47912524850896,
+        "bars": 546
+      },
+      "2023-Q3": {
+        "start_price": 6.212,
+        "end_price": 8.192,
+        "net_return_pct": 31.87379265936897,
+        "total_absolute_movement": 32.76999999999999,
+        "swing_opportunity_ratio": 16.55050505050504,
+        "annualized_volatility": 0.5197405827975092,
+        "max_intra_quarter_range_pct": 44.92024965325936,
+        "bars": 552
+      },
+      "2023-Q4": {
+        "start_price": 8.164,
+        "end_price": 14.935,
+        "net_return_pct": 82.93728564429202,
+        "total_absolute_movement": 99.83299999999998,
+        "swing_opportunity_ratio": 14.744203219613052,
+        "annualized_volatility": 0.7593816883836519,
+        "max_intra_quarter_range_pct": 144.64561403508773,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 14.935,
+        "end_price": 19.17,
+        "net_return_pct": 28.356210244392372,
+        "total_absolute_movement": 122.61299999999999,
+        "swing_opportunity_ratio": 28.95230224321132,
+        "annualized_volatility": 0.7156797670972517,
+        "max_intra_quarter_range_pct": 68.98349937733497,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 19.176,
+        "end_price": 14.258,
+        "net_return_pct": -25.646641635377556,
+        "total_absolute_movement": 99.50600000000001,
+        "swing_opportunity_ratio": 20.23302155347703,
+        "annualized_volatility": 0.6921668747036468,
+        "max_intra_quarter_range_pct": 50.9564669763048,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 14.275,
+        "end_price": 11.853,
+        "net_return_pct": -16.96672504378284,
+        "total_absolute_movement": 76.28199999999998,
+        "swing_opportunity_ratio": 31.495458298926494,
+        "annualized_volatility": 0.6917512543369848,
+        "max_intra_quarter_range_pct": 74.9203351823439,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 12.097,
+        "end_price": 19.972,
+        "net_return_pct": 65.09878482268333,
+        "total_absolute_movement": 173.195,
+        "swing_opportunity_ratio": 21.993015873015867,
+        "annualized_volatility": 0.9488260309162188,
+        "max_intra_quarter_range_pct": 196.11631537861047,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 20.025,
+        "end_price": 13.503,
+        "net_return_pct": -32.569288389513105,
+        "total_absolute_movement": 173.672,
+        "swing_opportunity_ratio": 26.628641521005832,
+        "annualized_volatility": 0.948553269691148,
+        "max_intra_quarter_range_pct": 114.46035065143963,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 13.638,
+        "end_price": 13.377,
+        "net_return_pct": -1.9137703475582875,
+        "total_absolute_movement": 96.87899999999999,
+        "swing_opportunity_ratio": 371.18390804597806,
+        "annualized_volatility": 0.6799545039461833,
+        "max_intra_quarter_range_pct": 70.46135989940998,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 13.318,
+        "end_price": 21.307,
+        "net_return_pct": 59.98648445712569,
+        "total_absolute_movement": 145.36500000000004,
+        "swing_opportunity_ratio": 18.195644010514464,
+        "annualized_volatility": 0.6826674327083325,
+        "max_intra_quarter_range_pct": 111.93948374015442,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 21.182,
+        "end_price": 12.183,
+        "net_return_pct": -42.484184685109994,
+        "total_absolute_movement": 110.32499999999999,
+        "swing_opportunity_ratio": 12.259695521724636,
+        "annualized_volatility": 0.7498178622171662,
+        "max_intra_quarter_range_pct": 99.5658465991317,
+        "bars": 551
+      },
+      "2026-Q1": {
+        "start_price": 12.198,
+        "end_price": 8.802,
+        "net_return_pct": -27.84062961141171,
+        "total_absolute_movement": 40.75199999999998,
+        "swing_opportunity_ratio": 11.999999999999991,
+        "annualized_volatility": 0.5723363136072173,
+        "max_intra_quarter_range_pct": 80.15692229815237,
+        "bars": 374
+      }
+    }
+  },
+  "XRP/USD": {
+    "period": "2023-07-13 to 2026-03-04",
+    "bars": 5786,
+    "start_price": 0.8177,
+    "end_price": 1.3619,
+    "net_return_pct": 66.5525253760548,
+    "total_absolute_movement_usd": 98.22659999999999,
+    "swing_opportunity_ratio": 180.49724366041892,
+    "avg_quarterly_sor": 41.53998003929441,
+    "swings_10pct": 97,
+    "total_swing_magnitude_10pct": 2355.9558717665127,
+    "swings_20pct": 31,
+    "total_swing_magnitude_20pct": 1642.5457762555309,
+    "top_swings": [
+      {
+        "start_idx": 2872,
+        "end_idx": 2951,
+        "start_price": 0.4969,
+        "end_price": 1.1874,
+        "change_pct": 138.96156168243107,
+        "direction": "UP",
+        "start_date": "2024-11-03",
+        "end_date": "2024-11-16",
+        "bars": 79
+      },
+      {
+        "start_idx": 2998,
+        "end_idx": 3051,
+        "start_price": 1.3084,
+        "end_price": 2.8501,
+        "change_pct": 117.83093855090185,
+        "direction": "UP",
+        "start_date": "2024-11-24",
+        "end_date": "2024-12-03",
+        "bars": 53
+      },
+      {
+        "start_idx": 4258,
+        "end_idx": 4411,
+        "start_price": 1.9348,
+        "end_price": 3.6093,
+        "change_pct": 86.54641306594996,
+        "direction": "UP",
+        "start_date": "2025-06-22",
+        "end_date": "2025-07-18",
+        "bars": 153
+      },
+      {
+        "start_idx": 3217,
+        "end_idx": 3317,
+        "start_price": 2.0176,
+        "end_price": 3.3494,
+        "change_pct": 66.00911974623317,
+        "direction": "UP",
+        "start_date": "2024-12-31",
+        "end_date": "2025-01-16",
+        "bars": 100
+      },
+      {
+        "start_idx": 2143,
+        "end_idx": 2220,
+        "start_price": 0.3986,
+        "end_price": 0.6261,
+        "change_pct": 57.0747616658304,
+        "direction": "UP",
+        "start_date": "2024-07-05",
+        "end_date": "2024-07-17",
+        "bars": 77
+      },
+      {
+        "start_idx": 2957,
+        "end_idx": 2989,
+        "start_price": 1.0351,
+        "end_price": 1.5678,
+        "change_pct": 51.463626702734054,
+        "direction": "UP",
+        "start_date": "2024-11-17",
+        "end_date": "2024-11-23",
+        "bars": 32
+      },
+      {
+        "start_idx": 544,
+        "end_idx": 694,
+        "start_price": 0.4777,
+        "end_price": 0.7175,
+        "change_pct": 50.19886958342056,
+        "direction": "UP",
+        "start_date": "2023-10-12",
+        "end_date": "2023-11-06",
+        "bars": 150
+      },
+      {
+        "start_idx": 5442,
+        "end_idx": 5626,
+        "start_price": 2.3864,
+        "end_price": 1.211,
+        "change_pct": -49.25410660408984,
+        "direction": "DOWN",
+        "start_date": "2026-01-06",
+        "end_date": "2026-02-05",
+        "bars": 184
+      },
+      {
+        "start_idx": 3572,
+        "end_idx": 3588,
+        "start_price": 1.9973,
+        "end_price": 2.9398,
+        "change_pct": 47.1887047514144,
+        "direction": "UP",
+        "start_date": "2025-02-28",
+        "end_date": "2025-03-02",
+        "bars": 16
+      },
+      {
+        "start_idx": 35,
+        "end_idx": 211,
+        "start_price": 0.8351,
+        "end_price": 0.4937,
+        "change_pct": -40.881331577056635,
+        "direction": "DOWN",
+        "start_date": "2023-07-19",
+        "end_date": "2023-08-18",
+        "bars": 176
+      }
+    ],
+    "dd_time_distribution": {
+      "0-10% (near ATH)": 5.53059108192188,
+      "10-20% (mild correction)": 12.184583477359142,
+      "20-40% (correction)": 64.84618043553405,
+      "40-60% (bear market)": 15.243691669547182,
+      "60%+ (deep bear)": 2.1949533356377464
+    },
+    "declining_quarters": 4,
+    "rising_quarters": 3,
+    "total_quarters": 11,
+    "quarterly_volatility": {
+      "2023-Q3": {
+        "start_price": 0.8177,
+        "end_price": 0.5151,
+        "net_return_pct": -37.006237006237,
+        "total_absolute_movement": 2.3592,
+        "swing_opportunity_ratio": 7.796430931923331,
+        "annualized_volatility": 0.508801121502133,
+        "max_intra_quarter_range_pct": 78.02174376465571,
+        "bars": 475
+      },
+      "2023-Q4": {
+        "start_price": 0.5168,
+        "end_price": 0.6154,
+        "net_return_pct": 19.078947368421034,
+        "total_absolute_movement": 2.5934000000000004,
+        "swing_opportunity_ratio": 26.302231237322545,
+        "annualized_volatility": 0.4416158599685043,
+        "max_intra_quarter_range_pct": 50.19886958342056,
+        "bars": 552
+      },
+      "2024-Q1": {
+        "start_price": 0.6128,
+        "end_price": 0.6291,
+        "net_return_pct": 2.6599216710182736,
+        "total_absolute_movement": 3.047699999999999,
+        "swing_opportunity_ratio": 186.97546012269953,
+        "annualized_volatility": 0.5823583090791102,
+        "max_intra_quarter_range_pct": 48.567946374162105,
+        "bars": 546
+      },
+      "2024-Q2": {
+        "start_price": 0.6274,
+        "end_price": 0.4753,
+        "net_return_pct": -24.242907236212936,
+        "total_absolute_movement": 2.2655000000000003,
+        "swing_opportunity_ratio": 14.894806048652208,
+        "annualized_volatility": 0.4747184516025341,
+        "max_intra_quarter_range_pct": 34.49088960342978,
+        "bars": 546
+      },
+      "2024-Q3": {
+        "start_price": 0.4781,
+        "end_price": 0.6113,
+        "net_return_pct": 27.86028027609285,
+        "total_absolute_movement": 3.2980000000000005,
+        "swing_opportunity_ratio": 24.759759759759778,
+        "annualized_volatility": 0.6551910089279488,
+        "max_intra_quarter_range_pct": 65.55444054189664,
+        "bars": 552
+      },
+      "2024-Q4": {
+        "start_price": 0.6226,
+        "end_price": 2.0793,
+        "net_return_pct": 233.9704465146161,
+        "total_absolute_movement": 14.344899999999996,
+        "swing_opportunity_ratio": 9.847532093087112,
+        "annualized_volatility": 1.0498413478201123,
+        "max_intra_quarter_range_pct": 473.57617226806195,
+        "bars": 552
+      },
+      "2025-Q1": {
+        "start_price": 2.1024,
+        "end_price": 2.0894,
+        "net_return_pct": -0.6183409436834048,
+        "total_absolute_movement": 21.04319999999999,
+        "swing_opportunity_ratio": 1618.707692307704,
+        "annualized_volatility": 0.9003363969160647,
+        "max_intra_quarter_range_pct": 67.696390126671,
+        "bars": 540
+      },
+      "2025-Q2": {
+        "start_price": 2.0981,
+        "end_price": 2.2373,
+        "net_return_pct": 6.634574138506257,
+        "total_absolute_movement": 12.3716,
+        "swing_opportunity_ratio": 88.87643678160934,
+        "annualized_volatility": 0.6049904738437046,
+        "max_intra_quarter_range_pct": 56.22240782722825,
+        "bars": 546
+      },
+      "2025-Q3": {
+        "start_price": 2.2383,
+        "end_price": 2.8471,
+        "net_return_pct": 27.199213688960374,
+        "total_absolute_movement": 16.447000000000006,
+        "swing_opportunity_ratio": 27.015440210249682,
+        "annualized_volatility": 0.545033724175587,
+        "max_intra_quarter_range_pct": 67.29860016686754,
+        "bars": 552
+      },
+      "2025-Q4": {
+        "start_price": 2.8194,
+        "end_price": 1.839,
+        "net_return_pct": -34.773356033198546,
+        "total_absolute_movement": 13.0304,
+        "swing_opportunity_ratio": 13.29090167278662,
+        "annualized_volatility": 0.5933834313895738,
+        "max_intra_quarter_range_pct": 71.3335918887473,
+        "bars": 551
+      },
+      "2026-Q1": {
+        "start_price": 1.831,
+        "end_price": 1.3619,
+        "net_return_pct": -25.619879847078092,
+        "total_absolute_movement": 7.3371,
+        "swing_opportunity_ratio": 15.640801534853981,
+        "annualized_volatility": 0.6765498019068305,
+        "max_intra_quarter_range_pct": 97.06028075970272,
+        "bars": 374
+      }
+    }
+  }
+}
