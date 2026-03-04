@@ -972,22 +972,6 @@ export function HoldingsCard() {
           </div>
         </div>
 
-        {/* Allocation bar */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Allocation
-          </p>
-          <div className="flex h-3 rounded-full overflow-hidden bg-(--color-bg-elevated)">
-            {donutSlices.map((s, i) => (
-              <div
-                key={`bar-${s.label}-${i}`}
-                className="h-full transition-all"
-                style={{ width: `${s.pct}%`, backgroundColor: s.color }}
-                title={`${s.label} — ${s.pct.toFixed(1)}%`}
-              />
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* ===== Holdings Table Card ===== */}
