@@ -49,27 +49,29 @@ async def get_candles(
     symbol = symbol.replace("-", "/")
     candles = await CandleStorage.load_candles_db(db, symbol, timeframe, limit=limit)
 
-    # If DB has no data, try fetching live from Binance via CCXT
+    # If DB has no data, try fetching live via CCXT (Binance → KuCoin → Kraken)
     if not candles and "/" in symbol:
-        try:
-            from app.data.ingestion import CCXTIngestion
+        from app.data.ingestion import CCXTIngestion
 
-            ingestion = CCXTIngestion("binance")
-            df = ingestion.fetch_candles(symbol, timeframe, limit=limit)
-            if not df.empty:
-                candles = [
-                    {
-                        "time": row["time"].isoformat(),
-                        "open": row["open"],
-                        "high": row["high"],
-                        "low": row["low"],
-                        "close": row["close"],
-                        "volume": row["volume"],
-                    }
-                    for _, row in df.iterrows()
-                ]
-        except Exception:
-            logger.debug("Live candle fetch failed for %s", symbol)
+        for exchange_id in ("binance", "kucoin", "kraken"):
+            try:
+                ingestion = CCXTIngestion(exchange_id)
+                df = ingestion.fetch_candles(symbol, timeframe, limit=limit)
+                if not df.empty:
+                    candles = [
+                        {
+                            "time": row["time"].isoformat(),
+                            "open": row["open"],
+                            "high": row["high"],
+                            "low": row["low"],
+                            "close": row["close"],
+                            "volume": row["volume"],
+                        }
+                        for _, row in df.iterrows()
+                    ]
+                    break
+            except Exception:
+                logger.debug("Live candle fetch from %s failed for %s", exchange_id, symbol)
 
     return {"symbol": symbol, "timeframe": timeframe, "candles": candles, "count": len(candles)}
 
