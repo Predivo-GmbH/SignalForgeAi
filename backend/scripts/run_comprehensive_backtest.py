@@ -87,7 +87,8 @@ PAIRS = {
 PARAM_GRID = {
     "min_confluence": [40, 50, 60, 70],
     "atr_sl_multiplier": [1.5, 2.0, 2.5, 3.0],
-    "max_risk_per_trade": [0.01, 0.02, 0.03],
+    "max_risk_per_trade": [0.01, 0.02],
+    "tp_ratio": [1.0, 1.2, 1.618, 2.0, 2.618],
 }
 
 VARIANTS = ["baseline", "breakeven", "trailing"]
@@ -366,9 +367,11 @@ def replay(
     min_conf = params["min_confluence"]
     atr_mult = params["atr_sl_multiplier"]
     risk_pct = params["max_risk_per_trade"]
+    tp_ratio = params.get("tp_ratio", 1.618)
     enable_breakeven = variant in ("breakeven", "trailing")
     enable_trailing = variant == "trailing"
     trail_atr_mult = 1.5
+    max_hold_bars = params.get("max_hold_bars", 0)  # 0 = disabled
 
     trades: list[ReplayTrade] = []
     equity = [initial_capital]
@@ -415,6 +418,27 @@ def replay(
                     if trail_sl < open_trade.stop_loss:
                         open_trade.stop_loss = trail_sl
 
+            # Time-based exit: close if held too long with no significant profit
+            if max_hold_bars > 0 and (i - open_trade.entry_idx) >= max_hold_bars:
+                exit_price = sig.close
+                risk_dist = abs(open_trade.entry_price - original_sl) if original_sl else sl_dist
+                if risk_dist > 0:
+                    pos_size = capital * risk_pct / risk_dist
+                    if open_trade.direction == "BUY":
+                        pnl = (exit_price - open_trade.entry_price) * pos_size
+                    else:
+                        pnl = (open_trade.entry_price - exit_price) * pos_size
+                else:
+                    pnl = 0.0
+                open_trade.exit_idx = i
+                open_trade.exit_price = exit_price
+                open_trade.pnl = pnl
+                capital += pnl
+                trades.append(open_trade)
+                open_trade = None
+                equity.append(capital)
+                continue
+
             # Check SL/TP
             hit_sl = hit_tp = False
             if open_trade.direction == "BUY":
@@ -457,10 +481,10 @@ def replay(
 
             if sig.action == "BUY":
                 sl = entry - sl_dist
-                tp = entry + sl_dist * 1.618
+                tp = entry + sl_dist * tp_ratio
             else:
                 sl = entry + sl_dist
-                tp = entry - sl_dist * 1.618
+                tp = entry - sl_dist * tp_ratio
 
             open_trade = ReplayTrade(
                 entry_idx=i,
@@ -688,6 +712,30 @@ def variant_comparison(results: list[dict]) -> dict:
     return comparison
 
 
+# ── Per-Pair Best Config ────────────────────────────────────────────────
+
+
+def best_config_per_pair(results: list[dict]) -> dict[str, dict]:
+    """Find the best configuration for each pair individually."""
+    pair_results: dict[str, list[dict]] = {}
+    for r in results:
+        pair_results.setdefault(r["pair"], []).append(r)
+
+    best_per_pair = {}
+    for pair, pair_r in pair_results.items():
+        # Sort by score descending
+        pair_r.sort(key=lambda x: x["score"], reverse=True)
+        if pair_r:
+            top = pair_r[0]
+            best_per_pair[pair] = {
+                "params": top["params"],
+                "variant": top["variant"],
+                "score": top["score"],
+                "metrics": top["metrics"],
+            }
+    return best_per_pair
+
+
 # ── Walk-Forward Validation ─────────────────────────────────────────────
 
 
@@ -810,11 +858,10 @@ def generate_report(
     lines.append(f"- **Initial capital:** ${INITIAL_CAPITAL:,.0f}")
     lines.append(f"- **Lookback:** {LOOKBACK} bars\n")
 
-    lines.append("### Key Discovery: R:R Is Always 1.618\n")
-    lines.append("The take-profit is calculated as `entry ± SL_distance × 1.618` (Fibonacci extension). "
-                 "This means R:R is always exactly 1.618 regardless of ATR multiplier. "
-                 "The `min_risk_reward` parameter only acts as a binary gate — values ≤1.618 always pass, "
-                 "values >1.618 always reject (0 trades). This was confirmed during backtesting.\n")
+    lines.append("### Key Parameter: TP Ratio\n")
+    lines.append("The take-profit distance is `SL_distance × tp_ratio`. In production this is hardcoded at 1.618 "
+                 "(Fibonacci extension). This backtest tests variable TP ratios [1.0, 1.2, 1.618, 2.0, 2.618] "
+                 "to find the optimal risk:reward tradeoff.\n")
 
     # ── 1. Baseline Results ──
     lines.append("---\n")
@@ -847,17 +894,16 @@ def generate_report(
     lines.append(f"Score = `profit_factor × (1 - max_drawdown/100) × min(trades/10, 1.0)`, "
                  f"averaged across {len(pair_names)} pairs, weighted by consistency.\n")
 
-    lines.append("| Rank | Confluence | ATR Mult | Risk/Trade | Variant | Combined Score | Avg Return | Avg Win Rate |")
-    lines.append("|------|-----------|----------|-----------|---------|---------------|-----------|-------------|")
+    lines.append("| Rank | Confluence | ATR Mult | Risk | TP Ratio | Variant | Score | Avg Return | Avg Win Rate |")
+    lines.append("|------|-----------|----------|------|---------|---------|-------|-----------|-------------|")
     for i, cfg in enumerate(ranked[:10]):
         p = cfg["params"]
-        # Compute avg return and win rate across pairs
         all_m = list(cfg["metrics"].values())
         avg_ret = sum(m.get("total_return_pct", 0) for m in all_m) / len(all_m) if all_m else 0
         avg_wr = sum(m.get("win_rate", 0) for m in all_m) / len(all_m) if all_m else 0
         lines.append(
             f"| {i+1} | {p['min_confluence']} | {p['atr_sl_multiplier']} | "
-            f"{p['max_risk_per_trade']:.0%} | {cfg['variant']} | "
+            f"{p['max_risk_per_trade']:.0%} | {p.get('tp_ratio', 1.618)} | {cfg['variant']} | "
             f"{cfg['combined_score']:.3f} | {avg_ret:.1f}% | {avg_wr:.1f}% |"
         )
     lines.append("")
@@ -966,9 +1012,9 @@ def generate_report(
         lines.append(f'  "min_confluence": {bp["min_confluence"]},')
         lines.append(f'  "atr_sl_multiplier": {bp["atr_sl_multiplier"]},')
         lines.append(f'  "max_risk_per_trade": {bp["max_risk_per_trade"]},')
+        lines.append(f'  "tp_ratio": {bp.get("tp_ratio", 1.618)},')
         if best["variant"] in ("breakeven", "trailing"):
             lines.append(f'  "break_even_enabled": true,')
-            lines.append(f'  "break_even_r_multiple": 1.0,')
         if best["variant"] == "trailing":
             lines.append(f'  "trailing_stop_enabled": true,')
             lines.append(f'  "atr_trail_multiplier": 1.5,')
@@ -986,13 +1032,32 @@ def generate_report(
             lines.append(f'  "min_confluence": {wp["min_confluence"]},')
             lines.append(f'  "atr_sl_multiplier": {wp["atr_sl_multiplier"]},')
             lines.append(f'  "max_risk_per_trade": {wp["max_risk_per_trade"]},')
+            lines.append(f'  "tp_ratio": {wp.get("tp_ratio", 1.618)},')
             if best_wfo["variant"] in ("breakeven", "trailing"):
                 lines.append(f'  "break_even_enabled": true,')
             if best_wfo["variant"] == "trailing":
                 lines.append(f'  "trailing_stop_enabled": true,')
-                lines.append(f'  "atr_trail_multiplier": 1.5,')
             lines.append("}")
             lines.append("```\n")
+
+    # ── Per-Pair Best Configs ──
+    if hasattr(generate_report, '_per_pair') and generate_report._per_pair:
+        pp = generate_report._per_pair
+        lines.append("### Best Configuration Per Pair\n")
+        lines.append("| Pair | Confluence | ATR Mult | Risk | TP Ratio | Variant | Score | Return | Win Rate |")
+        lines.append("|------|-----------|----------|------|---------|---------|-------|--------|---------|")
+        for pair in pair_names:
+            if pair in pp:
+                cfg = pp[pair]
+                p = cfg["params"]
+                m = cfg["metrics"]
+                lines.append(
+                    f"| {pair} | {p['min_confluence']} | {p['atr_sl_multiplier']} | "
+                    f"{p['max_risk_per_trade']:.0%} | {p.get('tp_ratio', 1.618)} | "
+                    f"{cfg['variant']} | {cfg['score']:.2f} | "
+                    f"{m.get('total_return_pct', 0):.1f}% | {m.get('win_rate', 0):.1f}% |"
+                )
+        lines.append("")
 
     lines.append("### Key Findings\n")
     for param_name, values in sensitivity.items():
@@ -1013,20 +1078,12 @@ def generate_report(
 
     lines.append("")
     lines.append("### Production Recommendations\n")
-    lines.append("1. **Enable trailing stops + break-even** — protects winners from reversing to losses")
-    lines.append("2. **Enable drawdown circuit breaker** (`max_drawdown_pct: 15%`) — prevents catastrophic streaks")
-    lines.append("3. **Enable correlation monitoring** — BTC/ETH/SOL are correlated; multiple positions multiply risk")
-    lines.append("4. **Consider partial take-profit** — close 50% at TP1, trail remaining to TP2")
-    lines.append("5. **R:R is fixed at 1.618** — consider making TP ratio configurable for different market conditions")
+    lines.append("1. **Make TP ratio configurable** — the optimal TP ratio varies; 1.618 may not be best for all conditions")
+    lines.append("2. **Enable drawdown circuit breaker** (`max_drawdown_pct: 15%`) — prevents catastrophic loss streaks")
+    lines.append("3. **Use per-pair optimized configs** — some pairs need different settings than others")
+    lines.append("4. **Enable correlation monitoring** — BTC/ETH/SOL are highly correlated; avoid simultaneous positions")
+    lines.append("5. **Consider partial take-profit** — close 50% at TP1, trail remaining to TP2")
     lines.append("")
-
-    lines.append("### Stop-Loss on Profitable Trades\n")
-    lines.append("A `stop_loss` exit reason with positive P&L occurs when **trailing stop or break-even stop** is active. "
-                 "The SL gets moved in the profit direction (e.g., to entry for break-even, or higher for trailing). "
-                 "When price retraces and hits this moved SL, the trade closes profitably — but the exit mechanism "
-                 "is still technically the stop loss, hence `exit_reason: stop_loss`.\n")
-    lines.append("Example: SELL at $0.0500 → price drops to $0.0490 → trailing SL moves to $0.0495 → "
-                 "price retraces to $0.0495 → exit at SL = +1% profit.\n")
 
     return "\n".join(lines)
 
@@ -1085,6 +1142,7 @@ def main():
         "min_confluence": 50,
         "atr_sl_multiplier": 2.0,
         "max_risk_per_trade": 0.02,
+        "tp_ratio": 1.618,
     }
     baseline_results = []
     for pair, signals in pairs_signals.items():
@@ -1106,12 +1164,24 @@ def main():
     sensitivity = parameter_sensitivity(grid_results)
     var_comp = variant_comparison(grid_results)
 
+    # Per-pair best configs
+    per_pair = best_config_per_pair(grid_results)
+
     if ranked:
         best = ranked[0]
         bp = best["params"]
-        print(f"  Best: conf={bp['min_confluence']} atr={bp['atr_sl_multiplier']} "
-              f"risk={bp['max_risk_per_trade']} ({best['variant']}) "
-              f"score={best['combined_score']:.3f}")
+        print(f"  Best universal: conf={bp['min_confluence']} atr={bp['atr_sl_multiplier']} "
+              f"tp={bp.get('tp_ratio', 1.618)} risk={bp['max_risk_per_trade']} "
+              f"({best['variant']}) score={best['combined_score']:.3f}")
+
+    print("\n  Per-pair best configs:")
+    for pair in per_pair:
+        cfg = per_pair[pair]
+        p = cfg["params"]
+        m = cfg["metrics"]
+        print(f"    {pair}: conf={p['min_confluence']} atr={p['atr_sl_multiplier']} "
+              f"tp={p.get('tp_ratio', 1.618)} ({cfg['variant']}) "
+              f"return={m.get('total_return_pct', 0):.1f}%, wr={m.get('win_rate', 0):.1f}%")
 
     # ── Walk-Forward Validation ──
     print("\n[6/6] Walk-forward validation...")
@@ -1126,6 +1196,9 @@ def main():
     elapsed = time.time() - overall_start
     pair_names = list(pairs_signals.keys())
     pairs_bar_counts = {p: len(c) for p, c in pairs_candles.items()}
+
+    # Attach per-pair data to report function (simple approach)
+    generate_report._per_pair = per_pair
 
     print(f"\nGenerating report... (total runtime: {elapsed:.0f}s)")
     report = generate_report(
