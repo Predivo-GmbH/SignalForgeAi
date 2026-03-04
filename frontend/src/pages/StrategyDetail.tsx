@@ -17,8 +17,11 @@ import { useStrategy, useToggleStrategy, useDeleteStrategy } from "@/hooks/useSt
 import { useSignals } from "@/hooks/useSignals";
 import { useTradeStats } from "@/hooks/useTrades";
 import { useRunStrategyBacktest } from "@/hooks/useStrategyBacktest";
+import { useBrokerConnections } from "@/hooks/useBrokerConnections";
+import { useProfile } from "@/hooks/useProfile";
 import { StrategyBacktestForm } from "@/components/backtest/StrategyBacktestForm";
 import { StrategyBacktestResults } from "@/components/backtest/StrategyBacktestResults";
+import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
@@ -286,8 +289,37 @@ export function StrategyDetailPage() {
     sortDir,
   });
   const { data: stats } = useTradeStats(id);
+  const { data: connections } = useBrokerConnections();
+  const { data: profile } = useProfile();
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
+  const [showTwoFa, setShowTwoFa] = useState(false);
+  const [twoFaError, setTwoFaError] = useState("");
+
+  const hasLiveConnections = connections?.some((c) => !c.is_paper) ?? false;
+
+  const handleToggle = () => {
+    if (!strategy) return;
+    if (!strategy.is_active && hasLiveConnections && profile?.totp_enabled) {
+      setShowTwoFa(true);
+      setTwoFaError("");
+      return;
+    }
+    toggleMutation.mutate({ id: strategy.id });
+  };
+
+  const handleTwoFaSubmit = (code: string) => {
+    if (!strategy) return;
+    toggleMutation.mutate(
+      { id: strategy.id, totp_code: code },
+      {
+        onSuccess: () => setShowTwoFa(false),
+        onError: (err) => {
+          setTwoFaError(err instanceof Error ? err.message : "Invalid code");
+        },
+      },
+    );
+  };
 
   const strategyBtMutation = useRunStrategyBacktest();
   const strategyBtResult = (strategyBtMutation.data as StrategyBacktestResult) ?? null;
@@ -390,7 +422,7 @@ export function StrategyDetailPage() {
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => toggleMutation.mutate(strategy.id)}
+              onClick={handleToggle}
               disabled={toggleMutation.isPending}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
@@ -609,6 +641,14 @@ export function StrategyDetailPage() {
           />
         </div>
       )}
+
+      <TwoFactorPrompt
+        open={showTwoFa}
+        onClose={() => setShowTwoFa(false)}
+        onSubmit={handleTwoFaSubmit}
+        isPending={toggleMutation.isPending}
+        error={twoFaError}
+      />
     </div>
   );
 }

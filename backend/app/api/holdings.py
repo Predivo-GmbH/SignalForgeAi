@@ -61,11 +61,12 @@ class ManualHoldingResponse(BaseModel):
 async def _fetch_exchange_holdings(
     db: AsyncSession, user_id: str,
 ) -> list[HoldingItem]:
-    """Fetch balances from all live (non-paper) broker connections."""
+    """Fetch balances from read-only live broker connections."""
     result = await db.execute(
         select(BrokerConnection).where(
             BrokerConnection.user_id == uuid.UUID(user_id),
             BrokerConnection.is_paper.is_(False),
+            BrokerConnection.purpose == "read",
         )
     )
     connections = result.scalars().all()

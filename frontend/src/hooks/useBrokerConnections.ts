@@ -6,6 +6,7 @@ export interface BrokerConnection {
   broker: string;
   api_key_masked: string;
   is_paper: boolean;
+  purpose: "read" | "trade";
 }
 
 export interface ConnectBrokerRequest {
@@ -13,6 +14,7 @@ export interface ConnectBrokerRequest {
   api_key?: string;
   api_secret?: string;
   is_paper: boolean;
+  purpose: "read" | "trade";
 }
 
 const BROKER_KEY = ["broker-connections"] as const;

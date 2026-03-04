@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
-from app.models.strategy import Strategy
+from app.models.strategy import BrokerConnection, Strategy
+from app.models.user import User
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 
@@ -301,14 +302,72 @@ async def update_strategy(
     return _strategy_to_response(strategy)
 
 
+class ActivateRequest(BaseModel):
+    totp_code: str | None = None
+
+
 @router.post("/{strategy_id}/activate", response_model=StrategyResponse)
 async def activate_strategy(
     strategy_id: uuid.UUID,
+    body: ActivateRequest | None = None,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Toggle the is_active flag on a strategy."""
+    """Toggle the is_active flag on a strategy.
+
+    When activating with live broker connections, 2FA verification is required.
+    Deactivation is always allowed without 2FA.
+    """
     strategy = await _get_user_strategy(strategy_id, user_id, db)
+
+    # Only enforce 2FA when ACTIVATING (not deactivating)
+    if not strategy.is_active:
+        # Check if user has live (non-paper) broker connections
+        live_result = await db.execute(
+            select(BrokerConnection).where(
+                BrokerConnection.user_id == uuid.UUID(user_id),
+                BrokerConnection.is_paper.is_(False),
+            ).limit(1)
+        )
+        has_live = live_result.scalar_one_or_none() is not None
+
+        if has_live:
+            user_result = await db.execute(
+                select(User).where(User.id == uuid.UUID(user_id))
+            )
+            user = user_result.scalar_one_or_none()
+
+            if not user or not user.totp_enabled:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Enable two-factor authentication before activating live trading",
+                )
+
+            totp_code = body.totp_code if body else None
+            if not totp_code:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="2FA code required to activate live trading",
+                )
+
+            from app.auth.totp import decrypt_totp_secret, verify_backup_code, verify_totp_code
+
+            secret = decrypt_totp_secret(user.totp_secret_enc)  # type: ignore[arg-type]
+            code_valid = verify_totp_code(secret, totp_code)
+            if not code_valid and user.backup_codes_hash:
+                idx = verify_backup_code(totp_code, user.backup_codes_hash)
+                if idx is not None:
+                    code_valid = True
+                    codes = list(user.backup_codes_hash)
+                    codes.pop(idx)
+                    user.backup_codes_hash = codes
+
+            if not code_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Invalid 2FA code",
+                )
+
     strategy.is_active = not strategy.is_active
     await db.commit()
     await db.refresh(strategy)

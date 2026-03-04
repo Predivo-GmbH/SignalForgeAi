@@ -842,7 +842,7 @@ export function AdvisorPage() {
                     <button
                       onClick={() => {
                         if (selectedScan?.deployedStrategyId) {
-                          toggleMutation.mutate(selectedScan.deployedStrategyId);
+                          toggleMutation.mutate({ id: selectedScan.deployedStrategyId });
                         }
                       }}
                       disabled={toggleMutation.isPending}

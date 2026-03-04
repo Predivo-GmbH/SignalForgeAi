@@ -21,6 +21,7 @@ class BrokerConnectRequest(BaseModel):
     api_key: str = ""
     api_secret: str = ""
     is_paper: bool = True
+    purpose: Literal["read", "trade"] = "read"
 
 
 class BrokerConnectionResponse(BaseModel):
@@ -28,6 +29,7 @@ class BrokerConnectionResponse(BaseModel):
     broker: str
     api_key_masked: str  # ****last4
     is_paper: bool
+    purpose: str
 
     model_config = {"from_attributes": True}
 
@@ -50,6 +52,11 @@ async def create_broker_connection(
             status_code=422,
             detail="API key and secret are required for live trading",
         )
+    if body.purpose == "trade" and body.is_paper:
+        raise HTTPException(
+            status_code=422,
+            detail="Trading purpose requires a live (non-paper) connection",
+        )
     # Paper mode doesn't need credentials — skip encryption
     if body.is_paper:
         api_key_enc = b""
@@ -65,6 +72,7 @@ async def create_broker_connection(
         api_key_enc=api_key_enc,
         api_secret_enc=api_secret_enc,
         is_paper=body.is_paper,
+        purpose=body.purpose,
     )
     db.add(conn)
     await db.commit()
@@ -74,6 +82,7 @@ async def create_broker_connection(
         broker=conn.broker,
         api_key_masked="Paper" if body.is_paper else _mask_key(body.api_key),
         is_paper=conn.is_paper,
+        purpose=conn.purpose,
     )
 
 
@@ -103,6 +112,7 @@ async def list_broker_connections(
                 broker=c.broker,
                 api_key_masked=masked,
                 is_paper=c.is_paper,
+                purpose=c.purpose,
             )
         )
     return out

@@ -17,6 +17,15 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class LoginResponse(BaseModel):
+    """Login response — either full tokens or 2FA challenge."""
+    access_token: str | None = None
+    refresh_token: str | None = None
+    token_type: str = "bearer"
+    requires_2fa: bool = False
+    partial_token: str | None = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 
@@ -25,6 +34,7 @@ class ProfileResponse(BaseModel):
     id: str
     email: str
     is_active: bool
+    totp_enabled: bool = False
     created_at: str
     updated_at: str | None = None
 
@@ -41,3 +51,35 @@ class ChangeEmailRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+# ---------- Two-Factor Authentication ----------
+
+
+class TwoFactorSetupResponse(BaseModel):
+    qr_code: str
+    secret: str
+    provisioning_uri: str
+
+
+class TwoFactorVerifyRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class TwoFactorEnableResponse(BaseModel):
+    message: str
+    backup_codes: list[str]
+
+
+class TwoFactorDisableRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+    code: str = Field(min_length=6, max_length=9)
+
+
+class TwoFactorLoginRequest(BaseModel):
+    partial_token: str
+    code: str = Field(min_length=6, max_length=9)
+
+
+class TwoFactorValidateRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=9)

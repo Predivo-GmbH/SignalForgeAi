@@ -31,6 +31,7 @@ import { useAlertConfig, useUpdateAlertConfig } from "@/hooks/useAlertConfig";
 import type { ConnectBrokerRequest } from "@/hooks/useBrokerConnections";
 import type { AlertConfig } from "@/hooks/useAlertConfig";
 import { AiUsageTab } from "@/components/settings/AiUsageTab";
+import { TwoFactorSetup } from "@/components/settings/TwoFactorSetup";
 import { useProfile, useChangePassword, useChangeEmail } from "@/hooks/useProfile";
 import { useAuth } from "@/lib/auth";
 
@@ -61,6 +62,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [isPaper, setIsPaper] = useState(false);
+  const [purpose, setPurpose] = useState<"read" | "trade">("read");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +71,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
       api_key: apiKey,
       api_secret: apiSecret,
       is_paper: isPaper,
+      purpose,
     };
     connect.mutate(payload, { onSuccess: () => onClose() });
   }
@@ -144,11 +147,67 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
         <input
           type="checkbox"
           checked={isPaper}
-          onChange={(e) => setIsPaper(e.target.checked)}
+          onChange={(e) => {
+            setIsPaper(e.target.checked);
+            if (e.target.checked) setPurpose("read");
+          }}
           className="w-4 h-4 rounded border border-(--color-border) bg-(--color-bg-elevated) accent-(--color-accent)"
         />
         <span className="text-sm text-(--color-text-primary)">Paper trading mode</span>
       </label>
+
+      {!isPaper && (
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Key Purpose
+          </label>
+          <div className="flex gap-3">
+            <label className={cn(
+              "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors",
+              purpose === "read"
+                ? "border-(--color-accent) bg-(--color-accent)/10"
+                : "border-(--color-border) bg-(--color-bg-elevated) hover:border-(--color-text-secondary)/30",
+            )}>
+              <input
+                type="radio"
+                name="purpose"
+                value="read"
+                checked={purpose === "read"}
+                onChange={() => setPurpose("read")}
+                className="accent-(--color-accent)"
+              />
+              <div>
+                <p className="text-sm text-(--color-text-primary)">Read Only</p>
+                <p className="text-[10px] text-(--color-text-secondary)">Portfolio viewing</p>
+              </div>
+            </label>
+            <label className={cn(
+              "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors",
+              purpose === "trade"
+                ? "border-amber-500 bg-amber-500/10"
+                : "border-(--color-border) bg-(--color-bg-elevated) hover:border-(--color-text-secondary)/30",
+            )}>
+              <input
+                type="radio"
+                name="purpose"
+                value="trade"
+                checked={purpose === "trade"}
+                onChange={() => setPurpose("trade")}
+                className="accent-amber-500"
+              />
+              <div>
+                <p className="text-sm text-(--color-text-primary)">Trading</p>
+                <p className="text-[10px] text-(--color-text-secondary)">Order execution</p>
+              </div>
+            </label>
+          </div>
+          {purpose === "trade" && (
+            <p className="text-xs text-amber-400">
+              Trading keys require IP whitelisting on Binance.
+            </p>
+          )}
+        </div>
+      )}
 
       {connect.isError && (
         <p className="text-xs text-(--color-negative)">
@@ -180,10 +239,12 @@ function ConnectionCard({
   id,
   broker,
   apiKeyMasked,
+  purpose,
 }: {
   id: string;
   broker: string;
   apiKeyMasked: string;
+  purpose: "read" | "trade";
 }) {
   const disconnect = useDisconnectBroker();
   const meta = SUPPORTED_BROKERS.find(
@@ -198,9 +259,19 @@ function ConnectionCard({
             <Wifi className="w-5 h-5 text-(--color-positive)" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-(--color-text-primary) capitalize">
-              {broker}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-(--color-text-primary) capitalize">
+                {broker}
+              </h3>
+              <span className={cn(
+                "px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full",
+                purpose === "trade"
+                  ? "bg-amber-500/15 text-amber-400"
+                  : "bg-blue-500/15 text-blue-400",
+              )}>
+                {purpose === "trade" ? "Trading" : "Read Only"}
+              </span>
+            </div>
             {meta && (
               <p className="text-xs text-(--color-text-secondary)">
                 {meta.description}
@@ -300,6 +371,7 @@ function ConnectionsTab() {
               id={conn.id}
               broker={conn.broker}
               apiKeyMasked={conn.api_key_masked}
+              purpose={conn.purpose}
             />
           ))}
         </div>
@@ -820,6 +892,9 @@ function ProfileTab() {
           </>
         )}
       </div>
+
+      {/* Two-Factor Authentication */}
+      <TwoFactorSetup />
 
       {/* Logout */}
       <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5">

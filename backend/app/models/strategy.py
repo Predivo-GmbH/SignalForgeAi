@@ -27,3 +27,4 @@ class BrokerConnection(Base, UUIDMixin, TimestampMixin):
     api_key_enc: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     api_secret_enc: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     is_paper: Mapped[bool] = mapped_column(Boolean, default=True)
+    purpose: Mapped[str] = mapped_column(String(10), nullable=False, default="read")

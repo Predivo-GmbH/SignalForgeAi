@@ -18,6 +18,9 @@ import {
   useDeleteStrategy,
 } from "@/hooks/useStrategies";
 import { useStrategyComparison } from "@/hooks/useAnalytics";
+import { useBrokerConnections } from "@/hooks/useBrokerConnections";
+import { useProfile } from "@/hooks/useProfile";
+import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import type { Strategy } from "@/hooks/useStrategies";
 import type { StrategyMetrics } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/cn";
@@ -295,13 +298,42 @@ export function StrategiesPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useStrategies();
   const { data: comparison } = useStrategyComparison();
+  const { data: connections } = useBrokerConnections();
+  const { data: profile } = useProfile();
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
+  const [twoFaTarget, setTwoFaTarget] = useState<string | null>(null);
+  const [twoFaError, setTwoFaError] = useState("");
 
   const strategies = data?.strategies ?? [];
   const metricsMap = new Map(
     (comparison?.strategies ?? []).map((m) => [m.strategy_id, m]),
   );
+
+  const hasLiveConnections = connections?.some((c) => !c.is_paper) ?? false;
+
+  function handleToggle(strategy: Strategy) {
+    // Activating (currently inactive) + has live connections + has 2FA → prompt
+    if (!strategy.is_active && hasLiveConnections && profile?.totp_enabled) {
+      setTwoFaTarget(strategy.id);
+      setTwoFaError("");
+      return;
+    }
+    toggleMutation.mutate({ id: strategy.id });
+  }
+
+  function handleTwoFaSubmit(code: string) {
+    if (!twoFaTarget) return;
+    toggleMutation.mutate(
+      { id: twoFaTarget, totp_code: code },
+      {
+        onSuccess: () => setTwoFaTarget(null),
+        onError: (err) => {
+          setTwoFaError(err instanceof Error ? err.message : "Invalid code");
+        },
+      },
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
@@ -355,11 +387,11 @@ export function StrategiesPage() {
                 strategy={strategy}
                 metrics={metricsMap.get(strategy.id)}
                 onClick={() => navigate(`/strategies/${strategy.id}`)}
-                onToggle={() => toggleMutation.mutate(strategy.id)}
+                onToggle={() => handleToggle(strategy)}
                 onDelete={() => deleteMutation.mutate(strategy.id)}
                 isToggling={
                   toggleMutation.isPending &&
-                  toggleMutation.variables === strategy.id
+                  toggleMutation.variables?.id === strategy.id
                 }
                 isDeleting={
                   deleteMutation.isPending &&
@@ -377,6 +409,14 @@ export function StrategiesPage() {
           Active strategies receive live signals and execute trades automatically
         </div>
       )}
+
+      <TwoFactorPrompt
+        open={twoFaTarget !== null}
+        onClose={() => setTwoFaTarget(null)}
+        onSubmit={handleTwoFaSubmit}
+        isPending={toggleMutation.isPending}
+        error={twoFaError}
+      />
     </div>
   );
 }

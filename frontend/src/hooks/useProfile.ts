@@ -5,8 +5,20 @@ export interface Profile {
   id: string;
   email: string;
   is_active: boolean;
+  totp_enabled: boolean;
   created_at: string;
   updated_at: string | null;
+}
+
+interface TwoFactorSetupResponse {
+  qr_code: string;
+  secret: string;
+  provisioning_uri: string;
+}
+
+interface TwoFactorEnableResponse {
+  message: string;
+  backup_codes: string[];
 }
 
 export function useProfile() {
@@ -30,5 +42,36 @@ export function useChangeEmail() {
     mutationFn: (data: { new_email: string; password: string }) =>
       api.put<Profile>("/auth/email", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+export function useSetup2FA() {
+  return useMutation({
+    mutationFn: () => api.post<TwoFactorSetupResponse>("/auth/2fa/setup"),
+  });
+}
+
+export function useVerify2FA() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { code: string }) =>
+      api.post<TwoFactorEnableResponse>("/auth/2fa/verify", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+export function useDisable2FA() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { password: string; code: string }) =>
+      api.post<{ message: string }>("/auth/2fa/disable", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+export function useValidate2FA() {
+  return useMutation({
+    mutationFn: (data: { code: string }) =>
+      api.post<{ message: string }>("/auth/2fa/validate", data),
   });
 }
