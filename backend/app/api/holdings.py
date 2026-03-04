@@ -136,6 +136,14 @@ async def _fetch_prices(
         result.update(fallback_result)
         missing = [s for s in missing if s not in result]
 
+    # Final fallback: CoinGecko (covers virtually every listed coin)
+    if missing:
+        from app.data.coingecko import fetch_prices as cg_fetch_prices
+
+        cg_result = await cg_fetch_prices(missing)
+        result.update(cg_result)
+        missing = [s for s in missing if s not in result]
+
     # Mark any still-missing symbols as None
     for s in missing:
         result[s] = {"price": None, "change_24h_pct": None}

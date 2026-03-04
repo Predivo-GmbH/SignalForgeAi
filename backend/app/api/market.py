@@ -73,6 +73,16 @@ async def get_candles(
             except Exception:
                 logger.debug("Live candle fetch from %s failed for %s", exchange_id, symbol)
 
+    # Final fallback: CoinGecko OHLC (covers virtually every listed coin)
+    if not candles and "/" in symbol:
+        try:
+            from app.data.coingecko import fetch_ohlc
+
+            base_symbol = symbol.split("/")[0]
+            candles = await fetch_ohlc(base_symbol, timeframe)
+        except Exception:
+            logger.debug("CoinGecko OHLC fallback failed for %s", symbol)
+
     return {"symbol": symbol, "timeframe": timeframe, "candles": candles, "count": len(candles)}
 
 

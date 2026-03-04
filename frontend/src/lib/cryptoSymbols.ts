@@ -299,6 +299,7 @@ export const CRYPTO_LIST: CryptoEntry[] = [
   { symbol: "YGG", name: "Yield Guild Games" },
   { symbol: "ZEC", name: "Zcash" },
   { symbol: "ZEN", name: "Horizen" },
+  { symbol: "ZEPH", name: "Zephyr Protocol" },
   { symbol: "ZETA", name: "ZetaChain" },
   { symbol: "ZIL", name: "Zilliqa" },
   { symbol: "ZK", name: "ZKsync" },
