@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Loader2,
   Plus,
@@ -10,6 +10,9 @@ import {
   TrendingDown,
   ChevronDown,
   ChevronUp,
+  Search,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { pnlColor, formatPrice } from "@/lib/format";
@@ -22,6 +25,19 @@ import {
 import type { HoldingItem, ManualHoldingRequest } from "@/hooks/useHoldings";
 
 /* ---- Constants ---- */
+
+const DONUT_COLORS = [
+  "#3b82f6", // blue
+  "#f59e0b", // amber
+  "#10b981", // emerald
+  "#8b5cf6", // violet
+  "#f43f5e", // rose
+  "#06b6d4", // cyan
+  "#f97316", // orange
+  "#ec4899", // pink
+  "#14b8a6", // teal
+  "#6366f1", // indigo
+];
 
 const ALLOCATION_COLORS = [
   "bg-blue-500",
@@ -36,16 +52,25 @@ const ALLOCATION_COLORS = [
   "bg-indigo-500",
 ];
 
-const SOURCE_STYLE: Record<string, { label: string; cls: string }> = {
-  binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500" },
-  kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500" },
-  mexc: { label: "MEXC", cls: "bg-blue-500/10 text-blue-500" },
-  bitstamp: { label: "Bitstamp", cls: "bg-green-500/10 text-green-500" },
-  cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500" },
-  kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500" },
-  manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" },
-  trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)" },
+const SOURCE_STYLE: Record<string, { label: string; cls: string; color: string }> = {
+  binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500", color: "#f59e0b" },
+  kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500", color: "#10b981" },
+  mexc: { label: "MEXC", cls: "bg-blue-500/10 text-blue-500", color: "#3b82f6" },
+  bitstamp: { label: "Bitstamp", cls: "bg-green-500/10 text-green-500", color: "#22c55e" },
+  cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500", color: "#6366f1" },
+  kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500", color: "#8b5cf6" },
+  manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)", color: "#6b7280" },
+  trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)", color: "#3b82f6" },
 };
+
+const STABLECOINS = new Set(["USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"]);
+const SMALL_BALANCE_THRESHOLD = 1; // $1
+
+/* ---- Helpers ---- */
+
+function fmtUsd(val: number): string {
+  return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 /* ---- Source badge ---- */
 
@@ -58,85 +83,250 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
-/* ---- Allocation Bar ---- */
+/* ---- SVG Donut Chart ---- */
 
-function AllocationBar({ holdings }: { holdings: HoldingItem[] }) {
-  const withValue = holdings.filter((h) => h.allocation_pct != null && h.allocation_pct > 0);
-  if (withValue.length === 0) return null;
+interface DonutSlice {
+  label: string;
+  value: number;
+  pct: number;
+  color: string;
+}
+
+function DonutChart({
+  slices,
+  totalValue,
+}: {
+  slices: DonutSlice[];
+  totalValue: number;
+}) {
+  const size = 200;
+  const cx = size / 2;
+  const cy = size / 2;
+  const outerR = 88;
+  const innerR = 62;
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  // Build arcs
+  let cumAngle = -90; // start at top
+  const arcs = slices.map((s, i) => {
+    const angle = (s.pct / 100) * 360;
+    const startAngle = cumAngle;
+    cumAngle += angle;
+    const endAngle = cumAngle;
+    const largeArc = angle > 180 ? 1 : 0;
+
+    const r = hoveredIdx === i ? outerR + 4 : outerR;
+    const ir = hoveredIdx === i ? innerR - 2 : innerR;
+
+    const toRad = (a: number) => (a * Math.PI) / 180;
+    const x1o = cx + r * Math.cos(toRad(startAngle));
+    const y1o = cy + r * Math.sin(toRad(startAngle));
+    const x2o = cx + r * Math.cos(toRad(endAngle));
+    const y2o = cy + r * Math.sin(toRad(endAngle));
+    const x1i = cx + ir * Math.cos(toRad(endAngle));
+    const y1i = cy + ir * Math.sin(toRad(endAngle));
+    const x2i = cx + ir * Math.cos(toRad(startAngle));
+    const y2i = cy + ir * Math.sin(toRad(startAngle));
+
+    const d = [
+      `M ${x1o} ${y1o}`,
+      `A ${r} ${r} 0 ${largeArc} 1 ${x2o} ${y2o}`,
+      `L ${x1i} ${y1i}`,
+      `A ${ir} ${ir} 0 ${largeArc} 0 ${x2i} ${y2i}`,
+      "Z",
+    ].join(" ");
+
+    return { d, color: s.color, label: s.label, pct: s.pct, value: s.value, idx: i };
+  });
 
   return (
-    <div className="space-y-2">
-      {/* Stacked bar */}
-      <div className="flex h-3 rounded-full overflow-hidden bg-(--color-bg-elevated)">
-        {withValue.map((h, i) => (
-          <div
-            key={`${h.source}-${h.symbol}-${i}`}
-            className={cn("h-full transition-all", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
-            style={{ width: `${h.allocation_pct}%` }}
-            title={`${h.symbol} — ${h.allocation_pct?.toFixed(1)}%`}
+    <div className="flex flex-col items-center gap-3">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="shrink-0"
+      >
+        {arcs.map((arc) => (
+          <path
+            key={arc.idx}
+            d={arc.d}
+            fill={arc.color}
+            opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.4 : 1}
+            className="transition-opacity duration-150"
+            onMouseEnter={() => setHoveredIdx(arc.idx)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            style={{ cursor: "pointer" }}
           />
         ))}
-      </div>
+        {/* Center text */}
+        <text x={cx} y={cy - 8} textAnchor="middle" className="fill-(--color-text-secondary) text-[10px]" fontSize="10">
+          Total Value
+        </text>
+        <text x={cx} y={cy + 12} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="16">
+          {fmtUsd(totalValue)}
+        </text>
+      </svg>
+
+      {/* Hover tooltip text */}
+      {hoveredIdx != null && slices[hoveredIdx] && (
+        <div className="text-center -mt-1">
+          <span className="text-xs font-semibold text-(--color-text-primary)">
+            {slices[hoveredIdx].label}
+          </span>
+          <span className="text-xs text-(--color-text-secondary) ml-1.5">
+            {fmtUsd(slices[hoveredIdx].value)} ({slices[hoveredIdx].pct.toFixed(1)}%)
+          </span>
+        </div>
+      )}
+
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {withValue.slice(0, 8).map((h, i) => (
-          <div key={`${h.source}-${h.symbol}-legend-${i}`} className="flex items-center gap-1.5">
-            <div className={cn("w-2 h-2 rounded-full", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])} />
-            <span className="text-[11px] text-(--color-text-secondary)">
-              {h.symbol} <span className="font-mono">{h.allocation_pct?.toFixed(1)}%</span>
+      <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 w-full">
+        {slices.map((s, i) => (
+          <div
+            key={`${s.label}-${i}`}
+            className="flex items-center gap-2 cursor-pointer"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="text-[11px] text-(--color-text-secondary) truncate">{s.label}</span>
+            <span className="text-[11px] font-mono font-medium text-(--color-text-primary) ml-auto">
+              {s.pct.toFixed(1)}%
             </span>
           </div>
         ))}
-        {withValue.length > 8 && (
-          <span className="text-[11px] text-(--color-text-secondary)">
-            +{withValue.length - 8} more
-          </span>
-        )}
       </div>
     </div>
   );
 }
 
-/* ---- Portfolio Summary ---- */
+/* ---- Portfolio Stats ---- */
 
-function PortfolioSummary({ holdings, totalValue }: { holdings: HoldingItem[]; totalValue: number | null }) {
+function PortfolioStats({ holdings, totalValue }: { holdings: HoldingItem[]; totalValue: number }) {
+  const withChange = holdings.filter((h) => h.change_24h_pct != null);
+  const best = withChange.length > 0
+    ? withChange.reduce((a, b) => ((a.change_24h_pct ?? 0) > (b.change_24h_pct ?? 0) ? a : b))
+    : null;
+  const worst = withChange.length > 0
+    ? withChange.reduce((a, b) => ((a.change_24h_pct ?? 0) < (b.change_24h_pct ?? 0) ? a : b))
+    : null;
+
+  const stablecoinValue = holdings
+    .filter((h) => STABLECOINS.has(h.symbol.toUpperCase()))
+    .reduce((sum, h) => sum + (h.value_usd ?? 0), 0);
+  const stablePct = totalValue > 0 ? (stablecoinValue / totalValue) * 100 : 0;
+
   const assetCount = new Set(holdings.map((h) => h.symbol.toUpperCase())).size;
   const sourceCount = new Set(holdings.map((h) => h.source)).size;
-  const sources = [...new Set(holdings.map((h) => h.source))];
+
+  const stats = [
+    {
+      label: "Assets",
+      value: String(assetCount),
+      sub: `${sourceCount} source${sourceCount !== 1 ? "s" : ""}`,
+    },
+    {
+      label: "Stablecoins",
+      value: `${stablePct.toFixed(1)}%`,
+      sub: fmtUsd(stablecoinValue),
+    },
+    {
+      label: "Best 24h",
+      value: best ? `${best.symbol}` : "—",
+      sub: best?.change_24h_pct != null ? `+${best.change_24h_pct.toFixed(2)}%` : "",
+      subColor: "text-(--color-positive)",
+    },
+    {
+      label: "Worst 24h",
+      value: worst ? `${worst.symbol}` : "—",
+      sub: worst?.change_24h_pct != null ? `${worst.change_24h_pct.toFixed(2)}%` : "",
+      subColor: "text-(--color-negative)",
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Portfolio Value
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {stats.map((s) => (
+        <div
+          key={s.label}
+          className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-0.5"
+        >
+          <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            {s.label}
           </p>
-          <p className="text-3xl font-bold font-mono text-(--color-text-primary)">
-            {totalValue != null
-              ? `$${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : "—"}
+          <p className="text-sm font-bold text-(--color-text-primary) font-mono">
+            {s.value}
           </p>
+          {s.sub && (
+            <p className={cn("text-[11px] font-mono", s.subColor ?? "text-(--color-text-secondary)")}>
+              {s.sub}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-center">
-            <p className="text-lg font-bold font-mono text-(--color-text-primary)">{assetCount}</p>
-            <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Assets</p>
-          </div>
-          <div className="w-px h-8 bg-(--color-border)" />
-          <div className="text-center">
-            <p className="text-lg font-bold font-mono text-(--color-text-primary)">{sourceCount}</p>
-            <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Sources</p>
-          </div>
-          <div className="w-px h-8 bg-(--color-border)" />
-          <div className="flex gap-1.5">
-            {sources.map((s) => (
-              <SourceBadge key={s} source={s} />
-            ))}
-          </div>
-        </div>
-      </div>
+      ))}
+    </div>
+  );
+}
 
-      <AllocationBar holdings={holdings} />
+/* ---- Source Breakdown ---- */
+
+function SourceBreakdown({ holdings, totalValue }: { holdings: HoldingItem[]; totalValue: number }) {
+  const bySource = useMemo(() => {
+    const map: Record<string, { value: number; count: number }> = {};
+    for (const h of holdings) {
+      if (!map[h.source]) map[h.source] = { value: 0, count: 0 };
+      map[h.source].value += h.value_usd ?? 0;
+      map[h.source].count += 1;
+    }
+    return Object.entries(map)
+      .map(([source, { value, count }]) => ({ source, value, count, pct: totalValue > 0 ? (value / totalValue) * 100 : 0 }))
+      .sort((a, b) => b.value - a.value);
+  }, [holdings, totalValue]);
+
+  if (bySource.length <= 1) return null;
+
+  return (
+    <div className="space-y-2.5">
+      <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+        By Source
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {bySource.map((s) => {
+          const style = SOURCE_STYLE[s.source];
+          return (
+            <div
+              key={s.source}
+              className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-1"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: style?.color ?? "#6b7280" }} />
+                <span className="text-xs font-semibold text-(--color-text-primary)">
+                  {style?.label ?? s.source}
+                </span>
+              </div>
+              <p className="text-sm font-bold font-mono text-(--color-text-primary)">
+                {fmtUsd(s.value)}
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-(--color-text-secondary)">
+                  {s.count} asset{s.count !== 1 ? "s" : ""}
+                </span>
+                <span className="text-[10px] font-mono text-(--color-text-secondary)">
+                  {s.pct.toFixed(1)}%
+                </span>
+              </div>
+              {/* Mini progress bar */}
+              <div className="w-full h-1 rounded-full bg-(--color-bg-surface) overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${Math.min(s.pct, 100)}%`, backgroundColor: style?.color ?? "#6b7280" }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -314,6 +504,8 @@ export function HoldingsCard() {
   const [editItem, setEditItem] = useState<HoldingItem | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [hideSmall, setHideSmall] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
@@ -332,24 +524,67 @@ export function HoldingsCard() {
     );
   }
 
-  const holdings = data?.holdings ?? [];
+  const allHoldings = data?.holdings ?? [];
   const totalValue = data?.total_value_usd ?? null;
-  const sorted = sortHoldings(holdings, sortKey, sortDir);
 
-  return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-(--color-accent)" />
-          <h3 className="text-sm font-semibold text-(--color-text-primary)">Crypto Holdings</h3>
-          {holdings.length > 0 && (
-            <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-bg-elevated) px-2 py-0.5 rounded-full">
-              {holdings.length}
-            </span>
-          )}
-        </div>
-        {!showForm && !editItem && (
+  // Counts before filtering
+  const smallCount = allHoldings.filter((h) => (h.value_usd ?? 0) < SMALL_BALANCE_THRESHOLD).length;
+
+  // Apply filters
+  let filtered = allHoldings;
+  if (hideSmall) {
+    filtered = filtered.filter((h) => (h.value_usd ?? 0) >= SMALL_BALANCE_THRESHOLD);
+  }
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    filtered = filtered.filter(
+      (h) =>
+        h.symbol.toLowerCase().includes(q) ||
+        (h.notes?.toLowerCase().includes(q) ?? false) ||
+        h.source.toLowerCase().includes(q),
+    );
+  }
+
+  const sorted = sortHoldings(filtered, sortKey, sortDir);
+
+  // Donut chart slices (top 9 + "Other" group)
+  const donutSlices: DonutSlice[] = useMemo(() => {
+    if (!totalValue || totalValue <= 0) return [];
+    const byValue = [...allHoldings]
+      .filter((h) => (h.value_usd ?? 0) > 0)
+      .sort((a, b) => (b.value_usd ?? 0) - (a.value_usd ?? 0));
+
+    const topN = byValue.slice(0, 9);
+    const rest = byValue.slice(9);
+    const restValue = rest.reduce((sum, h) => sum + (h.value_usd ?? 0), 0);
+
+    const slices: DonutSlice[] = topN.map((h, i) => ({
+      label: h.symbol,
+      value: h.value_usd ?? 0,
+      pct: ((h.value_usd ?? 0) / totalValue) * 100,
+      color: DONUT_COLORS[i % DONUT_COLORS.length],
+    }));
+
+    if (restValue > 0) {
+      slices.push({
+        label: `Other (${rest.length})`,
+        value: restValue,
+        pct: (restValue / totalValue) * 100,
+        color: "#4b5563", // gray
+      });
+    }
+
+    return slices;
+  }, [allHoldings, totalValue]);
+
+  if (allHoldings.length === 0) {
+    return (
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-(--color-accent)" />
+            <h3 className="text-sm font-semibold text-(--color-text-primary)">Crypto Holdings</h3>
+          </div>
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
@@ -357,55 +592,166 @@ export function HoldingsCard() {
             <Plus className="w-3.5 h-3.5" />
             Add holding
           </button>
+        </div>
+        {showForm && <HoldingForm onClose={() => setShowForm(false)} />}
+        {!showForm && (
+          <div className="flex flex-col items-center justify-center py-6 gap-2">
+            <Wallet className="w-8 h-8 text-(--color-text-secondary)/30" />
+            <p className="text-sm text-(--color-text-secondary)">No holdings found</p>
+            <p className="text-xs text-(--color-text-secondary)/60">
+              Connect an exchange or add holdings manually
+            </p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="text-xs font-medium text-(--color-accent) hover:underline mt-1"
+            >
+              Add your first holding
+            </button>
+          </div>
         )}
       </div>
+    );
+  }
 
-      {/* Portfolio summary + allocation bar */}
-      {holdings.length > 0 && (
-        <PortfolioSummary holdings={sorted} totalValue={totalValue} />
-      )}
-
-      {/* Add form */}
-      {showForm && <HoldingForm onClose={() => setShowForm(false)} />}
-
-      {/* Edit form */}
-      {editItem && (
-        <HoldingForm initial={editItem} onClose={() => setEditItem(null)} />
-      )}
-
-      {/* Holdings table */}
-      {holdings.length === 0 && !showForm ? (
-        <div className="flex flex-col items-center justify-center py-6 gap-2">
-          <Wallet className="w-8 h-8 text-(--color-text-secondary)/30" />
-          <p className="text-sm text-(--color-text-secondary)">No holdings found</p>
-          <p className="text-xs text-(--color-text-secondary)/60">
-            Connect an exchange or add holdings manually
-          </p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-xs font-medium text-(--color-accent) hover:underline mt-1"
-          >
-            Add your first holding
-          </button>
+  return (
+    <div className="space-y-5">
+      {/* ===== Overview Card ===== */}
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-(--color-accent)" />
+            <h3 className="text-sm font-semibold text-(--color-text-primary)">Portfolio Overview</h3>
+            <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-bg-elevated) px-2 py-0.5 rounded-full">
+              {allHoldings.length} asset{allHoldings.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {[...new Set(allHoldings.map((h) => h.source))].map((s) => (
+              <SourceBadge key={s} source={s} />
+            ))}
+          </div>
         </div>
-      ) : holdings.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-(--color-border)">
-                <SortHeader label="Asset" sortKey="symbol" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left" />
-                <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Qty</th>
-                <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Price</th>
-                <SortHeader label="Value" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
-                <SortHeader label="Alloc" sortKey="allocation" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
-                <SortHeader label="24h" sortKey="change" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
-                <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Source</th>
-                <th className="py-2 w-16" />
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((h, i) => {
-                return (
+
+        {/* Donut + Stats side by side */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Donut chart */}
+          {donutSlices.length > 0 && totalValue != null && totalValue > 0 && (
+            <div className="shrink-0">
+              <DonutChart slices={donutSlices} totalValue={totalValue} />
+            </div>
+          )}
+
+          {/* Right side: stats + source breakdown */}
+          <div className="flex-1 space-y-5 min-w-0">
+            {/* Stats grid */}
+            {totalValue != null && totalValue > 0 && (
+              <PortfolioStats holdings={allHoldings} totalValue={totalValue} />
+            )}
+
+            {/* Source breakdown */}
+            {totalValue != null && totalValue > 0 && (
+              <SourceBreakdown holdings={allHoldings} totalValue={totalValue} />
+            )}
+          </div>
+        </div>
+
+        {/* Allocation bar */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Allocation
+          </p>
+          <div className="flex h-3 rounded-full overflow-hidden bg-(--color-bg-elevated)">
+            {donutSlices.map((s, i) => (
+              <div
+                key={`bar-${s.label}-${i}`}
+                className="h-full transition-all"
+                style={{ width: `${s.pct}%`, backgroundColor: s.color }}
+                title={`${s.label} — ${s.pct.toFixed(1)}%`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Holdings Table Card ===== */}
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+        {/* Table header with controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="text-sm font-semibold text-(--color-text-primary)">All Assets</h3>
+
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary)" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search assets..."
+                className="w-40 bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-8 pr-3 py-1.5 text-xs text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 placeholder:text-(--color-text-secondary)/50"
+              />
+            </div>
+
+            {/* Hide small toggle */}
+            {smallCount > 0 && (
+              <button
+                onClick={() => setHideSmall(!hideSmall)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                  hideSmall
+                    ? "bg-(--color-accent)/10 border-(--color-accent)/30 text-(--color-accent)"
+                    : "bg-(--color-bg-elevated) border-(--color-border) text-(--color-text-secondary) hover:text-(--color-text-primary)",
+                )}
+              >
+                {hideSmall ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {hideSmall ? `${smallCount} hidden` : `Hide small (<$1)`}
+              </button>
+            )}
+
+            {/* Add holding */}
+            {!showForm && !editItem && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Add form */}
+        {showForm && <HoldingForm onClose={() => setShowForm(false)} />}
+
+        {/* Edit form */}
+        {editItem && (
+          <HoldingForm initial={editItem} onClose={() => setEditItem(null)} />
+        )}
+
+        {/* Table */}
+        {sorted.length === 0 ? (
+          <p className="text-sm text-(--color-text-secondary) text-center py-4">
+            {searchQuery ? "No assets match your search" : "No assets to display"}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-(--color-border)">
+                  <SortHeader label="Asset" sortKey="symbol" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left" />
+                  <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Qty</th>
+                  <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Price</th>
+                  <SortHeader label="Value" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
+                  <SortHeader label="Alloc" sortKey="allocation" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
+                  <SortHeader label="24h" sortKey="change" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
+                  <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Source</th>
+                  <th className="py-2 w-16" />
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((h, i) => (
                   <tr
                     key={`${h.source}-${h.symbol}-${i}`}
                     className="border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 transition-colors"
@@ -437,9 +783,7 @@ export function HoldingsCard() {
 
                     {/* Value */}
                     <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs font-semibold">
-                      {h.value_usd != null
-                        ? `$${h.value_usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : "—"}
+                      {h.value_usd != null ? fmtUsd(h.value_usd) : "—"}
                     </td>
 
                     {/* Allocation */}
@@ -505,27 +849,27 @@ export function HoldingsCard() {
                       )}
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
+                ))}
+              </tbody>
 
-            {/* Footer with total */}
-            {totalValue != null && (
-              <tfoot>
-                <tr className="border-t border-(--color-border)">
-                  <td colSpan={3} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
-                    Total
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
-                    ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td colSpan={4} />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      )}
+              {/* Footer with total */}
+              {totalValue != null && (
+                <tfoot>
+                  <tr className="border-t border-(--color-border)">
+                    <td colSpan={3} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
+                      Total{hideSmall ? ` (${filtered.length} of ${allHoldings.length})` : ""}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
+                      {fmtUsd(totalValue)}
+                    </td>
+                    <td colSpan={4} />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
