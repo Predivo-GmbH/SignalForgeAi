@@ -1,11 +1,15 @@
 """Market data and engine status endpoints."""
 
+import logging
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.data.storage import CandleStorage
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["market"])
 
@@ -44,6 +48,29 @@ async def get_candles(
     """
     symbol = symbol.replace("-", "/")
     candles = await CandleStorage.load_candles_db(db, symbol, timeframe, limit=limit)
+
+    # If DB has no data, try fetching live from Binance via CCXT
+    if not candles and "/" in symbol:
+        try:
+            from app.data.ingestion import CCXTIngestion
+
+            ingestion = CCXTIngestion("binance")
+            df = ingestion.fetch_candles(symbol, timeframe, limit=limit)
+            if not df.empty:
+                candles = [
+                    {
+                        "time": row["time"].isoformat(),
+                        "open": row["open"],
+                        "high": row["high"],
+                        "low": row["low"],
+                        "close": row["close"],
+                        "volume": row["volume"],
+                    }
+                    for _, row in df.iterrows()
+                ]
+        except Exception:
+            logger.debug("Live candle fetch failed for %s", symbol)
+
     return {"symbol": symbol, "timeframe": timeframe, "candles": candles, "count": len(candles)}
 
 

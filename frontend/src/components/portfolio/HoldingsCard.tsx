@@ -683,24 +683,68 @@ function HoldingForm({
   );
 }
 
+/* ---- Combined holding (merged by symbol) ---- */
+
+interface CombinedHolding {
+  symbol: string;
+  totalQty: number;
+  currentPrice: number | null;
+  totalValue: number;
+  change24hPct: number | null;
+  allocPct: number | null;
+  sources: { source: string; notes: string | null; qty: number; id?: string }[];
+}
+
+function combineHoldings(holdings: HoldingItem[], totalValue: number | null): CombinedHolding[] {
+  const map: Record<string, CombinedHolding> = {};
+  for (const h of holdings) {
+    const key = h.symbol.toUpperCase();
+    if (!map[key]) {
+      map[key] = {
+        symbol: key,
+        totalQty: 0,
+        currentPrice: h.current_price,
+        totalValue: 0,
+        change24hPct: h.change_24h_pct,
+        allocPct: null,
+        sources: [],
+      };
+    }
+    const c = map[key];
+    c.totalQty += h.quantity;
+    c.totalValue += h.value_usd ?? 0;
+    if (h.current_price != null) c.currentPrice = h.current_price;
+    if (h.change_24h_pct != null) c.change24hPct = h.change_24h_pct;
+    c.sources.push({ source: h.source, notes: h.notes, qty: h.quantity, id: h.id });
+  }
+
+  const result = Object.values(map);
+  if (totalValue && totalValue > 0) {
+    for (const c of result) {
+      c.allocPct = (c.totalValue / totalValue) * 100;
+    }
+  }
+  return result;
+}
+
 /* ---- Sort helpers ---- */
 
 type SortKey = "value" | "symbol" | "change" | "allocation";
 type SortDir = "asc" | "desc";
 
-function sortHoldings(holdings: HoldingItem[], key: SortKey, dir: SortDir): HoldingItem[] {
+function sortCombined(holdings: CombinedHolding[], key: SortKey, dir: SortDir): CombinedHolding[] {
   const sorted = [...holdings];
   const m = dir === "asc" ? 1 : -1;
   sorted.sort((a, b) => {
     switch (key) {
       case "value":
-        return m * ((a.value_usd ?? -1) - (b.value_usd ?? -1));
+        return m * (a.totalValue - b.totalValue);
       case "symbol":
         return m * a.symbol.localeCompare(b.symbol);
       case "change":
-        return m * ((a.change_24h_pct ?? 0) - (b.change_24h_pct ?? 0));
+        return m * ((a.change24hPct ?? 0) - (b.change24hPct ?? 0));
       case "allocation":
-        return m * ((a.allocation_pct ?? 0) - (b.allocation_pct ?? 0));
+        return m * ((a.allocPct ?? 0) - (b.allocPct ?? 0));
       default:
         return 0;
     }
@@ -783,41 +827,50 @@ export function HoldingsCard() {
     return map;
   }, [allHoldings]);
 
+  // Combined holdings (merged by symbol)
+  const allCombined = useMemo(
+    () => combineHoldings(allHoldings, totalValue),
+    [allHoldings, totalValue],
+  );
+
   // Counts before filtering
-  const smallCount = allHoldings.filter((h) => (h.value_usd ?? 0) < SMALL_BALANCE_THRESHOLD).length;
+  const smallCount = allCombined.filter((c) => c.totalValue < SMALL_BALANCE_THRESHOLD).length;
 
-  // Apply filters
-  let filtered = allHoldings;
-  if (hideSmall) {
-    filtered = filtered.filter((h) => (h.value_usd ?? 0) >= SMALL_BALANCE_THRESHOLD);
-  }
-  if (searchQuery.trim()) {
-    const q = searchQuery.trim().toLowerCase();
-    filtered = filtered.filter(
-      (h) =>
-        h.symbol.toLowerCase().includes(q) ||
-        (h.notes?.toLowerCase().includes(q) ?? false) ||
-        h.source.toLowerCase().includes(q),
-    );
-  }
+  // Apply filters on combined data
+  const filteredCombined = useMemo(() => {
+    let list = allCombined;
+    if (hideSmall) {
+      list = list.filter((c) => c.totalValue >= SMALL_BALANCE_THRESHOLD);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.symbol.toLowerCase().includes(q) ||
+          c.sources.some((s) => s.source.toLowerCase().includes(q)) ||
+          c.sources.some((s) => s.notes?.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [allCombined, hideSmall, searchQuery]);
 
-  const sorted = sortHoldings(filtered, sortKey, sortDir);
+  const sorted = sortCombined(filteredCombined, sortKey, sortDir);
 
-  // Donut chart slices (top 9 + "Other" group)
+  // Donut chart slices (top 9 + "Other" group) — uses combined data
   const donutSlices: DonutSlice[] = useMemo(() => {
     if (!totalValue || totalValue <= 0) return [];
-    const byValue = [...allHoldings]
-      .filter((h) => (h.value_usd ?? 0) > 0)
-      .sort((a, b) => (b.value_usd ?? 0) - (a.value_usd ?? 0));
+    const byValue = [...allCombined]
+      .filter((c) => c.totalValue > 0)
+      .sort((a, b) => b.totalValue - a.totalValue);
 
     const topN = byValue.slice(0, 9);
     const rest = byValue.slice(9);
-    const restValue = rest.reduce((sum, h) => sum + (h.value_usd ?? 0), 0);
+    const restValue = rest.reduce((sum, c) => sum + c.totalValue, 0);
 
-    const slices: DonutSlice[] = topN.map((h, i) => ({
-      label: h.symbol,
-      value: h.value_usd ?? 0,
-      pct: ((h.value_usd ?? 0) / totalValue) * 100,
+    const slices: DonutSlice[] = topN.map((c, i) => ({
+      label: c.symbol,
+      value: c.totalValue,
+      pct: (c.totalValue / totalValue) * 100,
       color: DONUT_COLORS[i % DONUT_COLORS.length],
     }));
 
@@ -831,7 +884,7 @@ export function HoldingsCard() {
     }
 
     return slices;
-  }, [allHoldings, totalValue]);
+  }, [allCombined, totalValue]);
 
   if (allHoldings.length === 0) {
     return (
@@ -879,7 +932,7 @@ export function HoldingsCard() {
             <Wallet className="w-4 h-4 text-(--color-accent)" />
             <h3 className="text-sm font-semibold text-(--color-text-primary)">Portfolio Overview</h3>
             <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-bg-elevated) px-2 py-0.5 rounded-full">
-              {allHoldings.length} asset{allHoldings.length !== 1 ? "s" : ""}
+              {allCombined.length} asset{allCombined.length !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -1014,106 +1067,120 @@ export function HoldingsCard() {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((h, i) => (
-                  <tr
-                    key={`${h.source}-${h.symbol}-${i}`}
-                    className="border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 transition-colors cursor-pointer"
-                    onClick={() => setDetailSymbol(h.symbol.toUpperCase())}
-                  >
-                    {/* Asset */}
-                    <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={cn("w-2 h-2 rounded-full shrink-0", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
-                        />
-                        <div>
-                          <span className="font-semibold text-(--color-text-primary)">{h.symbol}</span>
-                          {h.notes && (
-                            <span className="ml-1.5 text-[10px] text-(--color-text-secondary)">{h.notes}</span>
-                          )}
+                {sorted.map((c, i) => {
+                  const manualSources = c.sources.filter((s) => s.source === "manual" && s.id);
+                  return (
+                    <tr
+                      key={c.symbol}
+                      className="border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 transition-colors cursor-pointer"
+                      onClick={() => setDetailSymbol(c.symbol)}
+                    >
+                      {/* Asset */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={cn("w-2 h-2 rounded-full shrink-0", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
+                          />
+                          <span className="font-semibold text-(--color-text-primary)">{c.symbol}</span>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Quantity */}
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs">
-                      {h.quantity.toLocaleString("en-US", { maximumFractionDigits: 8 })}
-                    </td>
+                      {/* Quantity */}
+                      <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs">
+                        {c.totalQty.toLocaleString("en-US", { maximumFractionDigits: 8 })}
+                      </td>
 
-                    {/* Current Price */}
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-secondary) text-xs">
-                      {h.current_price != null ? formatPrice(h.current_price) : "—"}
-                    </td>
+                      {/* Current Price */}
+                      <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-secondary) text-xs">
+                        {c.currentPrice != null ? formatPrice(c.currentPrice) : "—"}
+                      </td>
 
-                    {/* Value */}
-                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs font-semibold">
-                      {h.value_usd != null ? fmtUsd(h.value_usd) : "—"}
-                    </td>
+                      {/* Value */}
+                      <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs font-semibold">
+                        {fmtUsd(c.totalValue)}
+                      </td>
 
-                    {/* Allocation */}
-                    <td className="py-2.5 px-3 text-right">
-                      {h.allocation_pct != null ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-12 h-1.5 rounded-full bg-(--color-bg-elevated) overflow-hidden">
-                            <div
-                              className={cn("h-full rounded-full", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
-                              style={{ width: `${Math.min(h.allocation_pct, 100)}%` }}
-                            />
+                      {/* Allocation */}
+                      <td className="py-2.5 px-3 text-right">
+                        {c.allocPct != null ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="w-12 h-1.5 rounded-full bg-(--color-bg-elevated) overflow-hidden">
+                              <div
+                                className={cn("h-full rounded-full", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
+                                style={{ width: `${Math.min(c.allocPct, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-mono tabular-nums text-(--color-text-secondary) w-12 text-right">
+                              {c.allocPct.toFixed(1)}%
+                            </span>
                           </div>
-                          <span className="text-xs font-mono tabular-nums text-(--color-text-secondary) w-12 text-right">
-                            {h.allocation_pct.toFixed(1)}%
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-(--color-text-secondary)">—</span>
-                      )}
-                    </td>
+                        ) : (
+                          <span className="text-xs text-(--color-text-secondary)">—</span>
+                        )}
+                      </td>
 
-                    {/* 24h Change */}
-                    <td className="py-2.5 px-3 text-right">
-                      {h.change_24h_pct != null ? (
-                        <div className="flex items-center justify-end gap-1">
-                          {h.change_24h_pct >= 0 ? (
-                            <TrendingUp className={cn("w-3 h-3", pnlColor(h.change_24h_pct))} />
-                          ) : (
-                            <TrendingDown className={cn("w-3 h-3", pnlColor(h.change_24h_pct))} />
-                          )}
-                          <span className={cn("text-xs font-mono tabular-nums font-medium", pnlColor(h.change_24h_pct))}>
-                            {h.change_24h_pct >= 0 ? "+" : ""}{h.change_24h_pct.toFixed(2)}%
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-(--color-text-secondary)">—</span>
-                      )}
-                    </td>
+                      {/* 24h Change */}
+                      <td className="py-2.5 px-3 text-right">
+                        {c.change24hPct != null ? (
+                          <div className="flex items-center justify-end gap-1">
+                            {c.change24hPct >= 0 ? (
+                              <TrendingUp className={cn("w-3 h-3", pnlColor(c.change24hPct))} />
+                            ) : (
+                              <TrendingDown className={cn("w-3 h-3", pnlColor(c.change24hPct))} />
+                            )}
+                            <span className={cn("text-xs font-mono tabular-nums font-medium", pnlColor(c.change24hPct))}>
+                              {c.change24hPct >= 0 ? "+" : ""}{c.change24hPct.toFixed(2)}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-(--color-text-secondary)">—</span>
+                        )}
+                      </td>
 
-                    {/* Source */}
-                    <td className="py-2.5 px-3">
-                      <SourceBadge source={h.source} />
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-2.5">
-                      {h.source === "manual" && h.id && (
-                        <div className="flex items-center gap-1 justify-end">
-                          <button
-                            onClick={() => { setShowForm(false); setEditItem(h); }}
-                            className="p-1 rounded hover:bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => h.id && deleteMutation.mutate(h.id)}
-                            disabled={deleteMutation.isPending}
-                            className="p-1 rounded hover:bg-(--color-negative)/10 text-(--color-text-secondary) hover:text-(--color-negative) transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                      {/* Sources (multiple badges) */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {c.sources.map((s, si) => {
+                            const style = SOURCE_STYLE[s.source] ?? { label: s.source, cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" };
+                            const label = s.notes && s.source === "manual" ? s.notes : style.label;
+                            return (
+                              <span
+                                key={`${s.source}-${si}`}
+                                className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}
+                              >
+                                {label}
+                              </span>
+                            );
+                          })}
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* Actions (only for manual-only entries) */}
+                      <td className="py-2.5" onClick={(e) => e.stopPropagation()}>
+                        {manualSources.length === 1 && c.sources.length === 1 && (
+                          <div className="flex items-center gap-1 justify-end">
+                            <button
+                              onClick={() => {
+                                const raw = allHoldings.find((h) => h.id === manualSources[0].id);
+                                if (raw) { setShowForm(false); setEditItem(raw); }
+                              }}
+                              className="p-1 rounded hover:bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => manualSources[0].id && deleteMutation.mutate(manualSources[0].id)}
+                              disabled={deleteMutation.isPending}
+                              className="p-1 rounded hover:bg-(--color-negative)/10 text-(--color-text-secondary) hover:text-(--color-negative) transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
 
               {/* Footer with total */}
@@ -1121,7 +1188,7 @@ export function HoldingsCard() {
                 <tfoot>
                   <tr className="border-t border-(--color-border)">
                     <td colSpan={3} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
-                      Total{hideSmall ? ` (${filtered.length} of ${allHoldings.length})` : ""}
+                      Total{hideSmall ? ` (${filteredCombined.length} of ${allCombined.length})` : ""}
                     </td>
                     <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
                       {fmtUsd(totalValue)}
