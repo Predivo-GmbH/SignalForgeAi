@@ -5,13 +5,14 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.models.position import Position
 from app.models.simulation import PaperSimulation, SimulationSnapshot
+from app.models.signal import Signal
 from app.models.strategy import Strategy
 from app.models.trade import Trade
 
@@ -128,6 +129,7 @@ async def start_simulation(
         },
     )
     db.add(strategy)
+    await db.flush()
 
     # Create simulation record
     sim = PaperSimulation(
@@ -232,13 +234,15 @@ async def get_simulation_comparison(
     )
     snapshots = snap_result.scalars().all()
 
-    # Trade stats
+    # Trade stats (Trade -> Signal -> strategy_id)
     trade_result = await db.execute(
         select(
             func.count(Trade.id).label("count"),
-            func.sum(func.case((Trade.pnl > 0, 1), else_=0)).label("wins"),
+            func.sum(case((Trade.pnl > 0, 1), else_=0)).label("wins"),
             func.coalesce(func.sum(Trade.pnl), 0.0).label("total_pnl"),
-        ).where(Trade.strategy_id == sim.strategy_id)
+        )
+        .join(Signal, Trade.signal_id == Signal.id)
+        .where(Signal.strategy_id == sim.strategy_id)
     )
     trade_stats = trade_result.one()
 
@@ -335,9 +339,9 @@ async def stop_simulation(
 
     # Take final snapshot
     pnl_result = await db.execute(
-        select(func.coalesce(func.sum(Trade.pnl), 0.0)).where(
-            Trade.strategy_id == sim.strategy_id
-        )
+        select(func.coalesce(func.sum(Trade.pnl), 0.0))
+        .join(Signal, Trade.signal_id == Signal.id)
+        .where(Signal.strategy_id == sim.strategy_id)
     )
     realized_pnl = float(pnl_result.scalar())
 
@@ -404,12 +408,14 @@ async def _build_simulation_response(db: AsyncSession, sim: PaperSimulation) -> 
     )
     snapshots = snap_result.scalars().all()
 
-    # Trade stats
+    # Trade stats (Trade -> Signal -> strategy_id)
     trade_result = await db.execute(
         select(
             func.count(Trade.id).label("count"),
-            func.sum(func.case((Trade.pnl > 0, 1), else_=0)).label("wins"),
-        ).where(Trade.strategy_id == sim.strategy_id)
+            func.sum(case((Trade.pnl > 0, 1), else_=0)).label("wins"),
+        )
+        .join(Signal, Trade.signal_id == Signal.id)
+        .where(Signal.strategy_id == sim.strategy_id)
     )
     trade_stats = trade_result.one()
 

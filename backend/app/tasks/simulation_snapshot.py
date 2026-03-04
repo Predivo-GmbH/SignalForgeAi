@@ -25,6 +25,7 @@ async def _snapshot_async():
 
     from app.core.database import task_session
     from app.models.position import Position
+    from app.models.signal import Signal
     from app.models.simulation import PaperSimulation, SimulationSnapshot
     from app.models.trade import Trade
 
@@ -61,9 +62,9 @@ async def _snapshot_async():
                 # --- SignalForge value ---
                 # Realized P&L from closed trades
                 pnl_result = await db.execute(
-                    select(func.coalesce(func.sum(Trade.pnl), 0.0)).where(
-                        Trade.strategy_id == sim.strategy_id
-                    )
+                    select(func.coalesce(func.sum(Trade.pnl), 0.0))
+                    .join(Signal, Trade.signal_id == Signal.id)
+                    .where(Signal.strategy_id == sim.strategy_id)
                 )
                 realized_pnl = float(pnl_result.scalar())
 
