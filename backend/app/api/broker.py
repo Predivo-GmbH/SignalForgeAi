@@ -31,6 +31,7 @@ class BrokerConnectionResponse(BaseModel):
     api_key_masked: str  # ****last4
     is_paper: bool
     purpose: str
+    created_at: str
 
     model_config = {"from_attributes": True}
 
@@ -87,6 +88,7 @@ async def create_broker_connection(
         api_key_masked="Paper" if body.is_paper else _mask_key(body.api_key),
         is_paper=conn.is_paper,
         purpose=conn.purpose,
+        created_at=conn.created_at.isoformat(),
     )
 
 
@@ -117,6 +119,7 @@ async def list_broker_connections(
                 api_key_masked=masked,
                 is_paper=c.is_paper,
                 purpose=c.purpose,
+                created_at=c.created_at.isoformat(),
             )
         )
     return out

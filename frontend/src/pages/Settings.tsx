@@ -20,6 +20,8 @@ import {
   Eye,
   EyeOff,
   Pencil,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -45,6 +47,7 @@ interface BrokerMeta {
   description: string;
   docsUrl: string;
   needsPassphrase?: boolean;
+  keyExpiryDays?: number;
 }
 
 const SUPPORTED_BROKERS: BrokerMeta[] = [
@@ -66,6 +69,7 @@ const SUPPORTED_BROKERS: BrokerMeta[] = [
     ccxtId: "mexc",
     description: "Crypto exchange with spot & futures trading",
     docsUrl: "https://mexcdevelop.github.io/apidocs/",
+    keyExpiryDays: 90,
   },
   {
     name: "Bitstamp",
@@ -264,6 +268,11 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
               Trading keys may require IP whitelisting on your exchange.
             </p>
           )}
+          {selectedMeta?.keyExpiryDays && (
+            <p className="text-xs text-amber-400">
+              {selectedMeta.name} keys without IP binding expire after {selectedMeta.keyExpiryDays} days. Link an IP address on {selectedMeta.name} for permanent validity.
+            </p>
+          )}
         </div>
       )}
 
@@ -293,16 +302,62 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
 
 /* ---- Connection Card ---- */
 
+function KeyExpiryBadge({ createdAt, expiryDays }: { createdAt: string; expiryDays: number }) {
+  const created = new Date(createdAt);
+  const expiresAt = new Date(created.getTime() + expiryDays * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (daysLeft <= 0) {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+        <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+        <span className="text-xs font-medium text-red-400">Key expired — reconnect required</span>
+      </div>
+    );
+  }
+
+  const isWarning = daysLeft <= 14;
+  const isCritical = daysLeft <= 7;
+
+  return (
+    <div className={cn(
+      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border",
+      isCritical
+        ? "bg-red-500/10 border-red-500/20"
+        : isWarning
+          ? "bg-amber-500/10 border-amber-500/20"
+          : "bg-(--color-bg-elevated) border-(--color-border)",
+    )}>
+      <Clock className={cn(
+        "w-3.5 h-3.5",
+        isCritical ? "text-red-400" : isWarning ? "text-amber-400" : "text-(--color-text-secondary)",
+      )} />
+      <span className={cn(
+        "text-xs font-medium",
+        isCritical ? "text-red-400" : isWarning ? "text-amber-400" : "text-(--color-text-secondary)",
+      )}>
+        {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
+      </span>
+      <span className="text-[10px] text-(--color-text-secondary)">
+        (no IP binding)
+      </span>
+    </div>
+  );
+}
+
 function ConnectionCard({
   id,
   broker,
   apiKeyMasked,
   purpose,
+  createdAt,
 }: {
   id: string;
   broker: string;
   apiKeyMasked: string;
   purpose: "read" | "trade";
+  createdAt: string;
 }) {
   const disconnect = useDisconnectBroker();
   const meta = SUPPORTED_BROKERS.find(
@@ -360,6 +415,10 @@ function ConnectionCard({
           {apiKeyMasked}
         </span>
       </div>
+
+      {meta?.keyExpiryDays && createdAt && (
+        <KeyExpiryBadge createdAt={createdAt} expiryDays={meta.keyExpiryDays} />
+      )}
 
       <button
         onClick={() => disconnect.mutate(id)}
@@ -430,6 +489,7 @@ function ConnectionsTab() {
               broker={conn.broker}
               apiKeyMasked={conn.api_key_masked}
               purpose={conn.purpose}
+              createdAt={conn.created_at}
             />
           ))}
         </div>

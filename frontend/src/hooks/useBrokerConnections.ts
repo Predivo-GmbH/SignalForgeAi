@@ -7,6 +7,7 @@ export interface BrokerConnection {
   api_key_masked: string;
   is_paper: boolean;
   purpose: "read" | "trade";
+  created_at: string;
 }
 
 export interface ConnectBrokerRequest {
