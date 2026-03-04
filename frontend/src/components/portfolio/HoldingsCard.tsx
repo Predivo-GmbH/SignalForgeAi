@@ -25,6 +25,7 @@ import {
   useDeleteHolding,
 } from "@/hooks/useHoldings";
 import type { HoldingItem, ManualHoldingRequest } from "@/hooks/useHoldings";
+import { AssetDetailModal } from "./AssetDetailModal";
 
 /* ---- Constants ---- */
 
@@ -97,9 +98,11 @@ interface DonutSlice {
 function DonutChart({
   slices,
   totalValue,
+  onSliceClick,
 }: {
   slices: DonutSlice[];
   totalValue: number;
+  onSliceClick?: (label: string) => void;
 }) {
   const size = 200;
   const cx = size / 2;
@@ -158,6 +161,7 @@ function DonutChart({
             className="transition-opacity duration-150"
             onMouseEnter={() => setHoveredIdx(arc.idx)}
             onMouseLeave={() => setHoveredIdx(null)}
+            onClick={() => onSliceClick?.(arc.label)}
             style={{ cursor: "pointer" }}
           />
         ))}
@@ -192,6 +196,7 @@ function DonutChart({
             className="flex items-center gap-2 cursor-pointer"
             onMouseEnter={() => setHoveredIdx(i)}
             onMouseLeave={() => setHoveredIdx(null)}
+            onClick={() => onSliceClick?.(s.label)}
           >
             <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
             <span className="text-[11px] text-(--color-text-secondary) truncate">{s.label}</span>
@@ -626,6 +631,7 @@ export function HoldingsCard() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [hideSmall, setHideSmall] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
@@ -646,6 +652,16 @@ export function HoldingsCard() {
 
   const allHoldings = data?.holdings ?? [];
   const totalValue = data?.total_value_usd ?? null;
+
+  // Group holdings by symbol for detail modal
+  const holdingsBySymbol = useMemo(() => {
+    const map: Record<string, HoldingItem[]> = {};
+    for (const h of allHoldings) {
+      const key = h.symbol.toUpperCase();
+      (map[key] ??= []).push(h);
+    }
+    return map;
+  }, [allHoldings]);
 
   // Counts before filtering
   const smallCount = allHoldings.filter((h) => (h.value_usd ?? 0) < SMALL_BALANCE_THRESHOLD).length;
@@ -758,7 +774,14 @@ export function HoldingsCard() {
           {/* Donut chart */}
           {donutSlices.length > 0 && totalValue != null && totalValue > 0 && (
             <div className="shrink-0">
-              <DonutChart slices={donutSlices} totalValue={totalValue} />
+              <DonutChart
+                slices={donutSlices}
+                totalValue={totalValue}
+                onSliceClick={(label) => {
+                  // "Other (N)" slices don't map to a single symbol
+                  if (!label.startsWith("Other")) setDetailSymbol(label);
+                }}
+              />
             </div>
           )}
 
@@ -874,7 +897,8 @@ export function HoldingsCard() {
                 {sorted.map((h, i) => (
                   <tr
                     key={`${h.source}-${h.symbol}-${i}`}
-                    className="border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 transition-colors"
+                    className="border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 transition-colors cursor-pointer"
+                    onClick={() => setDetailSymbol(h.symbol.toUpperCase())}
                   >
                     {/* Asset */}
                     <td className="py-2.5 px-3">
@@ -990,6 +1014,17 @@ export function HoldingsCard() {
           </div>
         )}
       </div>
+
+      {/* Asset detail modal */}
+      {detailSymbol && (
+        <AssetDetailModal
+          open={!!detailSymbol}
+          onClose={() => setDetailSymbol(null)}
+          symbol={detailSymbol}
+          holdings={holdingsBySymbol[detailSymbol] ?? []}
+          totalPortfolioValue={totalValue ?? 0}
+        />
+      )}
     </div>
   );
 }
