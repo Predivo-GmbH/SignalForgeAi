@@ -53,7 +53,7 @@ async def get_candles(
     if not candles and "/" in symbol:
         from app.data.ingestion import CCXTIngestion
 
-        for exchange_id in ("binance", "kucoin", "kraken"):
+        for exchange_id in ("binance", "kucoin", "kraken", "mexc", "gateio"):
             try:
                 ingestion = CCXTIngestion(exchange_id)
                 df = ingestion.fetch_candles(symbol, timeframe, limit=limit)

@@ -96,7 +96,7 @@ async def _fetch_prices_from_exchange(
 
 
 # Fallback exchanges for symbols not found on Binance
-_FALLBACK_EXCHANGES = ["kucoin", "kraken"]
+_FALLBACK_EXCHANGES = ["kucoin", "kraken", "mexc", "gateio"]
 
 
 async def _fetch_prices(
