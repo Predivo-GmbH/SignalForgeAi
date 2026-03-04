@@ -4,7 +4,7 @@
 > the SignalForge trading system does — how it decides to buy, how it decides to sell, what
 > signals it uses, how they combine, how risk is managed, and where improvements can be made.
 >
-> **Last updated:** 2026-03-03
+> **Last updated:** 2026-03-04
 
 ---
 
@@ -38,18 +38,22 @@
 16. [All 14 Confluence Factors Explained](#16-all-14-confluence-factors-explained)
 17. [The 5 Entry Triggers Explained](#17-the-5-entry-triggers-explained)
 18. [The AI Advisor and Self-Learning Loop](#18-the-ai-advisor-and-self-learning-loop)
-19. [Why the System May Be Selling at a Loss](#19-why-the-system-may-be-selling-at-a-loss)
-20. [Recommendations for Better Performance](#20-recommendations-for-better-performance)
-21. [Strategy Configuration Reference](#21-strategy-configuration-reference)
-22. [Complete Signal Lifecycle Diagram](#22-complete-signal-lifecycle-diagram)
+19. [Regime Allocator](#19-regime-allocator)
+20. [Cooldown Mechanism](#20-cooldown-mechanism)
+21. [Live Paper Simulation](#21-live-paper-simulation)
+22. [Why the System May Be Selling at a Loss](#22-why-the-system-may-be-selling-at-a-loss)
+23. [Recommendations for Better Performance](#23-recommendations-for-better-performance)
+24. [Strategy Configuration Reference](#24-strategy-configuration-reference)
+25. [Complete Signal Lifecycle Diagram](#25-complete-signal-lifecycle-diagram)
 
 ---
 
 ## 1. Executive Summary
 
 SignalForge is a **fully automated crypto day trading system** that uses a 6-layer signal
-pipeline, 14 technical indicators, and AI-powered quality control (Claude) to generate and
-execute trades.
+pipeline, 14 technical indicators, AI-powered quality control (Claude), regime-aware
+allocation, cooldown protection, and a live paper simulation system to generate, execute,
+and benchmark trades.
 
 **The core philosophy:**
 - The system identifies the market direction (trend), finds optimal entry zones using
@@ -64,7 +68,8 @@ execute trades.
 3. The AI may be approving trades that look technically sound but are in poor market
    conditions
 4. Several powerful protection features (trailing stops, break-even stops, CPPI, drawdown
-   breaker) are **disabled by default** and must be explicitly enabled
+   breaker, regime allocator, cooldown) are **disabled by default** and must be explicitly
+   enabled
 
 ---
 
@@ -351,22 +356,28 @@ the stop-loss distance, the signal may be rejected.
 
 After the pipeline produces a BUY or SELL signal, these additional checks are applied:
 
-1. **Feedback Filter** — The self-learning loop may have learned rules like "avoid BTC in
+1. **Cooldown Check** — If a position for this symbol was recently closed, a Redis cooldown
+   key exists. BUY signals are blocked during the cooldown period (see [Section 20](#20-cooldown-mechanism)).
+
+2. **Feedback Filter** — The self-learning loop may have learned rules like "avoid BTC in
    RANGING markets" based on past losing trades. These rules can block signals or require
    a higher confluence threshold.
 
-2. **Position Filter** — Only ONE open position per symbol is allowed. A BUY is blocked if
+3. **Position Filter** — Only ONE open position per symbol is allowed. A BUY is blocked if
    there's already an open BUY for that symbol. A SELL is blocked if there's no BUY to
    close.
 
-3. **Multi-Timeframe Alignment** — For 1-hour signals, the system checks the 4-hour trend.
+4. **Multi-Timeframe Alignment** — For 1-hour signals, the system checks the 4-hour trend.
    For 4-hour signals, it checks the daily trend. If the higher timeframe explicitly
    contradicts (e.g., BUY signal but 4h trend is BEARISH), the signal is **blocked**.
 
-4. **Deduplication** — Prevents the same signal from being created twice.
+5. **Deduplication** — Prevents the same signal from being created twice.
 
-5. **CPPI Scaling** — If enabled, reduces position size based on how close equity is to the
+6. **CPPI Scaling** — If enabled, reduces position size based on how close equity is to the
    protection floor (see [Section 14](#14-portfolio-level-risk-protection)).
+
+7. **Regime Allocator Scaling** — If enabled, scales position size by the current regime
+   allocation percentage (see [Section 19](#19-regime-allocator)). Applied after CPPI.
 
 **File:** `backend/app/tasks/run_pipeline.py`
 
@@ -414,15 +425,17 @@ For a BUY trade to execute, **every single one** of these conditions must pass:
 | 4 | Confluence Score | Score >= minimum | >= 50/100 |
 | 5 | Entry Triggers | >= minimum triggers fired recently | >= 2 of 5 |
 | 6 | Risk/Reward | R:R ratio >= minimum | >= 1.5 |
-| 7 | Feedback Filter | No "avoid" rule matches from self-learning | — |
-| 8 | Position Filter | No existing open BUY for this symbol | 1 position per symbol |
-| 9 | MTF Alignment | Higher timeframe not BEARISH | — |
-| 10 | AI Quality | Claude does not reject | Score >= 30 |
-| 11 | Daily Loss | Today's losses < maximum | < 6% of equity |
-| 12 | Open Positions | Below maximum | < 5 positions |
-| 13 | Per-Trade Risk | Risk amount within limit | < 2% of equity |
-| 14 | Drawdown Breaker | Not at Level 2+ (if enabled) | < 75% of limit consumed |
-| 15 | Correlation | Position size after penalty > 0 (if enabled) | — |
+| 7 | **Cooldown** | No recent position close for this symbol (if enabled) | 48h default |
+| 8 | Feedback Filter | No "avoid" rule matches from self-learning | — |
+| 9 | Position Filter | No existing open BUY for this symbol | 1 position per symbol |
+| 10 | MTF Alignment | Higher timeframe not BEARISH | — |
+| 11 | AI Quality | Claude does not reject | Score >= 30 |
+| 12 | Daily Loss | Today's losses < maximum | < 6% of equity |
+| 13 | Open Positions | Below maximum | < 5 positions |
+| 14 | Per-Trade Risk | Risk amount within limit | < 2% of equity |
+| 15 | Drawdown Breaker | Not at Level 2+ (if enabled) | < 75% of limit consumed |
+| 16 | Correlation | Position size after penalty > 0 (if enabled) | — |
+| 17 | **Regime Allocator** | Allocation % > 0 (if enabled) | Scales by regime |
 
 **If ANY gate fails, the trade does not happen.**
 
@@ -684,6 +697,7 @@ risks the full 2%.
 |----------|---------|--------|
 | **Kelly Criterion** | Disabled | Replaces 2% risk with a statistically optimal fraction based on win rate |
 | **CPPI Exposure** | Disabled | Reduces size as equity approaches the protection floor |
+| **Regime Allocator** | Disabled | Scales size by regime allocation % (e.g., high_vol → 50%) |
 | **AI Quality Factor** | Active | Claude can scale size 0.0x - 1.5x based on conviction |
 | **Drawdown Breaker** | Disabled | Level 1: halves size. Level 2+: blocks trading |
 | **Correlation Penalty** | Disabled | Reduces size if trading correlated assets (e.g., BTC + ETH) |
@@ -811,7 +825,7 @@ output. You cannot see:
 - How much of the confluence score came from Fibonacci factors
 
 **Recommendation:** Add Fibonacci-specific metadata to the signal output (see
-[Section 20.6](#206-make-fibonacci-reasoning-visible)).
+[Section 23.6](#236-make-fibonacci-reasoning-visible)).
 
 ### Fibonacci Implementation Details
 
@@ -1011,7 +1025,230 @@ unavailable, no changes are made.
 
 ---
 
-## 19. Why the System May Be Selling at a Loss
+## 19. Regime Allocator
+
+### What Is the Regime Allocator?
+
+The **Regime Allocator** is a portfolio-level scaling mechanism that adjusts position sizes
+based on the current market regime. Instead of trading at full size in all market conditions,
+the system scales down exposure during unfavorable regimes and scales up when conditions are
+favorable.
+
+### How It Works
+
+The regime allocator maps the HMM (Hidden Markov Model) regime label to an **allocation
+percentage** that is applied as a multiplier to position sizes:
+
+```
+Position Size × Regime Allocation % = Adjusted Position Size
+```
+
+This scaling happens **after** CPPI scaling but **before** the position is executed. It is
+applied in the signal pipeline (`run_pipeline.py`), not in position management.
+
+### Allocation Tables
+
+Three presets are available, each mapping regime states to allocation percentages:
+
+| Regime State | Conservative | Moderate | Aggressive |
+|-------------|-------------|----------|------------|
+| **low_vol** | 100% | 100% | 100% |
+| **trending** | 80% | 90% | 100% |
+| **high_vol** | 30% | 50% | 70% |
+| **unknown** | 50% | 60% | 80% |
+
+Custom allocation tables can also be passed as a dictionary in the strategy config instead
+of a preset name.
+
+### Smoothing
+
+The allocator doesn't jump instantly to the target allocation. Instead, it uses **smoothing**
+to transition gradually:
+
+```
+Current Allocation moves by (1 / smoothing_bars) of the gap toward the target each cycle
+
+Example (smoothing_bars = 3, currently at 100%, target 50%):
+  Cycle 1: 100% → 100% - (100% - 50%) / 3 = 83.3%
+  Cycle 2: 83.3% → 83.3% - (83.3% - 50%) / 3 = 72.2%
+  Cycle 3: 72.2% → 72.2% - (72.2% - 50%) / 3 = 64.8%
+  ... gradually approaches 50%
+```
+
+This prevents sudden size changes when the regime fluctuates.
+
+### State Persistence
+
+The allocator state is stored in Redis with a 7-day TTL:
+- **Key:** `signalforge:regime_alloc:{user_id}`
+- **Value:** JSON with `current_alloc`, `target_alloc`, `regime`, `updated_at`
+
+### Configuration
+
+```json
+{
+  "regime_allocator_enabled": true,
+  "regime_allocation_table": "moderate",
+  "regime_smoothing_bars": 3
+}
+```
+
+**File:** `backend/app/execution/regime_allocator.py`
+
+---
+
+## 20. Cooldown Mechanism
+
+### What Is the Cooldown?
+
+The **cooldown mechanism** prevents the system from immediately re-entering a position after
+closing one. When a position is closed for any reason (stop loss, take profit, trailing stop,
+time stop, drawdown breaker, or sell signal), a cooldown timer starts. During the cooldown
+period, BUY signals for that symbol are blocked.
+
+### Why Cooldown Matters
+
+Without cooldown, the system can get caught in a cycle:
+1. Open position → hit stop loss → close at loss
+2. Pipeline immediately generates a new BUY signal (technical conditions haven't changed)
+3. Open position → hit stop loss again → close at loss
+4. Repeat
+
+This "churn" can cause rapid losses as the system re-enters the same losing trade over and
+over. The cooldown forces a waiting period so market conditions have time to change.
+
+### How It Works
+
+```
+After every position close:
+  Set Redis key: signalforge:cooldown:{user_id}:{symbol}
+  TTL = cooldown_hours × 3600 seconds
+
+Before every BUY signal in the pipeline:
+  Check if cooldown key exists for this user + symbol
+  → If exists: SKIP the BUY signal (log warning, continue to next)
+  → If not: proceed normally
+```
+
+### Where It's Set
+
+The cooldown is set in `manage_positions.py` after every `close_position()` call:
+- Time stop closures (3 tiers)
+- Stop loss hits (BUY and SELL positions)
+- Take profit hits (BUY and SELL positions)
+- Drawdown breaker emergency closures
+
+### Configuration
+
+```json
+{
+  "cooldown_hours": 48
+}
+```
+
+Setting `cooldown_hours: 0` disables the cooldown entirely (default).
+
+**Files:**
+- Set: `backend/app/tasks/manage_positions.py` (`_set_cooldown()`)
+- Check: `backend/app/tasks/run_pipeline.py` (before position-aware filter)
+
+---
+
+## 21. Live Paper Simulation
+
+### What Is the Paper Simulation?
+
+The **Live Paper Simulation** is a system that lets you compare SignalForge's active trading
+performance against a simple **buy-and-hold** strategy, starting from your actual portfolio.
+
+Think of it as a science experiment:
+- **Control group (Buy & Hold):** Take your current holdings, do nothing, just track their
+  market value over time
+- **Test group (SignalForge):** Start with the same portfolio value, but let SignalForge
+  actively trade using its full pipeline with all features enabled
+
+After running for days or weeks, you can see which approach performed better.
+
+### How It Works
+
+1. **Start:** You click "Start Paper Test" on the Dashboard
+2. **Snapshot holdings:** The system reads your real exchange balances + manual holdings +
+   trading positions, recording each coin's symbol, quantity, and current price
+3. **Create simulation strategy:** A new Strategy is created with full stack features enabled
+   (regime allocator, cooldown 48h, trailing stops, break-even, CPPI, drawdown breaker) and
+   `is_simulation: true` flag
+4. **Pipeline picks it up:** The existing signal pipeline automatically starts processing
+   signals for the simulation strategy — no special pipeline code needed
+5. **Hourly snapshots:** A Celery task runs every hour recording:
+   - **B&H value:** Re-price the initial holdings at current market prices
+   - **SF value:** Initial value + realized P&L from closed trades + unrealized P&L from
+     open positions
+6. **Dashboard widget:** Shows both equity values, return percentages, and a mini sparkline
+   chart comparing the two curves
+7. **Stop:** You click "Stop Simulation" — open positions are closed, strategy is deactivated,
+   final snapshot is recorded
+
+### What the Dashboard Shows
+
+When a simulation is running:
+- **Buy & Hold value and return %** — how your portfolio would have performed doing nothing
+- **SignalForge value and return %** — how the active trading strategy performed
+- **Difference badge** — "SF ahead by $X,XXX (+X.X%)" or "SF behind by $X,XXX (-X.X%)",
+  color-coded green/red
+- **Trade stats** — number of trades, win rate, open positions
+- **Mini sparkline** — SVG chart showing both equity curves over time
+- **Running duration** — "Running for Xd Xh"
+
+### Key Design Decisions
+
+- **Isolation:** The simulation strategy is a normal active strategy. Its positions and
+  trades are isolated via `strategy_id` foreign keys — they don't mix with real strategies.
+- **One at a time:** Only one simulation can run per user. You must stop the current one
+  before starting a new one.
+- **B&H is independent:** The buy-and-hold benchmark is computed purely from the initial
+  holdings snapshot + current prices. It has no interaction with the signal pipeline.
+- **Trade queries join through Signal:** The Trade model has no `strategy_id` column.
+  All trade queries filter by joining Trade → Signal → strategy_id.
+
+### Configuration
+
+The simulation strategy is created with these default parameters:
+```json
+{
+  "symbols": ["BTC/USDT", "ETH/USDT", ...],
+  "timeframes": ["1h"],
+  "account_equity": <portfolio_value>,
+  "min_confluence": 50,
+  "atr_sl_multiplier": 2.0,
+  "max_risk_per_trade": 0.02,
+  "min_risk_reward": 1.5,
+  "max_daily_loss": 0.06,
+  "regime_allocator_enabled": true,
+  "regime_allocation_table": "moderate",
+  "regime_smoothing_bars": 3,
+  "cooldown_hours": 48,
+  "trailing_stop_enabled": true,
+  "atr_trail_multiplier": 2.0,
+  "break_even_enabled": true,
+  "break_even_r_multiple": 1.0,
+  "drawdown_breaker_enabled": true,
+  "max_drawdown_pct": 0.15,
+  "cppi_enabled": true,
+  "max_hold_hours": 48,
+  "is_simulation": true
+}
+```
+
+**Files:**
+- Models: `backend/app/models/simulation.py`
+- API: `backend/app/api/simulation.py`
+- Snapshot task: `backend/app/tasks/simulation_snapshot.py`
+- Frontend hook: `frontend/src/hooks/useSimulation.ts`
+- Dashboard widget: `frontend/src/components/dashboard/SimulationCard.tsx`
+
+---
+
+## 22. Why the System May Be Selling at a Loss
 
 Based on the complete codebase analysis, here are the specific reasons your trades may be
 closing at a loss:
@@ -1045,6 +1282,8 @@ Several features designed to protect winning trades and limit losses are **off b
 | CPPI | **DISABLED** | Position sizes don't decrease as losses mount |
 | Kelly Criterion | **DISABLED** | Position sizes don't adapt to actual win rate |
 | Correlation Monitor | **DISABLED** | Correlated positions (BTC + ETH) can double your risk |
+| Regime Allocator | **DISABLED** | Full position sizes even in high-volatility regimes |
+| Cooldown | **DISABLED** | System can immediately re-enter the same losing trade |
 
 ### 19.4 Buying at Poor Entries
 
@@ -1073,9 +1312,9 @@ close action based on reversal recommendations may not be fully wired into the
 
 ---
 
-## 20. Recommendations for Better Performance
+## 23. Recommendations for Better Performance
 
-### 20.1 Enable Trailing Stops (HIGH PRIORITY)
+### 23.1 Enable Trailing Stops (HIGH PRIORITY)
 
 **Why:** Without trailing stops, a trade that goes +$2,000 can reverse all the way back to
 the stop loss at -$1,200. Trailing stops would have locked in profit.
@@ -1090,7 +1329,7 @@ the stop loss at -$1,200. Trailing stops would have locked in profit.
 Consider a tighter trail multiplier (1.5) for scalping or a wider one (2.5) for swing
 trades.
 
-### 20.2 Enable Break-Even Stops (HIGH PRIORITY)
+### 23.2 Enable Break-Even Stops (HIGH PRIORITY)
 
 **Why:** Once a trade is 1R in profit ($1,200 in the example), the stop should move to
 entry. This ensures profitable trades never turn into losses.
@@ -1102,7 +1341,7 @@ entry. This ensures profitable trades never turn into losses.
 }
 ```
 
-### 20.3 Enable the Drawdown Circuit Breaker (HIGH PRIORITY)
+### 23.3 Enable the Drawdown Circuit Breaker (HIGH PRIORITY)
 
 **Why:** Without this, a losing streak has no emergency brake. The circuit breaker
 progressively reduces exposure and ultimately halts trading before catastrophic losses.
@@ -1114,7 +1353,7 @@ progressively reduces exposure and ultimately halts trading before catastrophic 
 }
 ```
 
-### 20.4 Raise the Confluence Minimum (MEDIUM PRIORITY)
+### 23.4 Raise the Confluence Minimum (MEDIUM PRIORITY)
 
 **Why:** A minimum of 50 means trades can execute with relatively weak confirmation. Raising
 to 60-65 would filter out marginal setups.
@@ -1125,7 +1364,7 @@ to 60-65 would filter out marginal setups.
 }
 ```
 
-### 20.5 Raise the Trigger Minimum (MEDIUM PRIORITY)
+### 23.5 Raise the Trigger Minimum (MEDIUM PRIORITY)
 
 **Why:** Requiring only 2 of 5 triggers means the entry timing may not be precise. Raising
 to 3 would require stronger confirmation.
@@ -1136,7 +1375,7 @@ to 3 would require stronger confirmation.
 }
 ```
 
-### 20.6 Make Fibonacci Reasoning Visible (MEDIUM PRIORITY)
+### 23.6 Make Fibonacci Reasoning Visible (MEDIUM PRIORITY)
 
 **Current issue:** You cannot see why the system chose a specific entry or how Fibonacci
 influenced the decision.
@@ -1150,7 +1389,7 @@ influenced the decision.
 
 This could be added as a `fibonacci_detail` JSON field on the Signal model.
 
-### 20.7 Enable CPPI Portfolio Insurance (MEDIUM PRIORITY)
+### 23.7 Enable CPPI Portfolio Insurance (MEDIUM PRIORITY)
 
 **Why:** CPPI dynamically reduces your exposure as losses mount and increases it as you win.
 It's like an automatic risk throttle.
@@ -1163,7 +1402,7 @@ It's like an automatic risk throttle.
 }
 ```
 
-### 20.8 Enable Correlation Monitoring (LOW-MEDIUM PRIORITY)
+### 23.8 Enable Correlation Monitoring (LOW-MEDIUM PRIORITY)
 
 **Why:** BTC and ETH (and many altcoins) are highly correlated. Holding BUY positions in
 both is effectively doubling your exposure to crypto risk.
@@ -1176,7 +1415,7 @@ both is effectively doubling your exposure to crypto risk.
 }
 ```
 
-### 20.9 Consider Wider Stop Losses (LOW PRIORITY)
+### 23.9 Consider Wider Stop Losses (LOW PRIORITY)
 
 **Why:** A 2x ATR stop may be too tight for crypto, which is inherently volatile. Widening
 to 2.5x or 3x gives trades more room to breathe, at the cost of larger individual losses
@@ -1192,7 +1431,7 @@ but fewer stops being hit.
 position size automatically adjusts (smaller positions when stops are wider) to maintain
 the same dollar risk per trade.
 
-### 20.10 Add Partial Take Profit (NOT IMPLEMENTED)
+### 23.10 Add Partial Take Profit (NOT IMPLEMENTED)
 
 **What:** Instead of a single TP, close 50% of the position at TP1 and let the remaining
 50% run toward TP2 with a trailing stop.
@@ -1206,7 +1445,7 @@ of both levels.
 2. Moves stop to break-even for the remaining 50%
 3. Uses a trailing stop to capture the move toward TP2 (2.618x risk)
 
-### 20.11 Improve the Reversal Monitor Integration (NOT FULLY WIRED)
+### 23.11 Improve the Reversal Monitor Integration (NOT FULLY WIRED)
 
 **What:** The Reversal Monitor exists and detects EMA crosses, volume divergence, and MACD
 divergence on open positions. It produces recommendations (CLOSE_POSITION, TIGHTEN_STOP,
@@ -1221,7 +1460,7 @@ PARTIAL_CLOSE, HOLD).
 - `PARTIAL_CLOSE` → close 50% of the position
 - `HOLD` → no action
 
-### 20.12 Add Real-Time Stop Loss Monitoring (FUTURE ENHANCEMENT)
+### 23.12 Add Real-Time Stop Loss Monitoring (FUTURE ENHANCEMENT)
 
 **Current limitation:** Stops are checked on periodic intervals (~60s), not in real-time.
 In fast-moving crypto markets, this can lead to significant slippage.
@@ -1233,7 +1472,7 @@ In fast-moving crypto markets, this can lead to significant slippage.
 - Use OCO (One-Cancels-Other) orders that combine stop-loss and take-profit at the
   exchange level
 
-### 20.13 Add Fibonacci Cluster Detection (FUTURE ENHANCEMENT)
+### 23.13 Add Fibonacci Cluster Detection (FUTURE ENHANCEMENT)
 
 **What:** Currently the system uses a single timeframe to calculate Fibonacci levels. A
 **Fibonacci cluster** is where multiple timeframe's Fibonacci levels converge at the same
@@ -1247,7 +1486,7 @@ an exceptional entry zone.
 where levels from different timeframes overlap within a small tolerance (e.g., 0.5% of
 price).
 
-### 20.14 Recommended Priority Configuration
+### 23.14 Recommended Priority Configuration
 
 If you want to start improving performance immediately, apply these settings to your
 strategy config:
@@ -1267,13 +1506,17 @@ strategy config:
   "correlation_auto_reduce": true,
   "cppi_enabled": true,
   "cppi_multiplier": 3.0,
-  "cppi_max_drawdown_pct": 0.15
+  "cppi_max_drawdown_pct": 0.15,
+  "regime_allocator_enabled": true,
+  "regime_allocation_table": "moderate",
+  "regime_smoothing_bars": 3,
+  "cooldown_hours": 48
 }
 ```
 
 ---
 
-## 21. Strategy Configuration Reference
+## 24. Strategy Configuration Reference
 
 Complete list of all configurable parameters:
 
@@ -1322,6 +1565,20 @@ Complete list of all configurable parameters:
 | `correlation_auto_reduce` | false | bool | Auto-reduce correlated positions |
 | `correlation_threshold` | 0.7 | 0-1 | Correlation warning threshold |
 
+### Regime Allocator Parameters
+
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| `regime_allocator_enabled` | false | bool | Enable regime-based position scaling |
+| `regime_allocation_table` | "moderate" | conservative/moderate/aggressive/dict | Preset or custom allocation table |
+| `regime_smoothing_bars` | 3 | 1+ | Smoothing speed (higher = slower transition) |
+
+### Cooldown Parameters
+
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| `cooldown_hours` | 0 | 0+ | Hours to block re-entry after closing a position (0 = disabled) |
+
 ### Kelly Criterion Parameters
 
 | Parameter | Default | Range | Description |
@@ -1333,7 +1590,7 @@ Complete list of all configurable parameters:
 
 ---
 
-## 22. Complete Signal Lifecycle Diagram
+## 25. Complete Signal Lifecycle Diagram
 
 ```
                         ┌─────────────────────┐
@@ -1371,10 +1628,12 @@ Complete list of all configurable parameters:
                ┌───────────────────────────────────────┐
                │       POST-PIPELINE FILTERS            │
                │                                        │
+               │  Cooldown Check (if enabled)           │
                │  Feedback Filter (self-learning rules) │
                │  Position Filter (1 per symbol)        │
                │  MTF Alignment (higher TF check)       │
                │  CPPI Scaling (if enabled)             │
+               │  Regime Allocator Scaling (if enabled) │
                │  Deduplication                         │
                └───────────────────┬───────────────────┘
                                    │
@@ -1457,7 +1716,7 @@ Complete list of all configurable parameters:
                │  Entry/exit prices, PnL, duration,     │
                │  exit_reason: stop_loss / take_profit / │
                │  time_stop / sell_signal / manual /    │
-               │  drawdown_breaker                      │
+               │  drawdown_breaker / simulation_end     │
                │                                        │
                │  Fed into self-learning loop nightly   │
                └───────────────────────────────────────┘
