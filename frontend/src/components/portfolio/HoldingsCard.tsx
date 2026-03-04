@@ -38,6 +38,10 @@ const ALLOCATION_COLORS = [
 
 const SOURCE_STYLE: Record<string, { label: string; cls: string }> = {
   binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500" },
+  kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500" },
+  mexc: { label: "MEXC", cls: "bg-blue-500/10 text-blue-500" },
+  bitstamp: { label: "Bitstamp", cls: "bg-green-500/10 text-green-500" },
+  cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500" },
   manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" },
   trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)" },
 };

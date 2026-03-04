@@ -17,7 +17,7 @@ router = APIRouter(prefix="/broker", tags=["broker"])
 
 
 class BrokerConnectRequest(BaseModel):
-    broker: Literal["binance"] = "binance"
+    broker: Literal["binance", "kucoin", "mexc", "bitstamp", "cryptocom"] = "binance"
     api_key: str = ""
     api_secret: str = ""
     is_paper: bool = True

@@ -41,6 +41,7 @@ type Tab = "profile" | "connections" | "alerts" | "ai-usage";
 
 interface BrokerMeta {
   name: string;
+  ccxtId: string;
   description: string;
   docsUrl: string;
 }
@@ -48,8 +49,33 @@ interface BrokerMeta {
 const SUPPORTED_BROKERS: BrokerMeta[] = [
   {
     name: "Binance",
+    ccxtId: "binance",
     description: "Crypto exchange with spot & futures trading",
     docsUrl: "https://binance-docs.github.io/apidocs/",
+  },
+  {
+    name: "KuCoin",
+    ccxtId: "kucoin",
+    description: "Crypto exchange with spot, margin & futures",
+    docsUrl: "https://www.kucoin.com/docs/beginners/introduction",
+  },
+  {
+    name: "MEXC",
+    ccxtId: "mexc",
+    description: "Crypto exchange with spot & futures trading",
+    docsUrl: "https://mexcdevelop.github.io/apidocs/",
+  },
+  {
+    name: "Bitstamp",
+    ccxtId: "bitstamp",
+    description: "European crypto exchange — fiat on/off ramp",
+    docsUrl: "https://www.bitstamp.net/api/",
+  },
+  {
+    name: "Crypto.com",
+    ccxtId: "cryptocom",
+    description: "Crypto exchange with spot & derivatives",
+    docsUrl: "https://exchange-docs.crypto.com/exchange/v1/rest-ws/index.html",
   },
 ];
 
@@ -66,8 +92,9 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const meta = SUPPORTED_BROKERS.find((b) => b.name === broker);
     const payload: ConnectBrokerRequest = {
-      broker: broker.toLowerCase(),
+      broker: meta?.ccxtId ?? broker.toLowerCase(),
       api_key: apiKey,
       api_secret: apiSecret,
       is_paper: isPaper,
@@ -203,7 +230,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
           </div>
           {purpose === "trade" && (
             <p className="text-xs text-amber-400">
-              Trading keys require IP whitelisting on Binance.
+              Trading keys may require IP whitelisting on your exchange.
             </p>
           )}
         </div>
@@ -248,7 +275,7 @@ function ConnectionCard({
 }) {
   const disconnect = useDisconnectBroker();
   const meta = SUPPORTED_BROKERS.find(
-    (b) => b.name.toLowerCase() === broker.toLowerCase(),
+    (b) => b.ccxtId === broker || b.name.toLowerCase() === broker.toLowerCase(),
   );
 
   return (
@@ -260,8 +287,8 @@ function ConnectionCard({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-(--color-text-primary) capitalize">
-                {broker}
+              <h3 className="text-base font-semibold text-(--color-text-primary)">
+                {meta?.name ?? broker}
               </h3>
               <span className={cn(
                 "px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full",
