@@ -84,10 +84,19 @@ async def _train_async(symbol: str, timeframe: str) -> dict:
 
     await redis_client.set(f"signalforge:hmm_regime:{symbol}", model.serialize(), ex=7 * 86400)
 
+    # Cache the current regime label for fast lookup by RegimeAllocator
+    current_regime = model.predict_current(df)
+    await redis_client.set(
+        f"signalforge:hmm_regime_label:{symbol}",
+        current_regime,
+        ex=7 * 86400,
+    )
+
     return {
         "status": "trained",
         "symbol": symbol,
         "timeframe": timeframe,
         "data_source": data_source,
         "candles_used": len(df),
+        "current_regime": current_regime,
     }

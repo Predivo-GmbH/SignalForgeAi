@@ -48,6 +48,23 @@ def manage_positions(self):
             r.close()
 
 
+async def _set_cooldown(pos, cfg) -> None:
+    """Set a Redis cooldown key after closing a position."""
+    cooldown_hours = cfg.get("cooldown_hours", 0)
+    if cooldown_hours > 0:
+        try:
+            from app.core.redis_client import redis_client
+
+            key = f"signalforge:cooldown:{pos.user_id}:{pos.symbol}"
+            await redis_client.set(key, "1", ex=int(cooldown_hours * 3600))
+            logger.info(
+                "Cooldown set: %s %s for %dh",
+                pos.symbol, pos.user_id, cooldown_hours,
+            )
+        except Exception as e:
+            logger.warning("Failed to set cooldown for %s: %s", pos.symbol, e)
+
+
 async def _manage_async():
     from sqlalchemy import select
 
@@ -173,6 +190,7 @@ async def _manage_async():
                             pos.current_price or pos.entry_price,
                             "time_stop",
                         )
+                        await _set_cooldown(pos, cfg)
                         logger.info(
                             "Time-stop: closed position %s after %.1fh (pnl=%.2f%%)",
                             pos.id, hours_open, pnl_pct,
@@ -263,12 +281,14 @@ async def _manage_async():
                         await PositionManagerDB.close_position(
                             db, str(pos.id), pos.current_price, "stop_loss"
                         )
+                        await _set_cooldown(pos, cfg)
                         logger.info("Stop-loss hit for position %s", pos.id)
                         continue
                     if pos.direction == "SELL" and pos.current_price >= pos.stop_loss:
                         await PositionManagerDB.close_position(
                             db, str(pos.id), pos.current_price, "stop_loss"
                         )
+                        await _set_cooldown(pos, cfg)
                         logger.info("Stop-loss hit for position %s", pos.id)
                         continue
 
@@ -280,12 +300,14 @@ async def _manage_async():
                         await PositionManagerDB.close_position(
                             db, str(pos.id), pos.current_price, "take_profit"
                         )
+                        await _set_cooldown(pos, cfg)
                         logger.info("Take-profit hit for position %s", pos.id)
                         continue
                     if pos.direction == "SELL" and pos.current_price <= pos.take_profit:
                         await PositionManagerDB.close_position(
                             db, str(pos.id), pos.current_price, "take_profit"
                         )
+                        await _set_cooldown(pos, cfg)
                         logger.info("Take-profit hit for position %s", pos.id)
                         continue
 
@@ -369,6 +391,8 @@ async def _check_portfolio_drawdown(db, positions, strategy_configs):
                                 pos.current_price or pos.entry_price,
                                 "drawdown_breaker",
                             )
+                            pos_cfg = strategy_configs.get(pos.strategy_id, {})
+                            await _set_cooldown(pos, pos_cfg)
                         except Exception as e:
                             logger.exception(
                                 "Failed to close position %s during drawdown liquidation: %s",

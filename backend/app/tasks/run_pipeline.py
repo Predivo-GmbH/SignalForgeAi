@@ -128,14 +128,32 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
         except Exception as e:
             logger.warning("CPPI calculation failed for strategy %s: %s", active_strategy.id, e)
 
+    # --- Regime allocator exposure scaling ---
+    regime_exposure = 1.0
+    if cfg.get("regime_allocator_enabled", False):
+        try:
+            from app.execution.regime_allocator import RegimeAllocator
+
+            allocator = RegimeAllocator(
+                allocation_table=cfg.get("regime_allocation_table", "moderate"),
+                smoothing_bars=cfg.get("regime_smoothing_bars", 3),
+            )
+            # Use first symbol for regime lookup (regime is market-wide)
+            regime_symbol = symbols[0] if symbols else "BTC/USDT"
+            regime_exposure = await allocator.get_target_allocation(
+                str(active_strategy.user_id), regime_symbol,
+            )
+        except Exception as e:
+            logger.warning("Regime allocator failed for strategy %s: %s", active_strategy.id, e)
+
     feedback_filter = FeedbackFilter()
 
     logger.info(
         "Strategy '%s' (id=%s): processing %d symbols × %d timeframes "
-        "(kelly=%s, cppi_exp=%.2f)",
+        "(kelly=%s, cppi_exp=%.2f, regime_exp=%.2f)",
         active_strategy.name, active_strategy.id, len(symbols), len(timeframes),
         f"{kelly_risk_pct:.4f}" if kelly_risk_pct else "off",
-        cppi_exposure,
+        cppi_exposure, regime_exposure,
     )
 
     for symbol in symbols:
@@ -193,6 +211,20 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             confluence_override, active_strategy.name,
                         )
                         continue
+
+                    # --- Cooldown check: prevent re-entry too soon after close ---
+                    cooldown_hours = cfg.get("cooldown_hours", 0)
+                    if cooldown_hours > 0 and signal.action == "BUY":
+                        from app.core.redis_client import redis_client
+
+                        cooldown_key = f"signalforge:cooldown:{active_strategy.user_id}:{symbol}"
+                        if await redis_client.exists(cooldown_key):
+                            logger.info(
+                                "Cooldown SKIP: BUY %s %s — cooldown active "
+                                "(strategy=%s)",
+                                symbol, timeframe, active_strategy.name,
+                            )
+                            continue
 
                     # --- Position-aware filter: prevent invalid signals ---
                     # BUY: only allowed when no BUY position exists for this symbol
@@ -263,6 +295,15 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                         logger.info(
                             "CPPI: scaled position_size %.6f -> %.6f (exposure=%.2f)",
                             original_size, position_size, cppi_exposure,
+                        )
+
+                    # Apply regime allocator scaling to position size
+                    if regime_exposure < 1.0 and position_size > 0:
+                        original_size = position_size
+                        position_size *= regime_exposure
+                        logger.info(
+                            "Regime: scaled position_size %.6f -> %.6f (exposure=%.2f)",
+                            original_size, position_size, regime_exposure,
                         )
 
                     # Dedup: skip if identical pending signal already exists

@@ -469,10 +469,19 @@ interface LoadingStep {
   source: string;
 }
 
+const _WAIT_MESSAGES = [
+  "Resolving prices across exchanges...",
+  "Checking fallback price sources...",
+  "Aggregating balances...",
+  "Almost there...",
+];
+
 function PortfolioLoader({ brokers }: { brokers: string[] }) {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [waitMsgIdx, setWaitMsgIdx] = useState(0);
 
-  // Build steps from connected brokers + always include "manual" and "prices"
+  // Build steps: connected brokers → manual → prices → finalize
   const steps = useMemo<LoadingStep[]>(() => {
     const result: LoadingStep[] = [];
     const unique = [...new Set(brokers)];
@@ -481,19 +490,43 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
       result.push({ label: style?.label ?? b, source: b });
     }
     result.push({ label: "Manual Holdings", source: "manual" });
-    result.push({ label: "Live Prices", source: "prices" });
+    result.push({ label: "Resolving Live Prices", source: "prices" });
+    result.push({ label: "Building Portfolio", source: "finalize" });
     return result;
   }, [brokers]);
 
-  // Cycle through steps with staggered timing
+  // Last step index — stays active/spinning until data arrives
+  const lastIdx = steps.length - 1;
+
+  // Cycle through steps — stop at the last step (keep it spinning)
   useEffect(() => {
-    if (activeIdx >= steps.length) return;
-    const delay = activeIdx === 0 ? 400 : 800 + Math.random() * 600;
+    if (activeIdx >= lastIdx) return;
+    const delay = activeIdx === 0 ? 600 : 1200 + Math.random() * 800;
     const timer = setTimeout(() => {
-      setActiveIdx((i) => Math.min(i + 1, steps.length));
+      setActiveIdx((i) => Math.min(i + 1, lastIdx));
     }, delay);
     return () => clearTimeout(timer);
-  }, [activeIdx, steps.length]);
+  }, [activeIdx, lastIdx]);
+
+  // Elapsed seconds timer
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Cycle wait messages once we reach the last step
+  useEffect(() => {
+    if (activeIdx < lastIdx) return;
+    const interval = setInterval(() => {
+      setWaitMsgIdx((i) => (i + 1) % _WAIT_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeIdx, lastIdx]);
+
+  // Progress: steps complete fills 80%, then slow pulse from 80→95% on last step
+  const stepsProgress = (Math.min(activeIdx, lastIdx) / steps.length) * 80;
+  const extraProgress = activeIdx >= lastIdx ? Math.min((elapsed - lastIdx * 1.5) * 1.5, 15) : 0;
+  const progressPct = Math.min(stepsProgress + Math.max(extraProgress, 0), 95);
 
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5">
@@ -503,10 +536,17 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
           <Wallet className="w-5 h-5 text-(--color-accent)" />
           <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-(--color-accent) animate-ping" />
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-(--color-text-primary)">Loading Portfolio</h3>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-(--color-text-primary)">Loading Portfolio</h3>
+            <span className="text-[10px] font-mono text-(--color-text-secondary) tabular-nums">
+              {elapsed}s
+            </span>
+          </div>
           <p className="text-[11px] text-(--color-text-secondary)">
-            Fetching balances from {steps.length - 1} source{steps.length - 1 !== 1 ? "s" : ""}...
+            {activeIdx >= lastIdx
+              ? _WAIT_MESSAGES[waitMsgIdx]
+              : `Fetching balances from ${steps.length - 2} source${steps.length - 2 !== 1 ? "s" : ""}...`}
           </p>
         </div>
       </div>
@@ -514,8 +554,11 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
       {/* Progress bar */}
       <div className="w-full h-1.5 rounded-full bg-(--color-bg-elevated) overflow-hidden">
         <div
-          className="h-full rounded-full bg-(--color-accent) transition-all duration-700 ease-out"
-          style={{ width: `${(activeIdx / steps.length) * 100}%` }}
+          className={cn(
+            "h-full rounded-full bg-(--color-accent) transition-all ease-out",
+            activeIdx >= lastIdx ? "duration-[2000ms]" : "duration-700",
+          )}
+          style={{ width: `${progressPct}%` }}
         />
       </div>
 
@@ -552,7 +595,7 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
 
               {/* Source badge + label */}
               <div className="flex items-center gap-2 min-w-0">
-                {style && step.source !== "prices" ? (
+                {style && step.source !== "prices" && step.source !== "finalize" ? (
                   <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}>
                     {step.label}
                   </span>
@@ -568,7 +611,9 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
                 {isDone ? (
                   <span className="text-(--color-positive)">Done</span>
                 ) : isActive ? (
-                  <span className="text-(--color-accent) animate-pulse">Fetching...</span>
+                  <span className="text-(--color-accent) animate-pulse">
+                    {step.source === "finalize" ? "Processing..." : "Fetching..."}
+                  </span>
                 ) : (
                   <span className="text-(--color-text-secondary)">Waiting</span>
                 )}
@@ -577,6 +622,13 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
           );
         })}
       </div>
+
+      {/* Elapsed hint for long loads */}
+      {elapsed >= 10 && (
+        <p className="text-[10px] text-(--color-text-secondary)/60 text-center animate-pulse">
+          Fetching prices from multiple exchanges can take a moment
+        </p>
+      )}
     </div>
   );
 }

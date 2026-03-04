@@ -9,6 +9,7 @@ import { ActiveStrategyCard } from "@/components/portfolio/ActiveStrategyCard";
 import { RecentTradesCard } from "@/components/portfolio/RecentTradesCard";
 import { PerformanceSummary } from "@/components/portfolio/PerformanceSummary";
 import { PositionsTable } from "@/components/dashboard/PositionsTable";
+import { RegimeWidget } from "@/components/dashboard/RegimeWidget";
 
 export function PortfolioPage() {
   const navigate = useNavigate();
