@@ -25,6 +25,7 @@ import {
   useDeleteHolding,
 } from "@/hooks/useHoldings";
 import type { HoldingItem, ManualHoldingRequest } from "@/hooks/useHoldings";
+import { useBrokerConnections } from "@/hooks/useBrokerConnections";
 import { AssetDetailModal } from "./AssetDetailModal";
 
 /* ---- Constants ---- */
@@ -461,6 +462,125 @@ function SymbolAutocomplete({
   );
 }
 
+/* ---- Portfolio Loading Animation ---- */
+
+interface LoadingStep {
+  label: string;
+  source: string;
+}
+
+function PortfolioLoader({ brokers }: { brokers: string[] }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  // Build steps from connected brokers + always include "manual" and "prices"
+  const steps = useMemo<LoadingStep[]>(() => {
+    const result: LoadingStep[] = [];
+    const unique = [...new Set(brokers)];
+    for (const b of unique) {
+      const style = SOURCE_STYLE[b];
+      result.push({ label: style?.label ?? b, source: b });
+    }
+    result.push({ label: "Manual Holdings", source: "manual" });
+    result.push({ label: "Live Prices", source: "prices" });
+    return result;
+  }, [brokers]);
+
+  // Cycle through steps with staggered timing
+  useEffect(() => {
+    if (activeIdx >= steps.length) return;
+    const delay = activeIdx === 0 ? 400 : 800 + Math.random() * 600;
+    const timer = setTimeout(() => {
+      setActiveIdx((i) => Math.min(i + 1, steps.length));
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [activeIdx, steps.length]);
+
+  return (
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <Wallet className="w-5 h-5 text-(--color-accent)" />
+          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-(--color-accent) animate-ping" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-(--color-text-primary)">Loading Portfolio</h3>
+          <p className="text-[11px] text-(--color-text-secondary)">
+            Fetching balances from {steps.length - 1} source{steps.length - 1 !== 1 ? "s" : ""}...
+          </p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full h-1.5 rounded-full bg-(--color-bg-elevated) overflow-hidden">
+        <div
+          className="h-full rounded-full bg-(--color-accent) transition-all duration-700 ease-out"
+          style={{ width: `${(activeIdx / steps.length) * 100}%` }}
+        />
+      </div>
+
+      {/* Step list */}
+      <div className="space-y-2">
+        {steps.map((step, i) => {
+          const isDone = i < activeIdx;
+          const isActive = i === activeIdx;
+          const style = SOURCE_STYLE[step.source];
+
+          return (
+            <div
+              key={step.source}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300",
+                isDone && "bg-(--color-positive)/5",
+                isActive && "bg-(--color-accent)/5",
+                !isDone && !isActive && "opacity-40",
+              )}
+            >
+              {/* Status icon */}
+              <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                {isDone ? (
+                  <svg className="w-4 h-4 text-(--color-positive)" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : isActive ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-(--color-accent)" />
+                ) : (
+                  <div className="w-3 h-3 rounded-full border border-(--color-border)" />
+                )}
+              </div>
+
+              {/* Source badge + label */}
+              <div className="flex items-center gap-2 min-w-0">
+                {style && step.source !== "prices" ? (
+                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}>
+                    {step.label}
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium text-(--color-text-primary)">
+                    {step.label}
+                  </span>
+                )}
+              </div>
+
+              {/* Status text */}
+              <span className="ml-auto text-[10px] font-medium whitespace-nowrap">
+                {isDone ? (
+                  <span className="text-(--color-positive)">Done</span>
+                ) : isActive ? (
+                  <span className="text-(--color-accent) animate-pulse">Fetching...</span>
+                ) : (
+                  <span className="text-(--color-text-secondary)">Waiting</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ---- Add/Edit Form ---- */
 
 function HoldingForm({
@@ -624,6 +744,7 @@ function SortHeader({
 
 export function HoldingsCard() {
   const { data, isLoading } = useHoldings();
+  const { data: brokerConns } = useBrokerConnections();
   const deleteMutation = useDeleteHolding();
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<HoldingItem | null>(null);
@@ -643,11 +764,10 @@ export function HoldingsCard() {
   }
 
   if (isLoading) {
-    return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 flex items-center justify-center min-h-[120px]">
-        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
-      </div>
-    );
+    const connectedBrokers = (brokerConns ?? [])
+      .filter((c) => c.purpose === "read")
+      .map((c) => c.broker);
+    return <PortfolioLoader brokers={connectedBrokers} />;
   }
 
   const allHoldings = data?.holdings ?? [];
