@@ -77,6 +77,12 @@ const SUPPORTED_BROKERS: BrokerMeta[] = [
     description: "Crypto exchange with spot & derivatives",
     docsUrl: "https://exchange-docs.crypto.com/exchange/v1/rest-ws/index.html",
   },
+  {
+    name: "Kraken",
+    ccxtId: "kraken",
+    description: "Established crypto exchange with fiat support",
+    docsUrl: "https://docs.kraken.com/api/",
+  },
 ];
 
 /* ---- Connect Form ---- */
