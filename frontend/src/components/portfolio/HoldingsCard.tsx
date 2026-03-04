@@ -965,12 +965,21 @@ export function HoldingsCard() {
   // Counts before filtering
   const smallCount = allCombined.filter((c) => c.totalValue < SMALL_BALANCE_THRESHOLD).length;
 
-  // Apply filters on combined data
+  // Apply filters — source filter works on RAW holdings before combining
+  // so that only the source-specific quantity/value is shown
   const filteredCombined = useMemo(() => {
-    let list = allCombined;
+    let base: CombinedHolding[];
+
     if (sourceFilter) {
-      list = list.filter((c) => c.sources.some((s) => s.source === sourceFilter));
+      // Re-combine from only the holdings matching this source
+      const sourceHoldings = allHoldings.filter((h) => h.source === sourceFilter);
+      const tv = sourceHoldings.reduce((sum, h) => sum + (h.value_usd ?? 0), 0);
+      base = combineHoldings(sourceHoldings, tv > 0 ? tv : null);
+    } else {
+      base = allCombined;
     }
+
+    let list = base;
     if (categoryFilter === "stablecoins") {
       list = list.filter((c) => STABLECOINS.has(c.symbol.toUpperCase()));
     }
@@ -987,7 +996,7 @@ export function HoldingsCard() {
       );
     }
     return list;
-  }, [allCombined, sourceFilter, categoryFilter, hideSmall, searchQuery]);
+  }, [allHoldings, allCombined, sourceFilter, categoryFilter, hideSmall, searchQuery]);
 
   const sorted = sortCombined(filteredCombined, sortKey, sortDir);
 
