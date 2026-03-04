@@ -3,6 +3,7 @@
 import logging
 import uuid
 
+import ccxt.async_support as ccxt_async
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -19,6 +20,9 @@ from app.models.strategy import BrokerConnection
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/holdings", tags=["holdings"])
 
+# Stablecoins pegged to ~$1 — no ticker lookup needed
+_STABLECOINS = {"USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"}
+
 
 # ---------- Schemas ----------
 
@@ -28,6 +32,10 @@ class HoldingItem(BaseModel):
     symbol: str
     quantity: float
     avg_price: float | None = None
+    current_price: float | None = None
+    value_usd: float | None = None
+    change_24h_pct: float | None = None
+    allocation_pct: float | None = None
     source: str
     notes: str | None = None
 
@@ -53,6 +61,92 @@ class ManualHoldingResponse(BaseModel):
     created_at: str
 
     model_config = {"from_attributes": True}
+
+
+# ---------- Price helpers ----------
+
+
+async def _fetch_prices(
+    symbols: list[str],
+) -> dict[str, dict[str, float | None]]:
+    """Fetch current prices and 24h change for a list of crypto symbols.
+
+    Uses Binance public API (no credentials needed).
+    Returns {symbol: {"price": float, "change_24h_pct": float}}.
+    """
+    result: dict[str, dict[str, float | None]] = {}
+    # Assign stablecoins immediately
+    non_stable = []
+    for s in symbols:
+        upper = s.upper()
+        if upper in _STABLECOINS:
+            result[upper] = {"price": 1.0, "change_24h_pct": 0.0}
+        else:
+            non_stable.append(upper)
+
+    if not non_stable:
+        return result
+
+    exchange = ccxt_async.binance({"enableRateLimit": True})
+    try:
+        await exchange.load_markets()
+
+        # Filter to symbols that actually have a /USDT pair on Binance
+        valid_pairs = []
+        for s in non_stable:
+            pair = f"{s}/USDT"
+            if pair in exchange.markets:
+                valid_pairs.append(pair)
+            else:
+                result[s] = {"price": None, "change_24h_pct": None}
+
+        if valid_pairs:
+            tickers = await exchange.fetch_tickers(valid_pairs)
+            for pair, ticker in tickers.items():
+                sym = pair.split("/")[0]
+                if ticker and ticker.get("last"):
+                    result[sym] = {
+                        "price": float(ticker["last"]),
+                        "change_24h_pct": float(ticker.get("percentage") or 0),
+                    }
+                else:
+                    result[sym] = {"price": None, "change_24h_pct": None}
+    except Exception:
+        logger.exception("Failed to fetch prices from Binance")
+        # Return whatever we have (stablecoins at least)
+    finally:
+        await exchange.close()
+
+    return result
+
+
+def _enrich_holdings(
+    holdings: list[HoldingItem],
+    prices: dict[str, dict[str, float | None]],
+) -> tuple[list[HoldingItem], float]:
+    """Attach current_price, value_usd, change_24h_pct, allocation_pct."""
+    enriched: list[HoldingItem] = []
+    total = 0.0
+
+    for h in holdings:
+        info = prices.get(h.symbol.upper(), {})
+        price = info.get("price")
+        value = price * h.quantity if price is not None else None
+        enriched.append(h.model_copy(update={
+            "current_price": price,
+            "value_usd": round(value, 2) if value is not None else None,
+            "change_24h_pct": info.get("change_24h_pct"),
+        }))
+        if value is not None:
+            total += value
+
+    # Compute allocation percentages
+    if total > 0:
+        for h in enriched:
+            if h.value_usd is not None:
+                h.allocation_pct = round((h.value_usd / total) * 100, 2)
+
+    return enriched, total
 
 
 # ---------- Helpers ----------
@@ -158,7 +252,25 @@ async def get_aggregated_holdings(
     manual = await _fetch_manual_holdings(db, user_id)
     trading = await _fetch_trading_holdings(db, user_id)
     all_holdings = exchange + manual + trading
-    return HoldingsResponse(holdings=all_holdings)
+
+    # Enrich with live prices
+    if all_holdings:
+        unique_symbols = list({h.symbol.upper() for h in all_holdings})
+        prices = await _fetch_prices(unique_symbols)
+        all_holdings, total = _enrich_holdings(all_holdings, prices)
+    else:
+        total = 0.0
+
+    # Sort by value descending (holdings with value first, then the rest)
+    all_holdings.sort(
+        key=lambda h: (h.value_usd is not None, h.value_usd or 0),
+        reverse=True,
+    )
+
+    return HoldingsResponse(
+        holdings=all_holdings,
+        total_value_usd=round(total, 2) if total > 0 else None,
+    )
 
 
 @router.get("/exchange", response_model=list[HoldingItem])

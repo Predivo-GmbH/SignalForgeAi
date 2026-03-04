@@ -6,6 +6,10 @@ export interface HoldingItem {
   symbol: string;
   quantity: number;
   avg_price: number | null;
+  current_price: number | null;
+  value_usd: number | null;
+  change_24h_pct: number | null;
+  allocation_pct: number | null;
   source: string;
   notes: string | null;
 }
