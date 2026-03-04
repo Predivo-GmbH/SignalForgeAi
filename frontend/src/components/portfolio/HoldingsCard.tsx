@@ -850,6 +850,19 @@ export function HoldingsCard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
 
+  // Reveal animation: only triggers on loading → loaded transition
+  const wasLoadingRef = useRef(isLoading);
+  const [reveal, setReveal] = useState(!isLoading);
+
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      // Small delay so the DOM renders in hidden state first
+      const id = requestAnimationFrame(() => setReveal(true));
+      return () => cancelAnimationFrame(id);
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading]);
+
   const allHoldings = data?.holdings ?? [];
   const totalValue = data?.total_value_usd ?? null;
 
@@ -977,7 +990,12 @@ export function HoldingsCard() {
   return (
     <div className="space-y-5">
       {/* ===== Overview Card ===== */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+      <div
+        className={cn(
+          "bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5 transition-all duration-600 ease-out",
+          reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
+        )}
+      >
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -998,7 +1016,13 @@ export function HoldingsCard() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Donut chart */}
           {donutSlices.length > 0 && totalValue != null && totalValue > 0 && (
-            <div className="shrink-0">
+            <div
+              className={cn(
+                "shrink-0 transition-all duration-700 ease-out",
+                reveal ? "opacity-100 scale-100" : "opacity-0 scale-90",
+              )}
+              style={{ transitionDelay: "150ms" }}
+            >
               <DonutChart
                 slices={donutSlices}
                 totalValue={totalValue}
@@ -1011,7 +1035,13 @@ export function HoldingsCard() {
           )}
 
           {/* Right side: stats + source breakdown */}
-          <div className="flex-1 space-y-5 min-w-0">
+          <div
+            className={cn(
+              "flex-1 space-y-5 min-w-0 transition-all duration-600 ease-out",
+              reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3",
+            )}
+            style={{ transitionDelay: "250ms" }}
+          >
             {/* Stats grid */}
             {totalValue != null && totalValue > 0 && (
               <PortfolioStats holdings={allHoldings} totalValue={totalValue} />
@@ -1027,7 +1057,13 @@ export function HoldingsCard() {
       </div>
 
       {/* ===== Holdings Table Card ===== */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+      <div
+        className={cn(
+          "bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4 transition-all duration-600 ease-out",
+          reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
+        )}
+        style={{ transitionDelay: "200ms" }}
+      >
         {/* Table header with controls */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-sm font-semibold text-(--color-text-primary)">All Assets</h3>
@@ -1108,7 +1144,12 @@ export function HoldingsCard() {
                   return (
                     <tr
                       key={c.symbol}
-                      className="border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 transition-colors cursor-pointer"
+                      className={cn(
+                        "border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 cursor-pointer",
+                        "transition-all duration-500 ease-out",
+                        reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
+                      )}
+                      style={{ transitionDelay: `${350 + i * 40}ms` }}
                       onClick={() => setDetailSymbol(c.symbol)}
                     >
                       {/* Asset */}
@@ -1222,7 +1263,13 @@ export function HoldingsCard() {
               {/* Footer with total */}
               {totalValue != null && (
                 <tfoot>
-                  <tr className="border-t border-(--color-border)">
+                  <tr
+                    className={cn(
+                      "border-t border-(--color-border) transition-all duration-500 ease-out",
+                      reveal ? "opacity-100" : "opacity-0",
+                    )}
+                    style={{ transitionDelay: `${350 + sorted.length * 40 + 80}ms` }}
+                  >
                     <td colSpan={3} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
                       Total{hideSmall ? ` (${filteredCombined.length} of ${allCombined.length})` : ""}
                     </td>

@@ -54,6 +54,7 @@ export function PortfolioPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         <PortfolioEquitySection />
         <div className="flex flex-col gap-4">
+          <RegimeWidget />
           <ActiveStrategyCard />
           <RecentTradesCard />
         </div>
