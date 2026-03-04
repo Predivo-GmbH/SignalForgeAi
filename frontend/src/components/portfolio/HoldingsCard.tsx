@@ -1000,11 +1000,22 @@ export function HoldingsCard() {
 
   const sorted = sortCombined(filteredCombined, sortKey, sortDir);
 
-  // Donut chart: reflects active filter when set
-  const donutSource = hasActiveFilter ? filteredCombined : allCombined;
-  const donutTotal = hasActiveFilter
-    ? filteredCombined.reduce((sum, c) => sum + c.totalValue, 0)
-    : totalValue ?? 0;
+  // Donut chart: reflects source/category filters but NOT hideSmall/search
+  const donutSource = useMemo(() => {
+    let base: CombinedHolding[];
+    if (sourceFilter) {
+      const sourceHoldings = allHoldings.filter((h) => h.source === sourceFilter);
+      const tv = sourceHoldings.reduce((sum, h) => sum + (h.value_usd ?? 0), 0);
+      base = combineHoldings(sourceHoldings, tv > 0 ? tv : null);
+    } else {
+      base = allCombined;
+    }
+    if (categoryFilter === "stablecoins") {
+      base = base.filter((c) => STABLECOINS.has(c.symbol.toUpperCase()));
+    }
+    return base;
+  }, [allHoldings, allCombined, sourceFilter, categoryFilter]);
+  const donutTotal = donutSource.reduce((sum, c) => sum + c.totalValue, 0);
 
   const donutSlices: DonutSlice[] = useMemo(() => {
     if (!donutTotal || donutTotal <= 0) return [];

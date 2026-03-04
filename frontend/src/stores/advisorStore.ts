@@ -165,6 +165,7 @@ export const useAdvisorStore = create<AdvisorState>()(
     }),
     {
       name: "sf-advisor",
+      version: 1,
       partialize: (state) => ({
         scanHistory: state.scanHistory
           .map((h) =>

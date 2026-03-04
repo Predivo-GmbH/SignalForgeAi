@@ -44,8 +44,8 @@ export function PortfolioPage() {
         </button>
       )}
 
-      {/* Account Hero — equity, daily P&L, drawdown */}
-      <AccountHero />
+      {/* Account Hero — equity, daily P&L, drawdown (only when trading) */}
+      {hasActiveStrategy && <AccountHero />}
 
       {/* Crypto Holdings — exchange + manual + trading */}
       <HoldingsCard />
