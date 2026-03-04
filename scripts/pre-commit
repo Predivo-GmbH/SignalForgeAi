@@ -1,0 +1,28 @@
+#!/bin/bash
+# Pre-commit hook: runs frontend build (tsc -b && vite build)
+# Blocks commit if the build fails.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
+
+# Only run if frontend files were staged
+STAGED_FRONTEND=$(git diff --cached --name-only -- frontend/)
+if [ -z "$STAGED_FRONTEND" ]; then
+  exit 0
+fi
+
+echo "==> Pre-commit: running frontend build..."
+cd "$FRONTEND_DIR" || exit 1
+
+npm run build 2>&1
+BUILD_EXIT=$?
+
+if [ $BUILD_EXIT -ne 0 ]; then
+  echo ""
+  echo "COMMIT BLOCKED: frontend build failed (tsc -b && vite build)"
+  echo "Fix the errors above before committing."
+  exit 1
+fi
+
+echo "==> Pre-commit: frontend build passed."
+exit 0
