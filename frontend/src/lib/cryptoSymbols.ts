@@ -22,6 +22,7 @@ export const CRYPTO_LIST: CryptoEntry[] = [
   { symbol: "AKRO", name: "Akropolis" },
   { symbol: "AKT", name: "Akash Network" },
   { symbol: "ALGO", name: "Algorand" },
+  { symbol: "ALPH", name: "Alephium" },
   { symbol: "ALICE", name: "My Neighbor Alice" },
   { symbol: "ALPHA", name: "Alpha Venture DAO" },
   { symbol: "ALT", name: "AltLayer" },

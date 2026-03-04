@@ -66,12 +66,46 @@ class ManualHoldingResponse(BaseModel):
 # ---------- Price helpers ----------
 
 
+async def _fetch_prices_from_exchange(
+    exchange_id: str,
+    symbols: list[str],
+) -> dict[str, dict[str, float | None]]:
+    """Fetch prices from a single exchange for the given symbols.
+
+    Returns only symbols that were successfully resolved.
+    """
+    result: dict[str, dict[str, float | None]] = {}
+    exchange = getattr(ccxt_async, exchange_id)({"enableRateLimit": True})
+    try:
+        await exchange.load_markets()
+        valid_pairs = [f"{s}/USDT" for s in symbols if f"{s}/USDT" in exchange.markets]
+        if valid_pairs:
+            tickers = await exchange.fetch_tickers(valid_pairs)
+            for pair, ticker in tickers.items():
+                sym = pair.split("/")[0]
+                if ticker and ticker.get("last"):
+                    result[sym] = {
+                        "price": float(ticker["last"]),
+                        "change_24h_pct": float(ticker.get("percentage") or 0),
+                    }
+    except Exception:
+        logger.debug("Price fetch from %s failed", exchange_id)
+    finally:
+        await exchange.close()
+    return result
+
+
+# Fallback exchanges for symbols not found on Binance
+_FALLBACK_EXCHANGES = ["kucoin", "kraken"]
+
+
 async def _fetch_prices(
     symbols: list[str],
 ) -> dict[str, dict[str, float | None]]:
     """Fetch current prices and 24h change for a list of crypto symbols.
 
-    Uses Binance public API (no credentials needed).
+    Uses Binance as primary, then falls back to other exchanges for
+    symbols not found on Binance.
     Returns {symbol: {"price": float, "change_24h_pct": float}}.
     """
     result: dict[str, dict[str, float | None]] = {}
@@ -87,35 +121,24 @@ async def _fetch_prices(
     if not non_stable:
         return result
 
-    exchange = ccxt_async.binance({"enableRateLimit": True})
-    try:
-        await exchange.load_markets()
+    # Primary: Binance
+    binance_result = await _fetch_prices_from_exchange("binance", non_stable)
+    result.update(binance_result)
 
-        # Filter to symbols that actually have a /USDT pair on Binance
-        valid_pairs = []
-        for s in non_stable:
-            pair = f"{s}/USDT"
-            if pair in exchange.markets:
-                valid_pairs.append(pair)
-            else:
-                result[s] = {"price": None, "change_24h_pct": None}
+    # Find symbols still missing a price
+    missing = [s for s in non_stable if s not in result]
 
-        if valid_pairs:
-            tickers = await exchange.fetch_tickers(valid_pairs)
-            for pair, ticker in tickers.items():
-                sym = pair.split("/")[0]
-                if ticker and ticker.get("last"):
-                    result[sym] = {
-                        "price": float(ticker["last"]),
-                        "change_24h_pct": float(ticker.get("percentage") or 0),
-                    }
-                else:
-                    result[sym] = {"price": None, "change_24h_pct": None}
-    except Exception:
-        logger.exception("Failed to fetch prices from Binance")
-        # Return whatever we have (stablecoins at least)
-    finally:
-        await exchange.close()
+    # Fallback exchanges for remaining symbols
+    for exchange_id in _FALLBACK_EXCHANGES:
+        if not missing:
+            break
+        fallback_result = await _fetch_prices_from_exchange(exchange_id, missing)
+        result.update(fallback_result)
+        missing = [s for s in missing if s not in result]
+
+    # Mark any still-missing symbols as None
+    for s in missing:
+        result[s] = {"price": None, "change_24h_pct": None}
 
     return result
 
