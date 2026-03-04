@@ -3,6 +3,8 @@ import { Info } from "lucide-react";
 
 interface TooltipProps {
   text: string;
+  /** When true, renders the default Info icon trigger (same as omitting children). */
+  icon?: boolean;
   children?: React.ReactNode;
 }
 
