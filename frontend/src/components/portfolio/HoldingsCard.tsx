@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { pnlColor, formatPrice } from "@/lib/format";
-import { CRYPTO_LIST } from "@/lib/cryptoSymbols";
+import { CRYPTO_LIST, CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
 import type { CryptoEntry } from "@/lib/cryptoSymbols";
 import {
   useHoldings,
@@ -43,19 +43,6 @@ const DONUT_COLORS = [
   "#6366f1", // indigo
 ];
 
-const ALLOCATION_COLORS = [
-  "bg-blue-500",
-  "bg-amber-500",
-  "bg-emerald-500",
-  "bg-violet-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-orange-500",
-  "bg-pink-500",
-  "bg-teal-500",
-  "bg-indigo-500",
-];
-
 const SOURCE_STYLE: Record<string, { label: string; cls: string; color: string }> = {
   binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500", color: "#f59e0b" },
   kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500", color: "#10b981" },
@@ -74,6 +61,44 @@ const SMALL_BALANCE_THRESHOLD = 1; // $1
 
 function fmtUsd(val: number): string {
   return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function fmtCompact(val: number): string {
+  if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
+  if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
+  if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
+  if (val >= 1e3) return `$${(val / 1e3).toFixed(1)}K`;
+  return fmtUsd(val);
+}
+
+/* ---- Coin Icon ---- */
+
+function CoinIcon({ symbol, imageUrl, size = 24 }: { symbol: string; imageUrl: string | null; size?: number }) {
+  const [error, setError] = useState(false);
+
+  if (imageUrl && !error) {
+    return (
+      <img
+        src={imageUrl}
+        alt={symbol}
+        width={size}
+        height={size}
+        className="rounded-full shrink-0"
+        onError={() => setError(true)}
+        loading="lazy"
+      />
+    );
+  }
+
+  const colorIndex = symbol.charCodeAt(0) % DONUT_COLORS.length;
+  return (
+    <div
+      className="rounded-full shrink-0 flex items-center justify-center text-white font-bold"
+      style={{ width: size, height: size, backgroundColor: DONUT_COLORS[colorIndex], fontSize: size * 0.45 }}
+    >
+      {symbol.charAt(0)}
+    </div>
+  );
 }
 
 /* ---- Source badge ---- */
@@ -219,96 +244,124 @@ function DonutChart({
   );
 }
 
-/* ---- Portfolio Stats ---- */
+/* ---- Portfolio Overview Header ---- */
 
-function PortfolioStats({
-  holdings,
+function PortfolioOverviewHeader({
   totalValue,
-  onStablecoinClick,
-  onBestClick,
-  onWorstClick,
-  activeCategory,
+  combined,
+  onTopClick,
 }: {
-  holdings: HoldingItem[];
   totalValue: number;
-  onStablecoinClick: () => void;
-  onBestClick: (symbol: string) => void;
-  onWorstClick: (symbol: string) => void;
-  activeCategory: "stablecoins" | null;
+  combined: CombinedHolding[];
+  onTopClick: (symbol: string) => void;
 }) {
-  const withChange = holdings.filter((h) => h.change_24h_pct != null);
-  const best = withChange.length > 0
-    ? withChange.reduce((a, b) => ((a.change_24h_pct ?? 0) > (b.change_24h_pct ?? 0) ? a : b))
+  // 24h portfolio change
+  const change24hUsd = combined.reduce((sum, c) => {
+    if (c.change24hPct != null && c.totalValue > 0) {
+      return sum + (c.totalValue * c.change24hPct) / (100 + c.change24hPct);
+    }
+    return sum;
+  }, 0);
+  const change24hPct = totalValue > 0 ? (change24hUsd / (totalValue - change24hUsd)) * 100 : 0;
+
+  // Total P/L from avg_price where available
+  const totalPnlUsd = combined.reduce((sum, c) => sum + (c.pnlUsd ?? 0), 0);
+  const totalCostBasis = combined.reduce((sum, c) => {
+    if (c.avgCost != null) return sum + c.avgCost * c.totalQty;
+    return sum;
+  }, 0);
+  const totalPnlPct = totalCostBasis > 0 ? (totalPnlUsd / totalCostBasis) * 100 : null;
+  const hasCostBasis = combined.some((c) => c.avgCost != null);
+
+  // Top performer 24h
+  const withChange = combined.filter((c) => c.change24hPct != null);
+  const topPerformer = withChange.length > 0
+    ? withChange.reduce((a, b) => ((a.change24hPct ?? 0) > (b.change24hPct ?? 0) ? a : b))
     : null;
-  const worst = withChange.length > 0
-    ? withChange.reduce((a, b) => ((a.change_24h_pct ?? 0) < (b.change_24h_pct ?? 0) ? a : b))
-    : null;
 
-  const stablecoinValue = holdings
-    .filter((h) => STABLECOINS.has(h.symbol.toUpperCase()))
-    .reduce((sum, h) => sum + (h.value_usd ?? 0), 0);
-  const stablePct = totalValue > 0 ? (stablecoinValue / totalValue) * 100 : 0;
-
-  const assetCount = new Set(holdings.map((h) => h.symbol.toUpperCase())).size;
-  const sourceCount = new Set(holdings.map((h) => h.source)).size;
-
-  const stats: {
-    label: string; value: string; sub: string; subColor?: string;
-    onClick?: () => void; active?: boolean;
-  }[] = [
-    {
-      label: "Assets",
-      value: String(assetCount),
-      sub: `${sourceCount} source${sourceCount !== 1 ? "s" : ""}`,
-    },
-    {
-      label: "Stablecoins",
-      value: `${stablePct.toFixed(1)}%`,
-      sub: fmtUsd(stablecoinValue),
-      onClick: onStablecoinClick,
-      active: activeCategory === "stablecoins",
-    },
-    {
-      label: "Best 24h",
-      value: best ? `${best.symbol}` : "—",
-      sub: best?.change_24h_pct != null ? `+${best.change_24h_pct.toFixed(2)}%` : "",
-      subColor: "text-(--color-positive)",
-      onClick: best ? () => onBestClick(best.symbol) : undefined,
-    },
-    {
-      label: "Worst 24h",
-      value: worst ? `${worst.symbol}` : "—",
-      sub: worst?.change_24h_pct != null ? `${worst.change_24h_pct.toFixed(2)}%` : "",
-      subColor: "text-(--color-negative)",
-      onClick: worst ? () => onWorstClick(worst.symbol) : undefined,
-    },
-  ];
+  // 24h change value for top performer
+  const topChange = topPerformer
+    ? (topPerformer.totalValue * (topPerformer.change24hPct ?? 0)) / (100 + (topPerformer.change24hPct ?? 0))
+    : 0;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {stats.map((s) => (
-        <div
-          key={s.label}
-          onClick={s.onClick}
-          className={cn(
-            "bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-0.5 transition-all duration-150",
-            s.onClick && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
-            s.active && "ring-2 ring-(--color-accent)/50 bg-(--color-accent)/5",
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Current Balance */}
+      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1">
+        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Current Balance</p>
+        <p className="text-lg font-bold font-mono text-(--color-text-primary)">{fmtUsd(totalValue)}</p>
+        <p className="text-xs text-(--color-text-secondary)">{combined.length} asset{combined.length !== 1 ? "s" : ""}</p>
+      </div>
+
+      {/* 24h Change */}
+      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1">
+        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">24h Portfolio Change</p>
+        <p className={cn("text-lg font-bold font-mono", pnlColor(change24hUsd))}>
+          {change24hUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))}
+        </p>
+        <div className="flex items-center gap-1">
+          {change24hPct >= 0 ? (
+            <TrendingUp className={cn("w-3 h-3", pnlColor(change24hUsd))} />
+          ) : (
+            <TrendingDown className={cn("w-3 h-3", pnlColor(change24hUsd))} />
           )}
-        >
-          <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            {s.label}
-          </p>
-          <p className="text-sm font-bold text-(--color-text-primary) font-mono">
-            {s.value}
-          </p>
-          {s.sub && (
-            <p className={cn("text-[11px] font-mono", s.subColor ?? "text-(--color-text-secondary)")}>
-              {s.sub}
-            </p>
-          )}
+          <span className={cn("text-xs font-mono", pnlColor(change24hUsd))}>
+            {change24hPct >= 0 ? "+" : ""}{change24hPct.toFixed(2)}%
+          </span>
         </div>
-      ))}
+      </div>
+
+      {/* Total P/L */}
+      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1">
+        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Total Profit / Loss</p>
+        {hasCostBasis ? (
+          <>
+            <p className={cn("text-lg font-bold font-mono", pnlColor(totalPnlUsd))}>
+              {totalPnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(totalPnlUsd))}
+            </p>
+            <div className="flex items-center gap-1">
+              {totalPnlUsd >= 0 ? (
+                <TrendingUp className={cn("w-3 h-3", pnlColor(totalPnlUsd))} />
+              ) : (
+                <TrendingDown className={cn("w-3 h-3", pnlColor(totalPnlUsd))} />
+              )}
+              <span className={cn("text-xs font-mono", pnlColor(totalPnlUsd))}>
+                {totalPnlPct != null ? `${totalPnlPct >= 0 ? "+" : ""}${totalPnlPct.toFixed(2)}%` : ""}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-lg font-bold font-mono text-(--color-text-secondary)">--</p>
+            <p className="text-xs text-(--color-text-secondary)">No cost basis</p>
+          </>
+        )}
+      </div>
+
+      {/* Top Performer */}
+      <div
+        onClick={topPerformer ? () => onTopClick(topPerformer.symbol) : undefined}
+        className={cn(
+          "bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1 transition-all duration-150",
+          topPerformer && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
+        )}
+      >
+        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Top Performer 24h</p>
+        {topPerformer ? (
+          <>
+            <div className="flex items-center gap-2">
+              <CoinIcon symbol={topPerformer.symbol} imageUrl={topPerformer.imageUrl} size={20} />
+              <span className="text-sm font-bold text-(--color-text-primary)">{topPerformer.name}</span>
+              <span className="text-xs text-(--color-text-secondary) font-mono">{topPerformer.symbol}</span>
+            </div>
+            <p className="text-xs font-mono text-(--color-positive)">
+              +{fmtUsd(Math.abs(topChange))}
+            </p>
+          </>
+        ) : (
+          <p className="text-lg font-bold font-mono text-(--color-text-secondary)">--</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -790,12 +843,20 @@ function HoldingForm({
 
 interface CombinedHolding {
   symbol: string;
+  name: string;
   totalQty: number;
   currentPrice: number | null;
   totalValue: number;
   change24hPct: number | null;
   allocPct: number | null;
-  sources: { source: string; notes: string | null; qty: number; id?: string }[];
+  sources: { source: string; notes: string | null; qty: number; id?: string; avgPrice?: number | null }[];
+  marketCap: number | null;
+  marketCapRank: number | null;
+  volume24h: number | null;
+  imageUrl: string | null;
+  avgCost: number | null;
+  pnlUsd: number | null;
+  pnlPct: number | null;
 }
 
 function combineHoldings(holdings: HoldingItem[], totalValue: number | null): CombinedHolding[] {
@@ -805,12 +866,20 @@ function combineHoldings(holdings: HoldingItem[], totalValue: number | null): Co
     if (!map[key]) {
       map[key] = {
         symbol: key,
+        name: CRYPTO_NAME_MAP[key] ?? key,
         totalQty: 0,
         currentPrice: h.current_price,
         totalValue: 0,
         change24hPct: h.change_24h_pct,
         allocPct: null,
         sources: [],
+        marketCap: h.market_cap,
+        marketCapRank: h.market_cap_rank,
+        volume24h: h.volume_24h,
+        imageUrl: h.image_url,
+        avgCost: null,
+        pnlUsd: null,
+        pnlPct: null,
       };
     }
     const c = map[key];
@@ -818,13 +887,28 @@ function combineHoldings(holdings: HoldingItem[], totalValue: number | null): Co
     c.totalValue += h.value_usd ?? 0;
     if (h.current_price != null) c.currentPrice = h.current_price;
     if (h.change_24h_pct != null) c.change24hPct = h.change_24h_pct;
-    c.sources.push({ source: h.source, notes: h.notes, qty: h.quantity, id: h.id });
+    if (h.market_cap != null) c.marketCap = h.market_cap;
+    if (h.market_cap_rank != null) c.marketCapRank = h.market_cap_rank;
+    if (h.volume_24h != null) c.volume24h = h.volume_24h;
+    if (h.image_url != null) c.imageUrl = h.image_url;
+    c.sources.push({ source: h.source, notes: h.notes, qty: h.quantity, id: h.id, avgPrice: h.avg_price });
   }
 
   const result = Object.values(map);
-  if (totalValue && totalValue > 0) {
-    for (const c of result) {
+  for (const c of result) {
+    if (totalValue && totalValue > 0) {
       c.allocPct = (c.totalValue / totalValue) * 100;
+    }
+    // PnL from weighted average cost
+    const withCost = c.sources.filter((s) => s.avgPrice != null && s.avgPrice! > 0);
+    if (withCost.length > 0) {
+      const totalCostQty = withCost.reduce((sum, s) => sum + s.qty, 0);
+      const weightedCost = withCost.reduce((sum, s) => sum + s.qty * (s.avgPrice ?? 0), 0);
+      c.avgCost = totalCostQty > 0 ? weightedCost / totalCostQty : null;
+      if (c.avgCost != null && c.currentPrice != null) {
+        c.pnlPct = ((c.currentPrice - c.avgCost) / c.avgCost) * 100;
+        c.pnlUsd = (c.currentPrice - c.avgCost) * c.totalQty;
+      }
     }
   }
   return result;
@@ -832,7 +916,7 @@ function combineHoldings(holdings: HoldingItem[], totalValue: number | null): Co
 
 /* ---- Sort helpers ---- */
 
-type SortKey = "value" | "symbol" | "change" | "allocation";
+type SortKey = "value" | "symbol" | "change" | "allocation" | "rank" | "marketCap" | "volume" | "pnl";
 type SortDir = "asc" | "desc";
 
 function sortCombined(holdings: CombinedHolding[], key: SortKey, dir: SortDir): CombinedHolding[] {
@@ -848,6 +932,14 @@ function sortCombined(holdings: CombinedHolding[], key: SortKey, dir: SortDir): 
         return m * ((a.change24hPct ?? 0) - (b.change24hPct ?? 0));
       case "allocation":
         return m * ((a.allocPct ?? 0) - (b.allocPct ?? 0));
+      case "rank":
+        return m * ((a.marketCapRank ?? 9999) - (b.marketCapRank ?? 9999));
+      case "marketCap":
+        return m * ((a.marketCap ?? 0) - (b.marketCap ?? 0));
+      case "volume":
+        return m * ((a.volume24h ?? 0) - (b.volume24h ?? 0));
+      case "pnl":
+        return m * ((a.pnlPct ?? 0) - (b.pnlPct ?? 0));
       default:
         return 0;
     }
@@ -991,6 +1083,7 @@ export function HoldingsCard() {
       list = list.filter(
         (c) =>
           c.symbol.toLowerCase().includes(q) ||
+          c.name.toLowerCase().includes(q) ||
           c.sources.some((s) => s.source.toLowerCase().includes(q)) ||
           c.sources.some((s) => s.notes?.toLowerCase().includes(q)),
       );
@@ -1103,9 +1196,6 @@ export function HoldingsCard() {
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-(--color-accent)" />
             <h3 className="text-sm font-semibold text-(--color-text-primary)">Portfolio Overview</h3>
-            <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-bg-elevated) px-2 py-0.5 rounded-full">
-              {allCombined.length} asset{allCombined.length !== 1 ? "s" : ""}
-            </span>
           </div>
           <div className="flex items-center gap-2">
             {[...new Set(allHoldings.map((h) => h.source))].map((s) => (
@@ -1119,7 +1209,16 @@ export function HoldingsCard() {
           </div>
         </div>
 
-        {/* Donut + Stats side by side */}
+        {/* Overview metric cards */}
+        {totalValue != null && totalValue > 0 && (
+          <PortfolioOverviewHeader
+            totalValue={totalValue}
+            combined={allCombined}
+            onTopClick={(symbol) => setDetailSymbol(symbol)}
+          />
+        )}
+
+        {/* Donut + Source breakdown side by side */}
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Donut chart */}
           {donutSlices.length > 0 && donutTotal > 0 && (
@@ -1134,14 +1233,13 @@ export function HoldingsCard() {
                 slices={donutSlices}
                 totalValue={donutTotal}
                 onSliceClick={(label) => {
-                  // "Other (N)" slices don't map to a single symbol
                   if (!label.startsWith("Other")) setDetailSymbol(label);
                 }}
               />
             </div>
           )}
 
-          {/* Right side: stats + source breakdown */}
+          {/* Right side: source breakdown */}
           <div
             className={cn(
               "flex-1 space-y-5 min-w-0 transition-all duration-600 ease-out",
@@ -1149,19 +1247,6 @@ export function HoldingsCard() {
             )}
             style={{ transitionDelay: "250ms" }}
           >
-            {/* Stats grid */}
-            {totalValue != null && totalValue > 0 && (
-              <PortfolioStats
-                holdings={allHoldings}
-                totalValue={totalValue}
-                onStablecoinClick={() => applyFilter("category", "stablecoins")}
-                onBestClick={(symbol) => setDetailSymbol(symbol)}
-                onWorstClick={(symbol) => setDetailSymbol(symbol)}
-                activeCategory={categoryFilter}
-              />
-            )}
-
-            {/* Source breakdown */}
             {totalValue != null && totalValue > 0 && (
               <SourceBreakdown
                 holdings={allHoldings}
@@ -1238,6 +1323,19 @@ export function HoldingsCard() {
               />
             </div>
 
+            {/* Stablecoins filter */}
+            <button
+              onClick={() => applyFilter("category", "stablecoins")}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                categoryFilter === "stablecoins"
+                  ? "bg-(--color-accent)/10 border-(--color-accent)/30 text-(--color-accent)"
+                  : "bg-(--color-bg-elevated) border-(--color-border) text-(--color-text-secondary) hover:text-(--color-text-primary)",
+              )}
+            >
+              Stablecoins
+            </button>
+
             {/* Hide small toggle */}
             {smallCount > 0 && (
               <button
@@ -1285,12 +1383,14 @@ export function HoldingsCard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-(--color-border)">
-                  <SortHeader label="Asset" sortKey="symbol" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left" />
-                  <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Qty</th>
+                  <SortHeader label="#" sortKey="rank" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left w-10" />
+                  <SortHeader label="Coin" sortKey="symbol" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left" />
                   <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Price</th>
-                  <SortHeader label="Value" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
-                  <SortHeader label="Alloc" sortKey="allocation" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
                   <SortHeader label="24h" sortKey="change" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
+                  <SortHeader label="Mkt Cap" sortKey="marketCap" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden lg:table-cell" />
+                  <SortHeader label="Volume" sortKey="volume" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden lg:table-cell" />
+                  <SortHeader label="Holdings" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
+                  <SortHeader label="PNL" sortKey="pnl" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
                   <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">Source</th>
                   <th className="py-2 w-16" />
                 </tr>
@@ -1309,48 +1409,29 @@ export function HoldingsCard() {
                       style={{ transitionDelay: `${350 + i * 40}ms` }}
                       onClick={() => setDetailSymbol(c.symbol)}
                     >
-                      {/* Asset */}
+                      {/* Rank */}
+                      <td className="py-2.5 px-2 text-xs font-mono text-(--color-text-secondary) w-10">
+                        {c.marketCapRank ?? "—"}
+                      </td>
+
+                      {/* Coin: icon + name + symbol */}
                       <td className="py-2.5 px-3">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={cn("w-2 h-2 rounded-full shrink-0", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
-                          />
-                          <span className="font-semibold text-(--color-text-primary)">{c.symbol}</span>
+                        <div className="flex items-center gap-2.5">
+                          <CoinIcon symbol={c.symbol} imageUrl={c.imageUrl} size={28} />
+                          <div className="min-w-0">
+                            <span className="font-semibold text-(--color-text-primary) text-sm block truncate">
+                              {c.name}
+                            </span>
+                            <span className="text-[11px] text-(--color-text-secondary) font-mono">
+                              {c.symbol}
+                            </span>
+                          </div>
                         </div>
                       </td>
 
-                      {/* Quantity */}
+                      {/* Price */}
                       <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs">
-                        {c.totalQty.toLocaleString("en-US", { maximumFractionDigits: 8 })}
-                      </td>
-
-                      {/* Current Price */}
-                      <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-secondary) text-xs">
                         {c.currentPrice != null ? formatPrice(c.currentPrice) : "—"}
-                      </td>
-
-                      {/* Value */}
-                      <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs font-semibold">
-                        {fmtUsd(c.totalValue)}
-                      </td>
-
-                      {/* Allocation */}
-                      <td className="py-2.5 px-3 text-right">
-                        {c.allocPct != null ? (
-                          <div className="flex items-center justify-end gap-2">
-                            <div className="w-12 h-1.5 rounded-full bg-(--color-bg-elevated) overflow-hidden">
-                              <div
-                                className={cn("h-full rounded-full", ALLOCATION_COLORS[i % ALLOCATION_COLORS.length])}
-                                style={{ width: `${Math.min(c.allocPct, 100)}%` }}
-                              />
-                            </div>
-                            <span className="text-xs font-mono tabular-nums text-(--color-text-secondary) w-12 text-right">
-                              {c.allocPct.toFixed(1)}%
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-(--color-text-secondary)">—</span>
-                        )}
                       </td>
 
                       {/* 24h Change */}
@@ -1371,7 +1452,49 @@ export function HoldingsCard() {
                         )}
                       </td>
 
-                      {/* Sources (multiple badges) */}
+                      {/* Market Cap */}
+                      <td className="py-2.5 px-3 text-right hidden lg:table-cell">
+                        <span className="text-xs font-mono tabular-nums text-(--color-text-secondary)">
+                          {c.marketCap ? fmtCompact(c.marketCap) : "—"}
+                        </span>
+                      </td>
+
+                      {/* Volume */}
+                      <td className="py-2.5 px-3 text-right hidden lg:table-cell">
+                        <span className="text-xs font-mono tabular-nums text-(--color-text-secondary)">
+                          {c.volume24h ? fmtCompact(c.volume24h) : "—"}
+                        </span>
+                      </td>
+
+                      {/* Holdings: value + qty stacked */}
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="font-mono tabular-nums">
+                          <span className="text-xs font-semibold text-(--color-text-primary) block">
+                            {fmtUsd(c.totalValue)}
+                          </span>
+                          <span className="text-[10px] text-(--color-text-secondary)">
+                            {c.totalQty.toLocaleString("en-US", { maximumFractionDigits: 6 })} {c.symbol}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* PNL */}
+                      <td className="py-2.5 px-3 text-right">
+                        {c.pnlUsd != null ? (
+                          <div className="font-mono tabular-nums">
+                            <span className={cn("text-xs font-semibold block", pnlColor(c.pnlUsd))}>
+                              {c.pnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(c.pnlUsd))}
+                            </span>
+                            <span className={cn("text-[10px]", pnlColor(c.pnlPct ?? 0))}>
+                              {(c.pnlPct ?? 0) >= 0 ? "+" : ""}{(c.pnlPct ?? 0).toFixed(1)}%
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-(--color-text-secondary)">—</span>
+                        )}
+                      </td>
+
+                      {/* Sources */}
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-1 flex-wrap">
                           {c.sources.map((s, si) => {
@@ -1389,7 +1512,7 @@ export function HoldingsCard() {
                         </div>
                       </td>
 
-                      {/* Actions (only for manual-only entries) */}
+                      {/* Actions */}
                       <td className="py-2.5" onClick={(e) => e.stopPropagation()}>
                         {manualSources.length === 1 && c.sources.length === 1 && (
                           <div className="flex items-center gap-1 justify-end">
@@ -1427,11 +1550,12 @@ export function HoldingsCard() {
                     )}
                     style={{ transitionDelay: `${350 + sorted.length * 40 + 80}ms` }}
                   >
-                    <td colSpan={3} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
+                    <td colSpan={4} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
                       {hasActiveFilter || hideSmall
                         ? `Showing ${filteredCombined.length} of ${allCombined.length}`
                         : "Total"}
                     </td>
+                    <td colSpan={2} className="py-3 px-3 text-right hidden lg:table-cell" />
                     <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
                       {fmtUsd(
                         hasActiveFilter || hideSmall || searchQuery.trim()
@@ -1439,7 +1563,7 @@ export function HoldingsCard() {
                           : (totalValue ?? 0),
                       )}
                     </td>
-                    <td colSpan={4} />
+                    <td colSpan={3} />
                   </tr>
                 </tfoot>
               )}

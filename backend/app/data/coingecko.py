@@ -100,6 +100,75 @@ async def fetch_prices(
     return result
 
 
+# ---------- Coin metadata (market cap, rank, image, volume) ----------
+
+_metadata_cache: dict[str, dict] = {}
+_metadata_cache_ts: float = 0
+_METADATA_CACHE_TTL = 300  # 5 minutes
+
+
+async def fetch_coin_metadata(
+    symbols: list[str],
+) -> dict[str, dict]:
+    """Fetch coin metadata from CoinGecko /coins/markets endpoint.
+
+    Returns {SYMBOL: {"market_cap": int, "market_cap_rank": int,
+    "volume_24h": float, "image_url": str}}.
+    Uses 5-minute in-memory cache.
+    """
+    global _metadata_cache, _metadata_cache_ts
+
+    if _metadata_cache and (time.time() - _metadata_cache_ts) < _METADATA_CACHE_TTL:
+        # Return cached entries for requested symbols
+        return {s: _metadata_cache[s] for s in symbols if s in _metadata_cache}
+
+    coin_map = await _ensure_coin_map()
+
+    sym_to_id: dict[str, str] = {}
+    for s in symbols:
+        upper = s.upper()
+        cg_id = coin_map.get(upper)
+        if cg_id:
+            sym_to_id[upper] = cg_id
+
+    if not sym_to_id:
+        return {}
+
+    ids_csv = ",".join(sym_to_id.values())
+    url = (
+        f"{_BASE}/coins/markets?vs_currency=usd&ids={ids_csv}"
+        f"&order=market_cap_desc&per_page=250&page=1&sparkline=false"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+
+        id_to_sym = {v: k for k, v in sym_to_id.items()}
+        result: dict[str, dict] = {}
+        for coin in data:
+            sym = id_to_sym.get(coin.get("id", ""))
+            if not sym:
+                continue
+            result[sym] = {
+                "market_cap": coin.get("market_cap"),
+                "market_cap_rank": coin.get("market_cap_rank"),
+                "volume_24h": coin.get("total_volume"),
+                "image_url": coin.get("image"),  # 200px icon URL
+            }
+
+        _metadata_cache = result
+        _metadata_cache_ts = time.time()
+        logger.debug("CoinGecko metadata cached for %d coins", len(result))
+        return result
+    except Exception:
+        logger.debug("CoinGecko metadata fetch failed")
+        # Return stale cache if available
+        return {s: _metadata_cache[s] for s in symbols if s in _metadata_cache}
+
+
 # ---------- OHLC candle lookup ----------
 
 # Map our timeframes to CoinGecko `days` parameter:

@@ -29,6 +29,28 @@ const SOURCE_STYLE: Record<string, { label: string; cls: string }> = {
   trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)" },
 };
 
+const DONUT_COLORS = [
+  "#3b82f6", "#f59e0b", "#10b981", "#8b5cf6", "#f43f5e",
+  "#06b6d4", "#f97316", "#ec4899", "#14b8a6", "#6366f1",
+];
+
+function CoinIcon({ symbol, imageUrl, size = 24 }: { symbol: string; imageUrl: string | null; size?: number }) {
+  const [error, setError] = useState(false);
+  if (imageUrl && !error) {
+    return (
+      <img src={imageUrl} alt={symbol} width={size} height={size}
+        className="rounded-full shrink-0" onError={() => setError(true)} loading="lazy" />
+    );
+  }
+  const colorIndex = symbol.charCodeAt(0) % DONUT_COLORS.length;
+  return (
+    <div className="rounded-full shrink-0 flex items-center justify-center text-white font-bold"
+      style={{ width: size, height: size, backgroundColor: DONUT_COLORS[colorIndex], fontSize: size * 0.45 }}>
+      {symbol.charAt(0)}
+    </div>
+  );
+}
+
 function fmtUsd(val: number): string {
   return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -210,6 +232,7 @@ export function AssetDetailModal({
   totalPortfolioValue,
 }: AssetDetailModalProps) {
   const name = CRYPTO_NAME_MAP[symbol] ?? symbol;
+  const imageUrl = holdings.find((h) => h.image_url)?.image_url ?? null;
   const totalQty = holdings.reduce((s, h) => s + h.quantity, 0);
   const totalValue = holdings.reduce((s, h) => s + (h.value_usd ?? 0), 0);
   const currentPrice = holdings.find((h) => h.current_price != null)?.current_price ?? null;
@@ -233,8 +256,9 @@ export function AssetDetailModal({
   return (
     <Modal open={open} onClose={onClose} title={`${symbol} — ${name}`} size="lg">
       <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
-        {/* Header: Price + 24h change */}
+        {/* Header: Icon + Price + 24h change */}
         <div className="flex items-center gap-3">
+          <CoinIcon symbol={symbol} imageUrl={imageUrl} size={32} />
           {currentPrice != null && (
             <span className="text-xl font-bold font-mono text-(--color-text-primary)">
               {formatPrice(currentPrice)}

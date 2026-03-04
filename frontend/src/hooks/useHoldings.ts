@@ -12,6 +12,10 @@ export interface HoldingItem {
   allocation_pct: number | null;
   source: string;
   notes: string | null;
+  market_cap: number | null;
+  market_cap_rank: number | null;
+  volume_24h: number | null;
+  image_url: string | null;
 }
 
 export interface HoldingsResponse {

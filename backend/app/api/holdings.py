@@ -38,6 +38,10 @@ class HoldingItem(BaseModel):
     allocation_pct: float | None = None
     source: str
     notes: str | None = None
+    market_cap: int | None = None
+    market_cap_rank: int | None = None
+    volume_24h: float | None = None
+    image_url: str | None = None
 
 
 class HoldingsResponse(BaseModel):
@@ -87,6 +91,7 @@ async def _fetch_prices_from_exchange(
                     result[sym] = {
                         "price": float(ticker["last"]),
                         "change_24h_pct": float(ticker.get("percentage") or 0),
+                        "volume_24h": float(ticker.get("quoteVolume") or 0) or None,
                     }
     except Exception:
         logger.debug("Price fetch from %s failed", exchange_id)
@@ -148,6 +153,21 @@ async def _fetch_prices(
     for s in missing:
         result[s] = {"price": None, "change_24h_pct": None}
 
+    # Enrich with CoinGecko metadata (market cap, rank, image, volume)
+    all_priced = [s for s in result if result[s].get("price") is not None]
+    if all_priced:
+        from app.data.coingecko import fetch_coin_metadata
+
+        metadata = await fetch_coin_metadata(all_priced)
+        for sym, meta in metadata.items():
+            if sym in result:
+                result[sym]["market_cap"] = meta.get("market_cap")
+                result[sym]["market_cap_rank"] = meta.get("market_cap_rank")
+                result[sym]["image_url"] = meta.get("image_url")
+                # Only set volume if not already provided by exchange
+                if not result[sym].get("volume_24h"):
+                    result[sym]["volume_24h"] = meta.get("volume_24h")
+
     return result
 
 
@@ -167,6 +187,10 @@ def _enrich_holdings(
             "current_price": price,
             "value_usd": round(value, 2) if value is not None else None,
             "change_24h_pct": info.get("change_24h_pct"),
+            "market_cap": info.get("market_cap"),
+            "market_cap_rank": info.get("market_cap_rank"),
+            "volume_24h": info.get("volume_24h"),
+            "image_url": info.get("image_url"),
         }))
         if value is not None:
             total += value
