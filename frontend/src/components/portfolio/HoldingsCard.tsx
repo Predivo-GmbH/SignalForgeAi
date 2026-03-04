@@ -115,8 +115,8 @@ function DonutChart({
     const endAngle = cumAngle;
     const largeArc = angle > 180 ? 1 : 0;
 
-    const r = hoveredIdx === i ? outerR + 4 : outerR;
-    const ir = hoveredIdx === i ? innerR - 2 : innerR;
+    const r = outerR;
+    const ir = innerR;
 
     const toRad = (a: number) => (a * Math.PI) / 180;
     const x1o = cx + r * Math.cos(toRad(startAngle));
@@ -168,17 +168,19 @@ function DonutChart({
         </text>
       </svg>
 
-      {/* Hover tooltip text */}
-      {hoveredIdx != null && slices[hoveredIdx] && (
-        <div className="text-center -mt-1">
-          <span className="text-xs font-semibold text-(--color-text-primary)">
-            {slices[hoveredIdx].label}
-          </span>
-          <span className="text-xs text-(--color-text-secondary) ml-1.5">
-            {fmtUsd(slices[hoveredIdx].value)} ({slices[hoveredIdx].pct.toFixed(1)}%)
-          </span>
-        </div>
-      )}
+      {/* Hover tooltip text — fixed height to prevent layout shift */}
+      <div className={cn("text-center h-5 -mt-1 transition-opacity duration-150", hoveredIdx != null ? "opacity-100" : "opacity-0")}>
+        {hoveredIdx != null && slices[hoveredIdx] && (
+          <>
+            <span className="text-xs font-semibold text-(--color-text-primary)">
+              {slices[hoveredIdx].label}
+            </span>
+            <span className="text-xs text-(--color-text-secondary) ml-1.5">
+              {fmtUsd(slices[hoveredIdx].value)} ({slices[hoveredIdx].pct.toFixed(1)}%)
+            </span>
+          </>
+        )}
+      </div>
 
       {/* Legend */}
       <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 w-full">
