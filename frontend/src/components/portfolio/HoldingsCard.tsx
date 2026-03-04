@@ -798,6 +798,9 @@ export function HoldingsCard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
 
+  const allHoldings = data?.holdings ?? [];
+  const totalValue = data?.total_value_usd ?? null;
+
   function handleSort(key: SortKey) {
     if (key === sortKey) {
       setSortDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -806,16 +809,6 @@ export function HoldingsCard() {
       setSortDir("desc");
     }
   }
-
-  if (isLoading) {
-    const connectedBrokers = (brokerConns ?? [])
-      .filter((c) => c.purpose === "read")
-      .map((c) => c.broker);
-    return <PortfolioLoader brokers={connectedBrokers} />;
-  }
-
-  const allHoldings = data?.holdings ?? [];
-  const totalValue = data?.total_value_usd ?? null;
 
   // Group holdings by symbol for detail modal
   const holdingsBySymbol = useMemo(() => {
@@ -885,6 +878,13 @@ export function HoldingsCard() {
 
     return slices;
   }, [allCombined, totalValue]);
+
+  if (isLoading) {
+    const connectedBrokers = (brokerConns ?? [])
+      .filter((c) => c.purpose === "read")
+      .map((c) => c.broker);
+    return <PortfolioLoader brokers={connectedBrokers} />;
+  }
 
   if (allHoldings.length === 0) {
     return (
