@@ -13,6 +13,7 @@ export interface ConnectBrokerRequest {
   broker: string;
   api_key?: string;
   api_secret?: string;
+  api_passphrase?: string;
   is_paper: boolean;
   purpose: "read" | "trade";
 }

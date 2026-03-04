@@ -33,6 +33,7 @@ class CCXTAdapter(BrokerAdapter):
         exchange_id: str = "binance",
         api_key: str = "",
         api_secret: str = "",
+        password: str = "",
         testnet: bool = True,
     ):
         exchange_class = getattr(ccxt_async, exchange_id)
@@ -41,6 +42,8 @@ class CCXTAdapter(BrokerAdapter):
             "secret": api_secret,
             "enableRateLimit": True,
         }
+        if password:
+            config["password"] = password
         if testnet:
             config["sandbox"] = True
         self._exchange = exchange_class(config)

@@ -170,10 +170,12 @@ async def _fetch_exchange_holdings(
         try:
             api_key = decrypt_value(conn.api_key_enc)
             api_secret = decrypt_value(conn.api_secret_enc)
+            passphrase = decrypt_value(conn.api_passphrase_enc) if conn.api_passphrase_enc else ""
             adapter = CCXTAdapter(
                 exchange_id=conn.broker,
                 api_key=api_key,
                 api_secret=api_secret,
+                password=passphrase,
                 testnet=False,
             )
             try:

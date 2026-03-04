@@ -44,6 +44,7 @@ interface BrokerMeta {
   ccxtId: string;
   description: string;
   docsUrl: string;
+  needsPassphrase?: boolean;
 }
 
 const SUPPORTED_BROKERS: BrokerMeta[] = [
@@ -58,6 +59,7 @@ const SUPPORTED_BROKERS: BrokerMeta[] = [
     ccxtId: "kucoin",
     description: "Crypto exchange with spot, margin & futures",
     docsUrl: "https://www.kucoin.com/docs/beginners/introduction",
+    needsPassphrase: true,
   },
   {
     name: "MEXC",
@@ -93,16 +95,20 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
   const [broker, setBroker] = useState(SUPPORTED_BROKERS[0].name);
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+  const [apiPassphrase, setApiPassphrase] = useState("");
   const [isPaper, setIsPaper] = useState(false);
   const [purpose, setPurpose] = useState<"read" | "trade">("read");
 
+  const selectedMeta = SUPPORTED_BROKERS.find((b) => b.name === broker);
+  const showPassphrase = selectedMeta?.needsPassphrase && !isPaper;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const meta = SUPPORTED_BROKERS.find((b) => b.name === broker);
     const payload: ConnectBrokerRequest = {
-      broker: meta?.ccxtId ?? broker.toLowerCase(),
+      broker: selectedMeta?.ccxtId ?? broker.toLowerCase(),
       api_key: apiKey,
       api_secret: apiSecret,
+      api_passphrase: apiPassphrase || undefined,
       is_paper: isPaper,
       purpose,
     };
@@ -173,6 +179,25 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
               className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
             />
           </div>
+
+          {showPassphrase && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+                API Passphrase
+              </label>
+              <input
+                type="password"
+                value={apiPassphrase}
+                onChange={(e) => setApiPassphrase(e.target.value)}
+                placeholder="Enter API passphrase"
+                required
+                className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+              />
+              <p className="text-[10px] text-(--color-text-secondary)">
+                KuCoin requires a passphrase set during API key creation
+              </p>
+            </div>
+          )}
         </>
       )}
 

@@ -20,6 +20,7 @@ class BrokerConnectRequest(BaseModel):
     broker: Literal["binance", "kucoin", "mexc", "bitstamp", "cryptocom", "kraken"] = "binance"
     api_key: str = ""
     api_secret: str = ""
+    api_passphrase: str = ""
     is_paper: bool = True
     purpose: Literal["read", "trade"] = "read"
 
@@ -61,9 +62,11 @@ async def create_broker_connection(
     if body.is_paper:
         api_key_enc = b""
         api_secret_enc = b""
+        api_passphrase_enc = None
     else:
         api_key_enc = encrypt_value(body.api_key)
         api_secret_enc = encrypt_value(body.api_secret)
+        api_passphrase_enc = encrypt_value(body.api_passphrase) if body.api_passphrase else None
 
     conn = BrokerConnection(
         id=uuid.uuid4(),
@@ -71,6 +74,7 @@ async def create_broker_connection(
         broker=body.broker,
         api_key_enc=api_key_enc,
         api_secret_enc=api_secret_enc,
+        api_passphrase_enc=api_passphrase_enc,
         is_paper=body.is_paper,
         purpose=body.purpose,
     )
