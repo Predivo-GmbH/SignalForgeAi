@@ -78,10 +78,18 @@ function fmtUsd(val: number): string {
 
 /* ---- Source badge ---- */
 
-function SourceBadge({ source }: { source: string }) {
+function SourceBadge({ source, onClick, active }: { source: string; onClick?: () => void; active?: boolean }) {
   const style = SOURCE_STYLE[source] ?? { label: source, cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" };
   return (
-    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}>
+    <span
+      onClick={onClick}
+      className={cn(
+        "text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap transition-all duration-150",
+        style.cls,
+        onClick && "cursor-pointer hover:opacity-80",
+        active && "ring-2 ring-current/30 scale-110",
+      )}
+    >
       {style.label}
     </span>
   );
@@ -213,7 +221,21 @@ function DonutChart({
 
 /* ---- Portfolio Stats ---- */
 
-function PortfolioStats({ holdings, totalValue }: { holdings: HoldingItem[]; totalValue: number }) {
+function PortfolioStats({
+  holdings,
+  totalValue,
+  onStablecoinClick,
+  onBestClick,
+  onWorstClick,
+  activeCategory,
+}: {
+  holdings: HoldingItem[];
+  totalValue: number;
+  onStablecoinClick: () => void;
+  onBestClick: (symbol: string) => void;
+  onWorstClick: (symbol: string) => void;
+  activeCategory: "stablecoins" | null;
+}) {
   const withChange = holdings.filter((h) => h.change_24h_pct != null);
   const best = withChange.length > 0
     ? withChange.reduce((a, b) => ((a.change_24h_pct ?? 0) > (b.change_24h_pct ?? 0) ? a : b))
@@ -230,7 +252,10 @@ function PortfolioStats({ holdings, totalValue }: { holdings: HoldingItem[]; tot
   const assetCount = new Set(holdings.map((h) => h.symbol.toUpperCase())).size;
   const sourceCount = new Set(holdings.map((h) => h.source)).size;
 
-  const stats = [
+  const stats: {
+    label: string; value: string; sub: string; subColor?: string;
+    onClick?: () => void; active?: boolean;
+  }[] = [
     {
       label: "Assets",
       value: String(assetCount),
@@ -240,18 +265,22 @@ function PortfolioStats({ holdings, totalValue }: { holdings: HoldingItem[]; tot
       label: "Stablecoins",
       value: `${stablePct.toFixed(1)}%`,
       sub: fmtUsd(stablecoinValue),
+      onClick: onStablecoinClick,
+      active: activeCategory === "stablecoins",
     },
     {
       label: "Best 24h",
       value: best ? `${best.symbol}` : "—",
       sub: best?.change_24h_pct != null ? `+${best.change_24h_pct.toFixed(2)}%` : "",
       subColor: "text-(--color-positive)",
+      onClick: best ? () => onBestClick(best.symbol) : undefined,
     },
     {
       label: "Worst 24h",
       value: worst ? `${worst.symbol}` : "—",
       sub: worst?.change_24h_pct != null ? `${worst.change_24h_pct.toFixed(2)}%` : "",
       subColor: "text-(--color-negative)",
+      onClick: worst ? () => onWorstClick(worst.symbol) : undefined,
     },
   ];
 
@@ -260,7 +289,12 @@ function PortfolioStats({ holdings, totalValue }: { holdings: HoldingItem[]; tot
       {stats.map((s) => (
         <div
           key={s.label}
-          className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-0.5"
+          onClick={s.onClick}
+          className={cn(
+            "bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-0.5 transition-all duration-150",
+            s.onClick && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
+            s.active && "ring-2 ring-(--color-accent)/50 bg-(--color-accent)/5",
+          )}
         >
           <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">
             {s.label}
@@ -281,7 +315,17 @@ function PortfolioStats({ holdings, totalValue }: { holdings: HoldingItem[]; tot
 
 /* ---- Source Breakdown ---- */
 
-function SourceBreakdown({ holdings, totalValue }: { holdings: HoldingItem[]; totalValue: number }) {
+function SourceBreakdown({
+  holdings,
+  totalValue,
+  onSourceClick,
+  activeSource,
+}: {
+  holdings: HoldingItem[];
+  totalValue: number;
+  onSourceClick: (source: string) => void;
+  activeSource: string | null;
+}) {
   const bySource = useMemo(() => {
     const map: Record<string, { value: number; count: number }> = {};
     for (const h of holdings) {
@@ -304,10 +348,17 @@ function SourceBreakdown({ holdings, totalValue }: { holdings: HoldingItem[]; to
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {bySource.map((s) => {
           const style = SOURCE_STYLE[s.source];
+          const isActive = activeSource === s.source;
           return (
             <div
               key={s.source}
-              className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-1"
+              onClick={() => onSourceClick(s.source)}
+              className={cn(
+                "bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-1 transition-all duration-150 cursor-pointer",
+                "hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
+                isActive && "ring-2 ring-offset-1 ring-offset-(--color-bg-surface)",
+              )}
+              style={isActive ? { boxShadow: `0 0 0 2px ${style?.color ?? "#6b7280"}40` } : undefined}
             >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: style?.color ?? "#6b7280" }} />
@@ -849,6 +900,26 @@ export function HoldingsCard() {
   const [hideSmall, setHideSmall] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<"stablecoins" | null>(null);
+
+  const hasActiveFilter = sourceFilter !== null || categoryFilter !== null;
+
+  function applyFilter(type: "source" | "category", value: string) {
+    if (type === "source") {
+      setSourceFilter((prev) => (prev === value ? null : value));
+      setCategoryFilter(null);
+    } else {
+      setCategoryFilter((prev) => (prev === (value as "stablecoins") ? null : (value as "stablecoins")));
+      setSourceFilter(null);
+    }
+  }
+
+  function clearAllFilters() {
+    setSourceFilter(null);
+    setCategoryFilter(null);
+    setSearchQuery("");
+  }
 
   // Reveal animation: only triggers on loading → loaded transition
   const wasLoadingRef = useRef(isLoading);
@@ -897,6 +968,12 @@ export function HoldingsCard() {
   // Apply filters on combined data
   const filteredCombined = useMemo(() => {
     let list = allCombined;
+    if (sourceFilter) {
+      list = list.filter((c) => c.sources.some((s) => s.source === sourceFilter));
+    }
+    if (categoryFilter === "stablecoins") {
+      list = list.filter((c) => STABLECOINS.has(c.symbol.toUpperCase()));
+    }
     if (hideSmall) {
       list = list.filter((c) => c.totalValue >= SMALL_BALANCE_THRESHOLD);
     }
@@ -910,14 +987,19 @@ export function HoldingsCard() {
       );
     }
     return list;
-  }, [allCombined, hideSmall, searchQuery]);
+  }, [allCombined, sourceFilter, categoryFilter, hideSmall, searchQuery]);
 
   const sorted = sortCombined(filteredCombined, sortKey, sortDir);
 
-  // Donut chart slices (top 9 + "Other" group) — uses combined data
+  // Donut chart: reflects active filter when set
+  const donutSource = hasActiveFilter ? filteredCombined : allCombined;
+  const donutTotal = hasActiveFilter
+    ? filteredCombined.reduce((sum, c) => sum + c.totalValue, 0)
+    : totalValue ?? 0;
+
   const donutSlices: DonutSlice[] = useMemo(() => {
-    if (!totalValue || totalValue <= 0) return [];
-    const byValue = [...allCombined]
+    if (!donutTotal || donutTotal <= 0) return [];
+    const byValue = [...donutSource]
       .filter((c) => c.totalValue > 0)
       .sort((a, b) => b.totalValue - a.totalValue);
 
@@ -928,7 +1010,7 @@ export function HoldingsCard() {
     const slices: DonutSlice[] = topN.map((c, i) => ({
       label: c.symbol,
       value: c.totalValue,
-      pct: (c.totalValue / totalValue) * 100,
+      pct: (c.totalValue / donutTotal) * 100,
       color: DONUT_COLORS[i % DONUT_COLORS.length],
     }));
 
@@ -936,13 +1018,13 @@ export function HoldingsCard() {
       slices.push({
         label: `Other (${rest.length})`,
         value: restValue,
-        pct: (restValue / totalValue) * 100,
+        pct: (restValue / donutTotal) * 100,
         color: "#4b5563", // gray
       });
     }
 
     return slices;
-  }, [allCombined, totalValue]);
+  }, [donutSource, donutTotal]);
 
   if (isLoading) {
     const connectedBrokers = (brokerConns ?? [])
@@ -1007,7 +1089,12 @@ export function HoldingsCard() {
           </div>
           <div className="flex items-center gap-2">
             {[...new Set(allHoldings.map((h) => h.source))].map((s) => (
-              <SourceBadge key={s} source={s} />
+              <SourceBadge
+                key={s}
+                source={s}
+                onClick={() => applyFilter("source", s)}
+                active={sourceFilter === s}
+              />
             ))}
           </div>
         </div>
@@ -1015,7 +1102,7 @@ export function HoldingsCard() {
         {/* Donut + Stats side by side */}
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Donut chart */}
-          {donutSlices.length > 0 && totalValue != null && totalValue > 0 && (
+          {donutSlices.length > 0 && donutTotal > 0 && (
             <div
               className={cn(
                 "shrink-0 transition-all duration-700 ease-out",
@@ -1025,7 +1112,7 @@ export function HoldingsCard() {
             >
               <DonutChart
                 slices={donutSlices}
-                totalValue={totalValue}
+                totalValue={donutTotal}
                 onSliceClick={(label) => {
                   // "Other (N)" slices don't map to a single symbol
                   if (!label.startsWith("Other")) setDetailSymbol(label);
@@ -1044,17 +1131,67 @@ export function HoldingsCard() {
           >
             {/* Stats grid */}
             {totalValue != null && totalValue > 0 && (
-              <PortfolioStats holdings={allHoldings} totalValue={totalValue} />
+              <PortfolioStats
+                holdings={allHoldings}
+                totalValue={totalValue}
+                onStablecoinClick={() => applyFilter("category", "stablecoins")}
+                onBestClick={(symbol) => setDetailSymbol(symbol)}
+                onWorstClick={(symbol) => setDetailSymbol(symbol)}
+                activeCategory={categoryFilter}
+              />
             )}
 
             {/* Source breakdown */}
             {totalValue != null && totalValue > 0 && (
-              <SourceBreakdown holdings={allHoldings} totalValue={totalValue} />
+              <SourceBreakdown
+                holdings={allHoldings}
+                totalValue={totalValue}
+                onSourceClick={(source) => applyFilter("source", source)}
+                activeSource={sourceFilter}
+              />
             )}
           </div>
         </div>
 
       </div>
+
+      {/* Active filter indicator */}
+      {hasActiveFilter && (
+        <div
+          className={cn(
+            "flex items-center justify-between bg-(--color-accent)/5 border border-(--color-accent)/20 rounded-lg px-4 py-2.5 transition-all duration-300 ease-out",
+            reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
+          )}
+          style={{ transitionDelay: "180ms" }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-(--color-text-secondary)">Filtered by:</span>
+            {sourceFilter && (
+              <span className={cn(
+                "text-xs font-semibold px-2.5 py-0.5 rounded-full",
+                SOURCE_STYLE[sourceFilter]?.cls ?? "bg-(--color-bg-elevated) text-(--color-text-primary)",
+              )}>
+                {SOURCE_STYLE[sourceFilter]?.label ?? sourceFilter}
+              </span>
+            )}
+            {categoryFilter === "stablecoins" && (
+              <span className="text-xs font-semibold text-(--color-accent) bg-(--color-accent)/10 px-2.5 py-0.5 rounded-full">
+                Stablecoins
+              </span>
+            )}
+            <span className="text-[11px] text-(--color-text-secondary) font-mono">
+              {filteredCombined.length} of {allCombined.length} assets
+            </span>
+          </div>
+          <button
+            onClick={clearAllFilters}
+            className="flex items-center gap-1 text-xs font-medium text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* ===== Holdings Table Card ===== */}
       <div
@@ -1121,7 +1258,7 @@ export function HoldingsCard() {
         {/* Table */}
         {sorted.length === 0 ? (
           <p className="text-sm text-(--color-text-secondary) text-center py-4">
-            {searchQuery ? "No assets match your search" : "No assets to display"}
+            {searchQuery ? "No assets match your search" : hasActiveFilter ? "No assets match this filter" : "No assets to display"}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -1271,10 +1408,16 @@ export function HoldingsCard() {
                     style={{ transitionDelay: `${350 + sorted.length * 40 + 80}ms` }}
                   >
                     <td colSpan={3} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
-                      Total{hideSmall ? ` (${filteredCombined.length} of ${allCombined.length})` : ""}
+                      {hasActiveFilter || hideSmall
+                        ? `Showing ${filteredCombined.length} of ${allCombined.length}`
+                        : "Total"}
                     </td>
                     <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
-                      {fmtUsd(totalValue)}
+                      {fmtUsd(
+                        hasActiveFilter || hideSmall || searchQuery.trim()
+                          ? filteredCombined.reduce((sum, c) => sum + c.totalValue, 0)
+                          : (totalValue ?? 0),
+                      )}
                     </td>
                     <td colSpan={4} />
                   </tr>
