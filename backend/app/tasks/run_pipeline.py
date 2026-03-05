@@ -78,6 +78,7 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
     cfg = active_strategy.config or {}
     symbols = cfg.get("symbols", DEFAULT_SYMBOLS)
     timeframes = cfg.get("timeframes", ["1h"])
+    exchange_map = cfg.get("exchange_map", {})
 
     # Collect pipeline decision logs for bulk insert
     log_entries: list[PipelineLog] = []
@@ -160,12 +161,26 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
         cppi_exposure, regime_exposure,
     )
 
+    # Resolve default exchange once for symbols not in exchange_map
+    from app.config import settings as _settings
+    _default_exchange = _settings.default_exchange
+
     for symbol in symbols:
+        # Determine which exchange's candles to use for this symbol
+        sym_exchange = exchange_map.get(symbol) or _default_exchange
+
         for timeframe in timeframes:
             try:
                 candles_data = await CandleStorage.load_candles_db(
                     db, symbol, timeframe, limit=300,
+                    exchange=sym_exchange,
                 )
+                # Fallback: if mapped exchange has insufficient data,
+                # try loading from any exchange (covers fallback ingestions)
+                if len(candles_data) < 100:
+                    candles_data = await CandleStorage.load_candles_db(
+                        db, symbol, timeframe, limit=300,
+                    )
                 if len(candles_data) < 100:
                     logger.warning(
                         "Insufficient candles for %s %s: %d",
@@ -309,6 +324,7 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                     if higher_tf:
                         htf_candles = await CandleStorage.load_candles_db(
                             db, symbol, higher_tf, limit=300,
+                            exchange=sym_exchange,
                         )
                         if len(htf_candles) >= 200:
                             htf_df = pd.DataFrame(htf_candles)

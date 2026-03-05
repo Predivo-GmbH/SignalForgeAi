@@ -209,6 +209,7 @@ class CandleStorage:
         symbol: str,
         timeframe: str = "1h",
         limit: int = 500,
+        exchange: str | None = None,
     ) -> list[float]:
         """Load just close prices for a symbol (useful for correlation).
 
@@ -216,11 +217,15 @@ class CandleStorage:
         """
         from app.models.candle import Candle
 
-        result = await db.execute(
+        query = (
             select(Candle.close)
             .where(Candle.symbol == symbol, Candle.timeframe == timeframe)
             .order_by(Candle.time.desc())
             .limit(limit)
         )
+        if exchange is not None:
+            query = query.where(Candle.exchange == exchange)
+
+        result = await db.execute(query)
         rows = result.all()
         return [float(r[0]) for r in reversed(rows)]

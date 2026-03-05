@@ -24,7 +24,7 @@ from app.core.database import get_db
 from app.models.position import Position
 from app.models.simulation import PaperSimulation, SimulationSnapshot
 from app.models.signal import Signal
-from app.models.strategy import Strategy
+from app.models.strategy import BrokerConnection, Strategy
 from app.models.trade import Trade
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,17 @@ async def start_simulation(
     symbols_for_trading: set[str] = set()
     exchange_map: dict[str, str] = {}  # "ALPH/USDT" -> "mexc"
 
+    # Non-exchange sources that should NOT be used as CCXT exchange IDs
+    _NON_EXCHANGE_SOURCES = {"manual", "trading"}
+
+    # Collect user's connected exchange names for fallback
+    broker_result = await db.execute(
+        select(BrokerConnection.broker).where(
+            BrokerConnection.user_id == uid,
+        ).distinct()
+    )
+    user_exchanges = [row[0] for row in broker_result.all()]
+
     for h in all_holdings:
         sym = h.symbol.upper()
         info = prices.get(sym, {})
@@ -102,9 +113,11 @@ async def start_simulation(
         if sym not in _STABLECOINS and price > 0:
             pair = f"{sym}/USDT"
             symbols_for_trading.add(pair)
-            # Track which exchange this symbol came from
+            # Track which exchange this symbol came from.
+            # Only use real exchange names (skip "manual", "trading", etc.).
             if pair not in exchange_map and h.source:
-                exchange_map[pair] = h.source
+                if h.source not in _NON_EXCHANGE_SOURCES:
+                    exchange_map[pair] = h.source
 
     if total_value < 1.0:
         raise HTTPException(

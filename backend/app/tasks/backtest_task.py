@@ -208,9 +208,10 @@ def _run_backtest_sync(
 def load_candles_sync(symbol: str, timeframe: str, limit: int):
     """Sync fallback: fetch candles directly from CCXT (no DB)."""
     try:
+        from app.config import settings
         from app.data.ingestion import CCXTIngestion
 
-        ingestion = CCXTIngestion("binance")
+        ingestion = CCXTIngestion(settings.default_exchange)
         df = ingestion.fetch_candles(symbol, timeframe, limit=limit)
         if not df.empty and len(df) >= 300:
             logger.info("Fetched %d candles from CCXT (sync) for %s %s", len(df), symbol, timeframe)
@@ -239,9 +240,10 @@ async def load_candles(symbol: str, timeframe: str, limit: int):
 
     # 2. Try live CCXT fetch
     try:
+        from app.config import settings
         from app.data.ingestion import CCXTIngestion
 
-        ingestion = CCXTIngestion("binance")
+        ingestion = CCXTIngestion(settings.default_exchange)
         df = ingestion.fetch_candles(symbol, timeframe, limit=limit)
         if not df.empty and len(df) >= 300:
             logger.info("Fetched %d candles from CCXT for %s %s", len(df), symbol, timeframe)

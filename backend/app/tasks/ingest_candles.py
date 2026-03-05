@@ -61,13 +61,18 @@ async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
          maps each symbol to its source exchange like "mexc", "kucoin")
       2. User's BrokerConnection.broker (fallback for manually created strategies)
       3. settings.default_exchange (ultimate fallback)
+
+    Invalid exchange names (e.g. "manual", "trading") are skipped and
+    the symbol falls through to the next resolution level.
     """
+    import ccxt
     from sqlalchemy import select
 
     from app.config import settings
     from app.models.strategy import BrokerConnection, Strategy
 
     default_ex = settings.default_exchange
+    valid_exchanges = set(ccxt.exchanges)
 
     # exchange -> {(symbol, timeframe), ...}
     exchange_pairs: dict[str, set[tuple[str, str]]] = defaultdict(set)
@@ -100,7 +105,17 @@ async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
         sym_exchange_map = cfg.get("exchange_map", {})
         fallback_exchange = broker_map.get(str(strategy.user_id), default_ex)
         for sym in cfg.get("symbols", []):
-            exchange = sym_exchange_map.get(sym, fallback_exchange)
+            mapped_exchange = sym_exchange_map.get(sym)
+            # Validate: only use mapped exchange if it's a real CCXT exchange
+            if mapped_exchange and mapped_exchange in valid_exchanges:
+                exchange = mapped_exchange
+            else:
+                if mapped_exchange:
+                    logger.warning(
+                        "Invalid exchange '%s' in exchange_map for %s — using fallback '%s'",
+                        mapped_exchange, sym, fallback_exchange,
+                    )
+                exchange = fallback_exchange
             for tf in cfg.get("timeframes", DEFAULT_TIMEFRAMES):
                 exchange_pairs[exchange].add((sym, tf))
 
@@ -108,16 +123,28 @@ async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
 
 
 async def _ingest_async():
+    import ccxt as ccxt_sync
+
     from app.data.ingestion import CCXTIngestion
     from app.core.database import task_session
     from app.data.storage import CandleStorage
 
+    # Fallback exchanges to try when a symbol isn't found on its primary exchange
+    FALLBACK_EXCHANGES = ["binance", "kucoin", "mexc", "kraken", "gateio"]
+
     async with task_session() as db:
         exchange_pairs = await _resolve_exchange_symbols(db)
+
+        # Track symbols that fail with BadSymbol on their primary exchange
+        # Key: (symbol, timeframe), Value: primary exchange that failed
+        bad_symbol_failures: dict[tuple[str, str], str] = {}
+        # Track which exchanges we've already initialized
+        ingestion_cache: dict[str, CCXTIngestion] = {}
 
         for exchange_id, pairs in exchange_pairs.items():
             try:
                 ingestion = CCXTIngestion(exchange_id)
+                ingestion_cache[exchange_id] = ingestion
             except Exception:
                 logger.exception("Failed to initialize exchange: %s", exchange_id)
                 continue
@@ -126,6 +153,7 @@ async def _ingest_async():
                 try:
                     existing = await CandleStorage.load_candles_db(
                         db, symbol, timeframe, limit=1,
+                        exchange=exchange_id,
                     )
                     if len(existing) == 0:
                         limit = BACKFILL_LIMIT
@@ -145,11 +173,55 @@ async def _ingest_async():
                             "Ingested %d candles for %s %s from %s",
                             count, symbol, timeframe, exchange_id,
                         )
+                except ccxt_sync.BadSymbol:
+                    logger.warning(
+                        "%s does not list %s — will try fallback exchanges",
+                        exchange_id, symbol,
+                    )
+                    bad_symbol_failures[(symbol, timeframe)] = exchange_id
                 except Exception as e:
                     logger.exception(
                         "Ingestion failed for %s %s on %s: %s",
                         symbol, timeframe, exchange_id, e,
                     )
+
+        # --- Retry failed symbols on fallback exchanges ---
+        if bad_symbol_failures:
+            logger.info(
+                "Retrying %d symbol/timeframe pairs on fallback exchanges",
+                len(bad_symbol_failures),
+            )
+            for (symbol, timeframe), failed_exchange in bad_symbol_failures.items():
+                for fallback_id in FALLBACK_EXCHANGES:
+                    if fallback_id == failed_exchange:
+                        continue  # Already tried this one
+                    try:
+                        if fallback_id not in ingestion_cache:
+                            ingestion_cache[fallback_id] = CCXTIngestion(fallback_id)
+                        fb_ingestion = ingestion_cache[fallback_id]
+
+                        candles = fb_ingestion.fetch_candles(
+                            symbol, timeframe, limit=BACKFILL_LIMIT,
+                        )
+                        if not candles.empty:
+                            count = await CandleStorage.save_candles_db(
+                                db, symbol, timeframe, candles,
+                            )
+                            logger.info(
+                                "Fallback: ingested %d candles for %s %s from %s",
+                                count, symbol, timeframe, fallback_id,
+                            )
+                            break  # Success — stop trying other exchanges
+                    except ccxt_sync.BadSymbol:
+                        continue  # Not on this exchange either
+                    except Exception:
+                        continue
+                else:
+                    logger.warning(
+                        "No exchange found for %s %s — symbol will have insufficient data",
+                        symbol, timeframe,
+                    )
+
         await db.commit()
 
 

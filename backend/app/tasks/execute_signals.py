@@ -160,6 +160,41 @@ async def _execute_async():
                     await db.commit()
                     continue
 
+                # --- Holdings-based position cap (use actual exchange balances) ---
+                try:
+                    from app.api.holdings import _fetch_exchange_holdings
+
+                    exchange_holdings = await _fetch_exchange_holdings(db, user_id)
+                    base_symbol = sig.symbol.split("/")[0]
+
+                    # Sum across all exchanges (user may hold asset on multiple)
+                    available_qty = sum(
+                        h.quantity for h in exchange_holdings
+                        if h.symbol == base_symbol
+                    )
+
+                    if available_qty <= 0:
+                        logger.warning(
+                            "Holdings cap REJECT: no %s holdings for user %s, "
+                            "skipping signal %s",
+                            base_symbol, user_id, sig.id,
+                        )
+                        sig.status = "rejected"
+                        await db.commit()
+                        continue
+
+                    if quantity > available_qty:
+                        logger.info(
+                            "Holdings cap: reduced %s quantity %.6f -> %.6f "
+                            "for signal %s (actual holding)",
+                            base_symbol, quantity, available_qty, sig.id,
+                        )
+                        quantity = available_qty
+                except Exception as e:
+                    logger.warning(
+                        "Holdings cap check failed (proceeding with formula size): %s", e
+                    )
+
                 # --- Position-aware safety check (defense-in-depth) ---
                 buy_position = await PositionManagerDB.find_open_position(
                     db, user_id, sig.symbol, direction="BUY",
