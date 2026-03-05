@@ -1,4 +1,15 @@
-"""Paper simulation API — start, monitor, and stop B&H vs SignalForge tests."""
+"""Paper simulation API — start, monitor, and stop B&H vs SignalForge tests.
+
+Simulation Model
+================
+Both sides start with the user's real portfolio snapshot.
+
+  B&H value  = sum(initial_qty × current_price)
+  SF  value  = B&H value + net trade P&L
+
+With zero trades SF ≡ B&H.  The comparison only diverges when SignalForge
+actually executes trades — any difference reflects pure trading alpha.
+"""
 
 import logging
 import uuid
@@ -359,7 +370,8 @@ async def stop_simulation(
         price = info.get("price") or h.get("price_usd", 0)
         bh_value += qty * price
 
-    sf_value = sim.initial_value_usd + realized_pnl
+    # SF = B&H + net trade P&L (both sides start with same portfolio)
+    sf_value = bh_value + realized_pnl
 
     final_snapshot = SimulationSnapshot(
         simulation_id=sim.id,

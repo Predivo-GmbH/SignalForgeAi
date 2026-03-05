@@ -1,4 +1,20 @@
-"""Hourly snapshot task — records B&H and SF equity for running simulations."""
+"""Hourly snapshot task — records B&H and SF equity for running simulations.
+
+Simulation Model
+================
+Both Buy & Hold (B&H) and SignalForge (SF) start with the **same portfolio**
+— the user's actual holdings at the moment the simulation was started.
+
+  B&H value  = sum(initial_qty × current_price)  for each holding
+  SF  value  = B&H value + realized_pnl + unrealized_pnl  from SF trades
+
+Key properties:
+  • With zero trades, SF ≡ B&H  (market moves apply equally to both sides).
+  • SF only diverges from B&H when the engine actually executes trades.
+  • This makes the comparison fair: any difference is purely the result of
+    SignalForge's trading decisions, not an artifact of treating one side
+    as cash and the other as crypto.
+"""
 
 import logging
 
@@ -52,6 +68,9 @@ async def _snapshot_async():
         for sim in simulations:
             try:
                 # --- Buy & Hold value ---
+                # B&H = sum(initial_qty * current_price) for each holding.
+                # Represents what the portfolio would be worth if you simply
+                # held everything unchanged from the simulation start.
                 bh_value = 0.0
                 for h in (sim.initial_holdings or []):
                     sym = h.get("symbol", "").upper()
@@ -60,7 +79,10 @@ async def _snapshot_async():
                     bh_value += qty * price
 
                 # --- SignalForge value ---
-                # Realized P&L from closed trades
+                # SF = B&H + net trade P&L.  Both sides start with the same
+                # portfolio.  With zero trades SF exactly equals B&H (the
+                # market moves apply to both).  SF only diverges when the
+                # engine actually executes trades on top of the base holdings.
                 pnl_result = await db.execute(
                     select(func.coalesce(func.sum(Trade.pnl), 0.0))
                     .join(Signal, Trade.signal_id == Signal.id)
@@ -68,7 +90,6 @@ async def _snapshot_async():
                 )
                 realized_pnl = float(pnl_result.scalar())
 
-                # Unrealized P&L from open positions
                 pos_result = await db.execute(
                     select(
                         func.coalesce(func.sum(Position.unrealized_pnl), 0.0)
@@ -79,7 +100,6 @@ async def _snapshot_async():
                 )
                 unrealized_pnl = float(pos_result.scalar())
 
-                # Open position value (for cash breakdown)
                 pos_value_result = await db.execute(
                     select(
                         func.coalesce(
@@ -92,7 +112,7 @@ async def _snapshot_async():
                 )
                 positions_value = float(pos_value_result.scalar())
 
-                sf_value = sim.initial_value_usd + realized_pnl + unrealized_pnl
+                sf_value = bh_value + realized_pnl + unrealized_pnl
                 sf_cash = sf_value - positions_value
 
                 snapshot = SimulationSnapshot(
@@ -117,8 +137,14 @@ _STABLECOINS = {"USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"}
 
 
 async def _fetch_current_prices(symbols: list[str]) -> dict[str, float]:
-    """Fetch current USD prices for a list of crypto symbols."""
+    """Fetch current USD prices for a list of crypto symbols.
+
+    Uses the configured default exchange (SF_DEFAULT_EXCHANGE) instead of
+    hardcoding Binance, so simulations work for any supported exchange.
+    """
     import ccxt.async_support as ccxt_async
+
+    from app.config import settings
 
     result: dict[str, float] = {}
     non_stable = []
@@ -132,7 +158,12 @@ async def _fetch_current_prices(symbols: list[str]) -> dict[str, float]:
     if not non_stable:
         return result
 
-    exchange = ccxt_async.binance({"enableRateLimit": True})
+    exchange_cls = getattr(ccxt_async, settings.default_exchange, None)
+    if exchange_cls is None:
+        logger.warning("Unknown exchange %s for simulation snapshot", settings.default_exchange)
+        return result
+
+    exchange = exchange_cls({"enableRateLimit": True})
     try:
         await exchange.load_markets()
         pairs = [f"{s}/USDT" for s in non_stable if f"{s}/USDT" in exchange.markets]
@@ -143,7 +174,7 @@ async def _fetch_current_prices(symbols: list[str]) -> dict[str, float]:
                 if ticker and ticker.get("last"):
                     result[sym] = float(ticker["last"])
     except Exception:
-        logger.warning("Binance price fetch failed for simulation snapshot")
+        logger.warning("Price fetch from %s failed for simulation snapshot", settings.default_exchange)
     finally:
         await exchange.close()
 
