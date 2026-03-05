@@ -1,5 +1,7 @@
 """Holdings API — aggregated portfolio view, exchange balances, manual CRUD."""
 
+import asyncio
+import json
 import logging
 import uuid
 
@@ -155,53 +157,86 @@ async def _fetch_prices(
     if not non_stable:
         return result
 
+    # --- Check Redis cache first ---
+    from app.core.redis_client import redis_client
+
+    cache_key = "signalforge:prices:v1"
+    try:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            cached_data = json.loads(cached)
+            # Return cached prices for all requested symbols
+            for s in non_stable:
+                if s in cached_data:
+                    result[s] = cached_data[s]
+            uncached = [s for s in non_stable if s not in result]
+            if not uncached:
+                return result
+    except Exception:
+        logger.debug("Redis price cache read failed, fetching fresh")
+
     # Separate CoinGecko-only symbols from exchange-eligible ones
     cg_only = [s for s in non_stable if s in _COINGECKO_ONLY]
     exchange_eligible = [s for s in non_stable if s not in _COINGECKO_ONLY]
 
-    # Primary: Binance (only for exchange-eligible symbols)
+    # Fire ALL exchange price lookups + CoinGecko in parallel
+    from app.data.coingecko import fetch_coin_metadata, fetch_prices as cg_fetch_prices
+
+    exchange_ids = ["binance"] + _FALLBACK_EXCHANGES
+    tasks = []
     if exchange_eligible:
-        binance_result = await _fetch_prices_from_exchange("binance", exchange_eligible)
-        result.update(binance_result)
+        tasks.extend(
+            _fetch_prices_from_exchange(eid, exchange_eligible)
+            for eid in exchange_ids
+        )
+    cg_all = cg_only + exchange_eligible  # CoinGecko covers everything as fallback
+    if cg_all:
+        tasks.append(cg_fetch_prices(cg_all))
+    tasks.append(fetch_coin_metadata(non_stable))
 
-    # Find symbols still missing a price
-    missing = [s for s in exchange_eligible if s not in result]
+    all_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Fallback exchanges for remaining symbols
-    for exchange_id in _FALLBACK_EXCHANGES:
-        if not missing:
-            break
-        fallback_result = await _fetch_prices_from_exchange(exchange_id, missing)
-        result.update(fallback_result)
-        missing = [s for s in missing if s not in result]
+    # Merge exchange results: prefer Binance, then fallbacks in order
+    exchange_count = len(exchange_ids) if exchange_eligible else 0
+    for i in range(exchange_count):
+        r = all_results[i]
+        if isinstance(r, Exception):
+            continue
+        for sym, data in r.items():
+            if sym not in result:  # first exchange to provide wins
+                result[sym] = data
 
-    # CoinGecko: covers CG-only symbols + any still-missing exchange symbols
-    missing = missing + cg_only
-    if missing:
-        from app.data.coingecko import fetch_prices as cg_fetch_prices
+    # Merge CoinGecko prices for anything still missing
+    cg_idx = exchange_count
+    if cg_all:
+        cg_result = all_results[cg_idx]
+        if not isinstance(cg_result, Exception):
+            for sym, data in cg_result.items():
+                if sym not in result:
+                    result[sym] = data
+        cg_idx += 1
 
-        cg_result = await cg_fetch_prices(missing)
-        result.update(cg_result)
-        missing = [s for s in missing if s not in result]
-
-    # Mark any still-missing symbols as None
-    for s in missing:
-        result[s] = {"price": None, "change_24h_pct": None}
-
-    # Enrich with CoinGecko metadata (market cap, rank, image, volume)
-    all_priced = [s for s in result if result[s].get("price") is not None]
-    if all_priced:
-        from app.data.coingecko import fetch_coin_metadata
-
-        metadata = await fetch_coin_metadata(all_priced)
-        for sym, meta in metadata.items():
+    # Merge CoinGecko metadata
+    metadata_result = all_results[cg_idx] if cg_idx < len(all_results) else {}
+    if not isinstance(metadata_result, Exception) and metadata_result:
+        for sym, meta in metadata_result.items():
             if sym in result:
                 result[sym]["market_cap"] = meta.get("market_cap")
                 result[sym]["market_cap_rank"] = meta.get("market_cap_rank")
                 result[sym]["image_url"] = meta.get("image_url")
-                # Only set volume if not already provided by exchange
                 if not result[sym].get("volume_24h"):
                     result[sym]["volume_24h"] = meta.get("volume_24h")
+
+    # Mark any still-missing symbols as None
+    for s in non_stable:
+        if s not in result:
+            result[s] = {"price": None, "change_24h_pct": None}
+
+    # --- Store in Redis cache ---
+    try:
+        await redis_client.set(cache_key, json.dumps(result), ex=60)
+    except Exception:
+        logger.debug("Redis price cache write failed")
 
     return result
 
@@ -245,7 +280,20 @@ def _enrich_holdings(
 async def _fetch_exchange_holdings(
     db: AsyncSession, user_id: str,
 ) -> list[HoldingItem]:
-    """Fetch balances from read-only live broker connections."""
+    """Fetch balances from read-only live broker connections.
+
+    Uses a 30-second Redis cache so page refreshes are instant.
+    """
+    from app.core.redis_client import redis_client
+
+    cache_key = f"signalforge:exchange_balances:{user_id}"
+    try:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return [HoldingItem(**h) for h in json.loads(cached)]
+    except Exception:
+        pass
+
     result = await db.execute(
         select(BrokerConnection).where(
             BrokerConnection.user_id == uuid.UUID(user_id),
@@ -254,9 +302,8 @@ async def _fetch_exchange_holdings(
         )
     )
     connections = result.scalars().all()
-    holdings: list[HoldingItem] = []
 
-    for conn in connections:
+    async def _fetch_one(conn) -> list[HoldingItem]:
         try:
             api_key = decrypt_value(conn.api_key_enc)
             api_secret = decrypt_value(conn.api_secret_enc)
@@ -270,16 +317,26 @@ async def _fetch_exchange_holdings(
             )
             try:
                 balances = await adapter.get_full_balance()
-                for symbol, qty in balances.items():
-                    holdings.append(HoldingItem(
-                        symbol=symbol,
-                        quantity=qty,
-                        source=conn.broker,
-                    ))
+                return [
+                    HoldingItem(symbol=symbol, quantity=qty, source=conn.broker)
+                    for symbol, qty in balances.items()
+                ]
             finally:
                 await adapter.close()
         except Exception:
             logger.exception("Failed to fetch balance from %s connection %s", conn.broker, conn.id)
+            return []
+
+    results = await asyncio.gather(*[_fetch_one(c) for c in connections])
+    holdings = [h for batch in results for h in batch]
+
+    # Cache for 30s so page refreshes are instant
+    try:
+        await redis_client.set(
+            cache_key, json.dumps([h.model_dump() for h in holdings]), ex=30,
+        )
+    except Exception:
+        pass
 
     return holdings
 
@@ -340,6 +397,8 @@ async def get_aggregated_holdings(
     db: AsyncSession = Depends(get_db),
 ):
     """Aggregated view: exchange balances + manual holdings + trading positions."""
+    # DB queries are fast (ms) — keep sequential to avoid session conflicts.
+    # Exchange API calls (the bottleneck) are parallelized inside _fetch_exchange_holdings.
     exchange = await _fetch_exchange_holdings(db, user_id)
     manual = await _fetch_manual_holdings(db, user_id)
     trading = await _fetch_trading_holdings(db, user_id)

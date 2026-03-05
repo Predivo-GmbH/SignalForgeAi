@@ -1,6 +1,7 @@
 """Periodic candle ingestion from exchanges."""
 
 import logging
+from collections import defaultdict
 
 from app.worker import celery_app
 
@@ -52,45 +53,81 @@ def ingest_candles(self):
             r.close()
 
 
-async def _ingest_async():
-    from app.core.database import task_session
-    from app.data.ingestion import CCXTIngestion
-    from app.data.storage import CandleStorage
+async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
+    """Build a mapping of exchange -> set of (symbol, timeframe) pairs.
 
-    ingestion = CCXTIngestion("binance")
-
-    # Collect symbols from active strategies
+    - Default symbols use settings.default_exchange
+    - Strategy symbols use the strategy owner's BrokerConnection.broker
+      (falls back to default_exchange if no broker connection exists)
+    """
     from sqlalchemy import select
 
-    from app.models.strategy import Strategy
+    from app.config import settings
+    from app.models.strategy import BrokerConnection, Strategy
 
-    symbols = set(DEFAULT_SYMBOLS)
-    timeframes = set(DEFAULT_TIMEFRAMES)
+    default_ex = settings.default_exchange
+
+    # exchange -> {(symbol, timeframe), ...}
+    exchange_pairs: dict[str, set[tuple[str, str]]] = defaultdict(set)
+
+    # Default symbols always go to the default exchange
+    for sym in DEFAULT_SYMBOLS:
+        for tf in DEFAULT_TIMEFRAMES:
+            exchange_pairs[default_ex].add((sym, tf))
+
+    # Collect from active strategies
+    result = await db.execute(
+        select(Strategy).where(Strategy.is_active == True)  # noqa: E712
+    )
+    strategies = result.scalars().all()
+
+    # Look up broker connections for strategy owners
+    user_ids = {s.user_id for s in strategies}
+    broker_map: dict[str, str] = {}  # user_id -> exchange
+    if user_ids:
+        broker_result = await db.execute(
+            select(BrokerConnection).where(BrokerConnection.user_id.in_(user_ids))
+        )
+        for bc in broker_result.scalars().all():
+            # Prefer "read" purpose connections, but any will do
+            if bc.user_id not in broker_map or bc.purpose == "read":
+                broker_map[str(bc.user_id)] = bc.broker
+
+    for strategy in strategies:
+        cfg = strategy.config or {}
+        exchange = broker_map.get(str(strategy.user_id), default_ex)
+        for sym in cfg.get("symbols", []):
+            for tf in cfg.get("timeframes", DEFAULT_TIMEFRAMES):
+                exchange_pairs[exchange].add((sym, tf))
+
+    return dict(exchange_pairs)
+
+
+async def _ingest_async():
+    from app.data.ingestion import CCXTIngestion
+    from app.core.database import task_session
+    from app.data.storage import CandleStorage
 
     async with task_session() as db:
-        result = await db.execute(
-            select(Strategy).where(Strategy.is_active == True)  # noqa: E712
-        )
-        for strategy in result.scalars().all():
-            cfg = strategy.config or {}
-            for s in cfg.get("symbols", []):
-                symbols.add(s)
-            for t in cfg.get("timeframes", []):
-                timeframes.add(t)
+        exchange_pairs = await _resolve_exchange_symbols(db)
 
-        for symbol in symbols:
-            for timeframe in timeframes:
+        for exchange_id, pairs in exchange_pairs.items():
+            try:
+                ingestion = CCXTIngestion(exchange_id)
+            except Exception:
+                logger.exception("Failed to initialize exchange: %s", exchange_id)
+                continue
+
+            for symbol, timeframe in pairs:
                 try:
-                    # Check how many candles we already have
                     existing = await CandleStorage.load_candles_db(
                         db, symbol, timeframe, limit=1,
                     )
                     if len(existing) == 0:
-                        # First run — backfill historical data
                         limit = BACKFILL_LIMIT
                         logger.info(
-                            "Backfilling %d candles for %s %s",
-                            limit, symbol, timeframe,
+                            "Backfilling %d candles for %s %s from %s",
+                            limit, symbol, timeframe, exchange_id,
                         )
                     else:
                         limit = INCREMENTAL_LIMIT
@@ -101,31 +138,43 @@ async def _ingest_async():
                             db, symbol, timeframe, candles,
                         )
                         logger.info(
-                            "Ingested %d candles for %s %s", count, symbol, timeframe,
+                            "Ingested %d candles for %s %s from %s",
+                            count, symbol, timeframe, exchange_id,
                         )
                 except Exception as e:
-                    logger.exception("Ingestion failed for %s %s: %s", symbol, timeframe, e)
+                    logger.exception(
+                        "Ingestion failed for %s %s on %s: %s",
+                        symbol, timeframe, exchange_id, e,
+                    )
         await db.commit()
 
 
 @celery_app.task(name="backfill_symbols", bind=True, max_retries=3)
-def backfill_symbols(self, symbols: list[str], timeframes: list[str] | None = None):
+def backfill_symbols(
+    self,
+    symbols: list[str],
+    timeframes: list[str] | None = None,
+    exchange: str | None = None,
+):
     """One-time backfill for a list of symbols (triggered by advisor deploy)."""
     import asyncio
 
+    from app.config import settings
+
+    ex = exchange or settings.default_exchange
     try:
-        asyncio.run(_backfill_async(symbols, timeframes or DEFAULT_TIMEFRAMES))
+        asyncio.run(_backfill_async(symbols, timeframes or DEFAULT_TIMEFRAMES, ex))
     except (ConnectionError, OSError, TimeoutError) as exc:
         logger.warning("backfill_symbols transient error: %s — retrying", exc)
         self.retry(exc=exc, countdown=60)
 
 
-async def _backfill_async(symbols: list[str], timeframes: list[str]):
+async def _backfill_async(symbols: list[str], timeframes: list[str], exchange: str):
     from app.core.database import task_session
     from app.data.ingestion import CCXTIngestion
     from app.data.storage import CandleStorage
 
-    ingestion = CCXTIngestion("binance")
+    ingestion = CCXTIngestion(exchange)
 
     async with task_session() as db:
         for symbol in symbols:
@@ -137,8 +186,12 @@ async def _backfill_async(symbols: list[str], timeframes: list[str]):
                             db, symbol, timeframe, candles,
                         )
                         logger.info(
-                            "Backfilled %d candles for %s %s", count, symbol, timeframe,
+                            "Backfilled %d candles for %s %s from %s",
+                            count, symbol, timeframe, exchange,
                         )
                 except Exception as e:
-                    logger.exception("Backfill failed for %s %s: %s", symbol, timeframe, e)
+                    logger.exception(
+                        "Backfill failed for %s %s on %s: %s",
+                        symbol, timeframe, exchange, e,
+                    )
         await db.commit()

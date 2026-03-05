@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_domain: str = "signalforge.dev"
 
+    # Exchange
+    default_exchange: str = "binance"
+
     # App
     app_name: str = "SignalForge"
     debug: bool = True

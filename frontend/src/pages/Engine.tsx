@@ -56,7 +56,7 @@ const REASON_DESCRIPTIONS: Record<string, string> = {
   no_trigger:
     "No entry trigger fired. The trigger detector requires at least 2 confirmations from 5 trigger types (e.g., candlestick patterns, momentum crossovers, zone bounces).",
   insufficient_candles:
-    "Not enough candle data loaded yet (minimum 100, ideally 200+ for the 200-EMA trend filter). On first run, the ingestion task backfills 500 candles from Binance — this block should clear after the first successful ingestion cycle (~60s). If it persists, check that the worker and beat services are running.",
+    "Not enough candle data loaded yet (minimum 100, ideally 200+ for the 200-EMA trend filter). On first run, the ingestion task backfills 500 historical candles from the configured exchange. This block should clear after the first successful ingestion cycle (~60s). If it persists, check that the worker and beat services are running and that the symbol is listed on your exchange.",
   risk_rejected:
     "The risk manager rejected this trade. Possible causes: position size exceeded max risk per trade, ATR-based stop loss was too wide, or Kelly criterion sizing was unfavorable.",
   feedback_filter:
