@@ -1211,7 +1211,7 @@ export function HoldingsCard() {
           {/* Right: Portfolio value chart */}
           <div
             className={cn(
-              "bg-(--color-bg-elevated)/30 rounded-lg p-3 sm:p-4 transition-all duration-600 ease-out min-w-0 min-h-[280px]",
+              "bg-(--color-bg-elevated)/30 rounded-lg p-3 sm:p-4 transition-all duration-600 ease-out min-w-0 min-h-[280px] overflow-hidden",
               reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3",
             )}
             style={{ transitionDelay: "250ms" }}

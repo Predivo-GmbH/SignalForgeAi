@@ -76,7 +76,7 @@ class HMMRegimeModel:
 
     @classmethod
     def deserialize(cls, data: bytes) -> "HMMRegimeModel":
-        obj = pickle.loads(data)  # noqa: S301
+        obj = pickle.loads(data)  # noqa: S301  # nosec B301
         instance = cls()
         instance.model = obj["model"]
         instance._state_map = obj["state_map"]
