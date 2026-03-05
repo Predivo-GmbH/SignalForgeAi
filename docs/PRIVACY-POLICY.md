@@ -12,7 +12,7 @@ SignalForge is a personal trading tool designed for automated signal generation,
 
 SignalForge operates as a self-hosted trading platform. The data controller is the individual or organization operating the SignalForge instance.
 
-**Contact:** [owner@signalforge.dev] *(replace with your contact email)*
+**Contact:** support@signalforge.dev
 
 ---
 
@@ -101,11 +101,19 @@ SignalForge does **not** use cookies for tracking or analytics. The only client-
 
 ## 7. Data Retention
 
-- **Account data** -- retained while your account is active
-- **Trading history** -- retained while your account is active for performance analysis and audit purposes
-- **AI interaction logs** -- retained for cost tracking and usage analytics while your account is active
-- **Authentication logs** -- retained for security purposes while your account is active
-- **All data is deleted** when you delete your account (see Section 8 below)
+We retain your data according to the following schedule:
+
+| Data Category | Retention Period |
+|---------------|-----------------|
+| Account information | Lifetime of your account |
+| Trading data (signals, trades, orders, positions) | Lifetime of your account |
+| AI interaction logs | 90 days |
+| Authentication logs | 90 days |
+| Backups containing personal data | 14 days after creation |
+
+Upon account deletion, all personal data is permanently removed from our active
+database within 24 hours. Backup copies containing your data are automatically
+purged within 14 days of creation.
 
 ---
 
@@ -115,12 +123,12 @@ Under applicable data protection regulations (including GDPR), you have the foll
 
 ### 8.1 Right of Access
 You can access all your data through the platform's data export functionality:
-- **API endpoint:** `GET /api/data-export` -- exports your complete data in JSON format
+- **API endpoint:** `GET /api/auth/user/export` -- exports your complete data in JSON format
 - **Dashboard access:** all trading data, signals, and performance metrics are visible in the application
 
 ### 8.2 Right to Erasure
 You can request complete deletion of your account and all associated data:
-- **API endpoint:** `DELETE /api/account` -- permanently deletes your account and all data
+- **API endpoint:** `DELETE /api/auth/user` -- permanently deletes your account and all data
 - This action is irreversible and removes all trading history, strategies, signals, broker connections, and personal information
 
 ### 8.3 Right to Data Portability
@@ -183,7 +191,7 @@ We may update this Privacy Policy from time to time to reflect changes in our pr
 
 If you have questions about this Privacy Policy or wish to exercise your data protection rights, please contact:
 
-**Email:** [owner@signalforge.dev] *(replace with your contact email)*
+**Email:** support@signalforge.dev
 
 ---
 

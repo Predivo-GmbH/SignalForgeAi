@@ -207,9 +207,9 @@ You agree to indemnify, defend, and hold harmless SignalForge and its operators 
 
 ## 13. Governing Law and Dispute Resolution
 
-These Terms shall be governed by and construed in accordance with the laws of [Jurisdiction] *(specify your applicable jurisdiction)*, without regard to its conflict of law provisions.
+These Terms shall be governed by and construed in accordance with the laws of Switzerland, without regard to its conflict of law provisions.
 
-Any disputes arising from or relating to these Terms or the Service shall first be attempted to be resolved through good-faith negotiation. If negotiation fails, disputes shall be resolved through binding arbitration in accordance with the rules of [Arbitration Body] *(specify if applicable)*, or in the courts of [Jurisdiction].
+Any disputes arising from or relating to these Terms or the Service shall first be attempted to be resolved through good-faith negotiation. If negotiation fails, disputes shall be resolved through the competent courts of Zurich, Switzerland.
 
 ---
 
@@ -229,7 +229,7 @@ These Terms, together with the Privacy Policy, constitute the entire agreement b
 
 If you have questions about these Terms, please contact:
 
-**Email:** [owner@signalforge.dev] *(replace with your contact email)*
+**Email:** support@signalforge.dev
 
 ---
 

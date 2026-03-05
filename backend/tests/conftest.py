@@ -1,5 +1,6 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import get_db
@@ -9,6 +10,15 @@ from app.models.base import Base
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+
+
+@event.listens_for(test_engine.sync_engine, "connect")
+def set_sqlite_pragma(dbapi_conn, connection_record):
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 test_session = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 

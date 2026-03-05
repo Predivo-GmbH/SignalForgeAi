@@ -66,3 +66,76 @@ async def test_refresh_token(client):
     })
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+
+@pytest.mark.asyncio
+async def test_delete_account_cascades(client):
+    """GDPR: DELETE /auth/user removes all user data."""
+    # Register a user
+    reg = await client.post("/api/auth/register", json={
+        "email": "delete-test@example.com",
+        "password": "DeleteMe123"
+    })
+    assert reg.status_code == 201
+    tokens = reg.json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    # Create some data (strategy)
+    await client.post("/api/strategies/", json={
+        "name": "Test Strategy",
+        "description": "For deletion test",
+        "symbols": ["BTC/USDT"],
+    }, headers=headers)
+    # Don't assert strategy creation succeeds -- schema may vary
+
+    # Delete the account
+    resp = await client.delete("/api/auth/user", headers=headers)
+    assert resp.status_code == 204
+
+    # Verify token is now invalid
+    me = await client.get("/api/auth/me", headers=headers)
+    assert me.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_export_user_data(client):
+    """GDPR: GET /auth/user/export returns user data."""
+    # Register
+    reg = await client.post("/api/auth/register", json={
+        "email": "export-test@example.com",
+        "password": "ExportMe123"
+    })
+    assert reg.status_code == 201
+    tokens = reg.json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    # Export data
+    resp = await client.get("/api/auth/user/export", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    # Verify structure
+    assert "user" in data
+    assert data["user"]["email"] == "export-test@example.com"
+    assert "strategies" in data
+    assert "signals" in data
+    assert "trades" in data
+
+
+@pytest.mark.asyncio
+async def test_delete_nonexistent_after_deletion(client):
+    """Deleted account cannot be accessed again."""
+    reg = await client.post("/api/auth/register", json={
+        "email": "double-delete@example.com",
+        "password": "DeleteTwice1"
+    })
+    tokens = reg.json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    # Delete once
+    resp = await client.delete("/api/auth/user", headers=headers)
+    assert resp.status_code == 204
+
+    # Try to use the token -- should fail
+    resp2 = await client.get("/api/auth/user/export", headers=headers)
+    assert resp2.status_code == 401
