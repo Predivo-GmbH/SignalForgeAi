@@ -578,7 +578,7 @@ function PortfolioValueChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
-  const [hoverValue, setHoverValue] = useState<{ value: number; date: string; time: string } | null>(null);
+  const [hoverValue, setHoverValue] = useState<{ value: number; date: string; time: string; x: number; y: number } | null>(null);
 
   const has24hData = holdings.some((h) => h.change24hPct != null);
   const canRender = period === "24H" && has24hData && totalValue > 0;
@@ -641,7 +641,7 @@ function PortfolioValueChart({
     chartRef.current = chart;
 
     chart.subscribeCrosshairMove((param) => {
-      if (!param.time || !param.seriesData.size) {
+      if (!param.time || !param.seriesData.size || !param.point) {
         setHoverValue(null);
         return;
       }
@@ -652,6 +652,8 @@ function PortfolioValueChart({
           value: data.value,
           date: d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }),
           time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          x: param.point.x,
+          y: param.point.y,
         });
       }
     });
@@ -746,6 +748,23 @@ function PortfolioValueChart({
           className={cn("w-full h-full", !(canRender && chartData.length >= 2) && "invisible")}
           onMouseLeave={() => setHoverValue(null)}
         />
+        {/* Floating tooltip on chart */}
+        {hoverValue && canRender && (
+          <div
+            className="absolute pointer-events-none z-10 bg-(--color-bg-surface)/95 border border-(--color-border) rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm"
+            style={{
+              left: Math.min(hoverValue.x, (containerRef.current?.clientWidth ?? 300) - 180),
+              top: Math.max(0, hoverValue.y - 60),
+            }}
+          >
+            <p className="text-[10px] text-(--color-text-secondary) font-mono">
+              {hoverValue.date}, {hoverValue.time}
+            </p>
+            <p className="text-sm font-bold font-mono text-(--color-text-primary)">
+              Total Balance: {fmtUsd(hoverValue.value)}
+            </p>
+          </div>
+        )}
         {!(canRender && chartData.length >= 2) && (
           <div className="absolute inset-0 flex items-center justify-center">
             <p className="text-[11px] text-(--color-text-secondary)/50 text-center">

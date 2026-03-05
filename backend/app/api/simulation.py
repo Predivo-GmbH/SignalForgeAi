@@ -78,10 +78,11 @@ async def start_simulation(
     unique_symbols = list({h.symbol.upper() for h in all_holdings})
     prices = await _fetch_prices(unique_symbols)
 
-    # Build holdings snapshot with prices
+    # Build holdings snapshot with prices and track source exchanges
     holdings_snapshot = []
     total_value = 0.0
     symbols_for_trading: set[str] = set()
+    exchange_map: dict[str, str] = {}  # "ALPH/USDT" -> "mexc"
 
     for h in all_holdings:
         sym = h.symbol.upper()
@@ -99,7 +100,11 @@ async def start_simulation(
 
         # Build trading pairs (skip stablecoins)
         if sym not in _STABLECOINS and price > 0:
-            symbols_for_trading.add(f"{sym}/USDT")
+            pair = f"{sym}/USDT"
+            symbols_for_trading.add(pair)
+            # Track which exchange this symbol came from
+            if pair not in exchange_map and h.source:
+                exchange_map[pair] = h.source
 
     if total_value < 1.0:
         raise HTTPException(
@@ -115,6 +120,7 @@ async def start_simulation(
         is_active=True,
         config={
             "symbols": sorted(symbols_for_trading),
+            "exchange_map": exchange_map,
             "timeframes": ["1h"],
             "account_equity": round(total_value, 2),
             "min_confluence": 50,

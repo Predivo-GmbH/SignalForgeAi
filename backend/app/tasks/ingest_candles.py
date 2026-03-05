@@ -56,9 +56,11 @@ def ingest_candles(self):
 async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
     """Build a mapping of exchange -> set of (symbol, timeframe) pairs.
 
-    - Default symbols use settings.default_exchange
-    - Strategy symbols use the strategy owner's BrokerConnection.broker
-      (falls back to default_exchange if no broker connection exists)
+    Resolution order for each symbol:
+      1. Strategy config ``exchange_map`` (set when simulation starts,
+         maps each symbol to its source exchange like "mexc", "kucoin")
+      2. User's BrokerConnection.broker (fallback for manually created strategies)
+      3. settings.default_exchange (ultimate fallback)
     """
     from sqlalchemy import select
 
@@ -81,7 +83,7 @@ async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
     )
     strategies = result.scalars().all()
 
-    # Look up broker connections for strategy owners
+    # Look up broker connections for strategy owners (fallback only)
     user_ids = {s.user_id for s in strategies}
     broker_map: dict[str, str] = {}  # user_id -> exchange
     if user_ids:
@@ -89,14 +91,16 @@ async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
             select(BrokerConnection).where(BrokerConnection.user_id.in_(user_ids))
         )
         for bc in broker_result.scalars().all():
-            # Prefer "read" purpose connections, but any will do
             if bc.user_id not in broker_map or bc.purpose == "read":
                 broker_map[str(bc.user_id)] = bc.broker
 
     for strategy in strategies:
         cfg = strategy.config or {}
-        exchange = broker_map.get(str(strategy.user_id), default_ex)
+        # Per-symbol exchange mapping (from simulation start / holdings source)
+        sym_exchange_map = cfg.get("exchange_map", {})
+        fallback_exchange = broker_map.get(str(strategy.user_id), default_ex)
         for sym in cfg.get("symbols", []):
+            exchange = sym_exchange_map.get(sym, fallback_exchange)
             for tf in cfg.get("timeframes", DEFAULT_TIMEFRAMES):
                 exchange_pairs[exchange].add((sym, tf))
 
