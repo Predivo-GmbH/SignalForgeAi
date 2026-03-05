@@ -56,6 +56,11 @@ class ManualHoldingRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=255)
 
 
+class BulkImportRequest(BaseModel):
+    holdings: list[ManualHoldingRequest] = Field(min_length=1, max_length=100)
+    clear_existing: bool = False
+
+
 class ManualHoldingResponse(BaseModel):
     id: str
     symbol: str
@@ -443,3 +448,49 @@ async def delete_manual_holding(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Holding not found")
     await db.delete(holding)
     await db.commit()
+
+
+@router.post("/manual/bulk", response_model=list[ManualHoldingResponse], status_code=201)
+async def bulk_import_holdings(
+    body: BulkImportRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bulk import manual holdings. Optionally clears existing manual holdings first."""
+    uid = uuid.UUID(user_id)
+
+    if body.clear_existing:
+        result = await db.execute(
+            select(ManualHolding).where(ManualHolding.user_id == uid)
+        )
+        for h in result.scalars().all():
+            await db.delete(h)
+
+    created: list[ManualHolding] = []
+    for item in body.holdings:
+        holding = ManualHolding(
+            id=uuid.uuid4(),
+            user_id=uid,
+            symbol=item.symbol.upper(),
+            quantity=item.quantity,
+            purchase_price=item.purchase_price,
+            notes=item.notes,
+        )
+        db.add(holding)
+        created.append(holding)
+
+    await db.commit()
+    for h in created:
+        await db.refresh(h)
+
+    return [
+        ManualHoldingResponse(
+            id=str(h.id),
+            symbol=h.symbol,
+            quantity=h.quantity,
+            purchase_price=h.purchase_price,
+            notes=h.notes,
+            created_at=h.created_at.isoformat() if h.created_at else "",
+        )
+        for h in created
+    ]

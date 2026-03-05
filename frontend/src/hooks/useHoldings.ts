@@ -63,3 +63,17 @@ export function useDeleteHolding() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
 }
+
+export interface BulkImportRequest {
+  holdings: ManualHoldingRequest[];
+  clear_existing?: boolean;
+}
+
+export function useBulkImportHoldings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BulkImportRequest) =>
+      api.post("/holdings/manual/bulk", data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
+  });
+}

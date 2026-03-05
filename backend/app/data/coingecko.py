@@ -92,6 +92,15 @@ _SYMBOL_OVERRIDES: dict[str, str] = {
     "W": "wormhole",
     "ENA": "ethena",
     "STRK": "starknet",
+    "ALPH": "alephium",
+    "QUBIC": "qubic-network",
+    "RIO": "realio-network",
+    "ORAI": "oraichain-token",
+    "ZEPH": "zephyr-protocol",
+    "ABX": "abyss-token",
+    "APAD": "anypad",
+    "EX": "exmo-coin",
+    "AYIN": "ayin",
 }
 
 

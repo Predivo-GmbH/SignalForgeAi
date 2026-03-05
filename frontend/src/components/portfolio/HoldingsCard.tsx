@@ -1544,32 +1544,61 @@ export function HoldingsCard() {
               </tbody>
 
               {/* Footer with total */}
-              {totalValue != null && (
-                <tfoot>
-                  <tr
-                    className={cn(
-                      "border-t border-(--color-border) transition-all duration-500 ease-out",
-                      reveal ? "opacity-100" : "opacity-0",
-                    )}
-                    style={{ transitionDelay: `${350 + sorted.length * 40 + 80}ms` }}
-                  >
-                    <td colSpan={4} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
-                      {hasActiveFilter || hideSmall
-                        ? `Showing ${filteredCombined.length} of ${allCombined.length}`
-                        : "Total"}
-                    </td>
-                    <td colSpan={2} className="py-3 px-3 text-right hidden lg:table-cell" />
-                    <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
-                      {fmtUsd(
-                        hasActiveFilter || hideSmall || searchQuery.trim()
-                          ? filteredCombined.reduce((sum, c) => sum + c.totalValue, 0)
-                          : (totalValue ?? 0),
+              {totalValue != null && (() => {
+                const footerHoldings = hasActiveFilter || hideSmall || searchQuery.trim()
+                  ? filteredCombined
+                  : allCombined;
+                const footerTotal = hasActiveFilter || hideSmall || searchQuery.trim()
+                  ? footerHoldings.reduce((sum, c) => sum + c.totalValue, 0)
+                  : (totalValue ?? 0);
+                const footerPnlUsd = footerHoldings.reduce((sum, c) => sum + (c.pnlUsd ?? 0), 0);
+                const footerCostBasis = footerHoldings.reduce((sum, c) => {
+                  if (c.avgCost != null) return sum + c.avgCost * c.totalQty;
+                  return sum;
+                }, 0);
+                const footerPnlPct = footerCostBasis > 0
+                  ? (footerPnlUsd / footerCostBasis) * 100
+                  : null;
+                const hasFooterPnl = footerHoldings.some((c) => c.pnlUsd != null);
+                return (
+                  <tfoot>
+                    <tr
+                      className={cn(
+                        "border-t border-(--color-border) transition-all duration-500 ease-out",
+                        reveal ? "opacity-100" : "opacity-0",
                       )}
-                    </td>
-                    <td colSpan={3} />
-                  </tr>
-                </tfoot>
-              )}
+                      style={{ transitionDelay: `${350 + sorted.length * 40 + 80}ms` }}
+                    >
+                      <td colSpan={4} className="py-3 px-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
+                        {hasActiveFilter || hideSmall
+                          ? `Showing ${filteredCombined.length} of ${allCombined.length}`
+                          : "Total"}
+                      </td>
+                      <td colSpan={2} className="py-3 px-3 text-right hidden lg:table-cell" />
+                      <td className="py-3 px-3 text-right font-mono tabular-nums text-(--color-text-primary) font-bold text-sm">
+                        {fmtUsd(footerTotal)}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        {hasFooterPnl ? (
+                          <div className="font-mono tabular-nums">
+                            <span className={cn("text-xs font-bold block", pnlColor(footerPnlUsd))}>
+                              {footerPnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(footerPnlUsd))}
+                            </span>
+                            {footerPnlPct != null && (
+                              <span className={cn("text-[10px]", pnlColor(footerPnlPct))}>
+                                {footerPnlPct >= 0 ? "+" : ""}{footerPnlPct.toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-(--color-text-secondary)">—</span>
+                        )}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  </tfoot>
+                );
+              })()}
             </table>
           </div>
         )}
