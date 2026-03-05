@@ -194,14 +194,14 @@ function PortfolioOverviewHeader({
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {/* Current Balance */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <Tooltip text="The total USD value of all your crypto holdings right now."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">Current Balance</p></Tooltip>
+        <Tooltip text="The total USD value of all your crypto holdings right now."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help">Balance</p></Tooltip>
         <p className="text-base sm:text-lg font-bold font-mono text-(--color-text-primary)">{fmtUsd(totalValue)}</p>
         <p className="text-xs text-(--color-text-secondary)">{combined.length} asset{combined.length !== 1 ? "s" : ""}</p>
       </div>
 
       {/* 24h Change */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <Tooltip text="How much your total portfolio value changed in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">24h Portfolio Change</p></Tooltip>
+        <Tooltip text="How much your total portfolio value changed in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">24h Change</span><span className="hidden sm:inline">24h Portfolio Change</span></p></Tooltip>
         <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(change24hUsd))}>
           {change24hUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))}
         </p>
@@ -219,7 +219,7 @@ function PortfolioOverviewHeader({
 
       {/* Total P/L */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <Tooltip text="Cumulative profit or loss based on your cost basis vs current market value."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">Total Profit / Loss</p></Tooltip>
+        <Tooltip text="Cumulative profit or loss based on your cost basis vs current market value."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">Total P/L</span><span className="hidden sm:inline">Total Profit / Loss</span></p></Tooltip>
         {hasCostBasis ? (
           <>
             <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(totalPnlUsd))}>
@@ -252,7 +252,7 @@ function PortfolioOverviewHeader({
           topPerformer && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
         )}
       >
-        <Tooltip text="The asset with the highest dollar gain in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">Top Performer 24h</p></Tooltip>
+        <Tooltip text="The asset with the highest dollar gain in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">Top 24h</span><span className="hidden sm:inline">Top Performer 24h</span></p></Tooltip>
         {topPerformer ? (
           <>
             <div className="flex items-center gap-2">
@@ -322,7 +322,7 @@ function SourceBreakdown({
         <p className="text-sm font-bold font-mono text-(--color-text-primary)">
           {fmtCompact(totalValue)}
         </p>
-        <p className="text-[10px] font-mono text-(--color-text-secondary) truncate">
+        <p className="text-[10px] font-mono text-(--color-text-secondary)">
           {totalCount} asset{totalCount !== 1 ? "s" : ""} · 100%
         </p>
       </button>
@@ -354,7 +354,7 @@ function SourceBreakdown({
             <p className="text-sm font-bold font-mono text-(--color-text-primary)">
               {fmtCompact(s.value)}
             </p>
-            <p className="text-[10px] font-mono text-(--color-text-secondary) truncate">
+            <p className="text-[10px] font-mono text-(--color-text-secondary)">
               {s.count} asset{s.count !== 1 ? "s" : ""} · {s.pct.toFixed(1)}%
             </p>
           </button>
@@ -1365,7 +1365,7 @@ export function HoldingsCard() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed sm:table-auto">
               <thead>
                 <tr className="border-b border-(--color-border)">
                   <SortHeader label="#" sortKey="rank" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left w-10 hidden sm:table-cell" />
@@ -1374,7 +1374,7 @@ export function HoldingsCard() {
                   <SortHeader label="24h" sortKey="change" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden sm:table-cell" />
                   <SortHeader label="Mkt Cap" sortKey="marketCap" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden lg:table-cell" />
                   <SortHeader label="Volume" sortKey="volume" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden lg:table-cell" />
-                  <SortHeader label="Holdings" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right min-w-[90px]" />
+                  <SortHeader label="Holdings" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right w-28 sm:w-auto min-w-[90px]" />
                   <SortHeader label="PNL" sortKey="pnl" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden sm:table-cell" />
                   <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3 hidden md:table-cell">Source</th>
                   <th className="py-2 w-16 hidden sm:table-cell" />

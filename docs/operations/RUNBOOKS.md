@@ -13,8 +13,8 @@
 ### Database Connection Issues
 **Symptoms:** API returns 500, health check shows DB down
 **Resolution:**
-1. Check DB container: `docker compose logs db`
-2. Check connections: `docker compose exec db psql -U signalforge -c "SELECT count(*) FROM pg_stat_activity;"`
+1. Check DB container: `docker compose logs db` (dev) or `docker compose logs timescaledb` (prod)
+2. Check connections: `docker compose exec db psql -U signalforge -c "SELECT count(*) FROM pg_stat_activity;"` (dev) or use `timescaledb` service name in prod
 3. If too many connections, restart API: `docker compose restart api`
 4. If DB crashed, restore from backup: see "Restore from Backup" below
 
@@ -50,7 +50,7 @@ ls -la /opt/signalforge/backups/
 
 # Restore latest backup
 gunzip < /opt/signalforge/backups/signalforge_YYYYMMDD_HHMMSS.sql.gz | \
-  docker compose exec -T db psql -U signalforge -d signalforge
+  docker compose exec -T db psql -U signalforge -d signalforge  # use 'timescaledb' in prod
 ```
 
 ### Full System Restart

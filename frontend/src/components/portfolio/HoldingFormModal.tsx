@@ -47,7 +47,7 @@ export function HoldingForm({
         <span className="text-xs font-semibold text-(--color-text-primary)">
           {isEdit ? "Edit Holding" : "Add Holding"}
         </span>
-        <button type="button" onClick={onClose} className="p-1 hover:bg-(--color-bg-elevated) rounded">
+        <button type="button" onClick={onClose} aria-label="Close form" className="p-1 hover:bg-(--color-bg-elevated) rounded">
           <X className="w-3.5 h-3.5 text-(--color-text-secondary)" />
         </button>
       </div>

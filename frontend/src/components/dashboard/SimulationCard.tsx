@@ -40,9 +40,8 @@ export function SimulationCard() {
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
           </Tooltip>
         </div>
-        <p className="text-xs text-[var(--color-text-secondary)]">
-          Compare SignalForge&apos;s active trading against buy &amp; hold using
-          your real portfolio as a starting point.
+        <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+          Compare active trading vs buy &amp; hold using your real portfolio.
         </p>
         <button
           onClick={() => startMutation.mutate()}

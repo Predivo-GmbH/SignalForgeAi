@@ -9,7 +9,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -249,8 +249,11 @@ async def deploy_plan(
     try:
         validated = StrategyConfig(**config)
         config = validated.model_dump()
-    except Exception as e:
+    except ValidationError as e:
         raise HTTPException(status_code=422, detail=f"Invalid strategy configuration: {e}")
+    except Exception:
+        logger.exception("Unexpected error validating strategy config")
+        raise HTTPException(status_code=422, detail="Invalid strategy configuration")
 
     uid = uuid.UUID(user_id)
 

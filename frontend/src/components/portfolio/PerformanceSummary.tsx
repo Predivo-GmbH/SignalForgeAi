@@ -16,7 +16,7 @@ function StatCard({ label, value, icon: Icon, colorClass }: StatCardData) {
     <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
       <div className="flex items-center gap-1.5 sm:gap-2">
         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" />
-        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider">{label}</span>
       </div>
       <p className={`text-base sm:text-xl font-semibold font-mono ${colorClass ?? "text-(--color-text-primary)"}`}>
         {value}

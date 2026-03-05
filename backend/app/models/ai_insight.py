@@ -34,13 +34,13 @@ class AIInsight(Base, UUIDMixin, TimestampMixin):
 
     # Context references (nullable — not all types need all)
     signal_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True, index=True
     )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
     )
     user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
     symbol: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
@@ -63,10 +63,10 @@ class FeedbackRule(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "feedback_rules"
 
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id", ondelete="CASCADE")
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     rule_type: Mapped[str] = mapped_column(String(50))
     # Types: avoid_pattern, prefer_pattern, adjust_param, filter_condition

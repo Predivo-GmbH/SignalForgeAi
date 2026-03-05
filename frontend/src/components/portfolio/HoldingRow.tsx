@@ -88,8 +88,8 @@ export function HoldingRow({
       </td>
 
       {/* Coin: icon + name + symbol inline */}
-      <td className="py-2.5 px-2 sm:px-3">
-        <div className="flex items-center gap-2 sm:gap-2.5">
+      <td className="py-2.5 px-2 sm:px-3 overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <CoinIcon symbol={c.symbol} imageUrl={c.imageUrl} size={28} />
           <div className="min-w-0 flex items-baseline gap-1.5">
             <span className="font-semibold text-(--color-text-primary) text-sm truncate">
@@ -140,12 +140,12 @@ export function HoldingRow({
       </td>
 
       {/* Holdings: value + qty stacked */}
-      <td className="py-2.5 px-3 text-right">
-        <div className="font-mono tabular-nums">
+      <td className="py-2.5 px-2 sm:px-3 text-right">
+        <div className="font-mono tabular-nums truncate sm:overflow-visible">
           <span className="text-xs font-semibold text-(--color-text-primary) block">
             {fmtUsd(c.totalValue)}
           </span>
-          <span className="text-[10px] text-(--color-text-secondary)">
+          <span className="text-[10px] text-(--color-text-secondary) hidden sm:inline">
             {c.totalQty.toLocaleString("en-US", { maximumFractionDigits: 6 })} {c.symbol}
           </span>
         </div>

@@ -187,14 +187,18 @@ update() {
   info "Rebuilding Docker images..."
   docker compose -f docker-compose.prod.yml build
 
-  # Run migrations BEFORE restarting so new schema is ready for new code
-  info "Running database migrations..."
-  docker compose -f docker-compose.prod.yml exec api \
-    python -m alembic upgrade head
-
   # Restart services with updated code
   info "Restarting services with updated code..."
   docker compose -f docker-compose.prod.yml up -d
+
+  # Wait for DB to be healthy before running migrations
+  info "Waiting for services to be ready..."
+  sleep 10
+
+  # Run migrations AFTER restart so new migration files are available in the container
+  info "Running database migrations..."
+  docker compose -f docker-compose.prod.yml exec api \
+    python -m alembic upgrade head
 
   # Update Caddy config if changed
   sudo cp "$APP_DIR/deploy/Caddyfile" /etc/caddy/Caddyfile

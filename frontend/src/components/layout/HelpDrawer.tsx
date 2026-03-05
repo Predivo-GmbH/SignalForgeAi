@@ -51,6 +51,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close help"
             className="p-1.5 rounded-lg hover:bg-(--color-bg-elevated) transition-colors"
           >
             <X className="w-4 h-4 text-(--color-text-secondary)" />

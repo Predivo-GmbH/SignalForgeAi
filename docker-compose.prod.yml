@@ -1,6 +1,4 @@
 # Production deployment for SignalForge
-version: "3.8"
-
 x-logging: &default-logging
   driver: json-file
   options:
@@ -40,7 +38,7 @@ services:
       - redisdata:/data
     # No ports exposed to host — only accessible within Docker network
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $SF_REDIS_PASSWORD ping || exit 1"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$SF_REDIS_PASSWORD redis-cli ping || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

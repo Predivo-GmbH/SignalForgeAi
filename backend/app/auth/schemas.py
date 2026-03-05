@@ -43,7 +43,7 @@ class LoginResponse(BaseModel):
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(max_length=4096)
 
 
 class ProfileResponse(BaseModel):
@@ -98,7 +98,7 @@ class TwoFactorDisableRequest(BaseModel):
 
 
 class TwoFactorLoginRequest(BaseModel):
-    partial_token: str
+    partial_token: str = Field(max_length=4096)
     code: str = Field(min_length=6, max_length=9)
 
 

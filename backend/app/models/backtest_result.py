@@ -16,7 +16,7 @@ class BacktestResult(Base, UUIDMixin):
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
     )
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     timeframe: Mapped[str] = mapped_column(String(5), nullable=False)

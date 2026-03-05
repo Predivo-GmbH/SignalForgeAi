@@ -30,6 +30,7 @@ def task_lock(lock_name: str, timeout: int = 1800, blocking: bool = False):
         if not acquired:
             logger.info("%s already running, skipping", lock_name)
             r.close()
+            r = None
     except redis.ConnectionError:
         logger.warning("Redis unavailable for %s lock — proceeding without lock", lock_name)
     except Exception:
