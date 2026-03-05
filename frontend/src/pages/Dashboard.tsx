@@ -11,6 +11,7 @@ import { PerformanceSummary } from "@/components/portfolio/PerformanceSummary";
 import { PositionsTable } from "@/components/dashboard/PositionsTable";
 import { RegimeWidget } from "@/components/dashboard/RegimeWidget";
 import { SimulationCard } from "@/components/dashboard/SimulationCard";
+import { SystemHealthBanner } from "@/components/dashboard/SystemHealthBanner";
 
 export function PortfolioPage() {
   const navigate = useNavigate();
@@ -22,6 +23,9 @@ export function PortfolioPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* System health — warns when services are down */}
+      <SystemHealthBanner />
+
       {/* Onboarding banner when no active strategy */}
       {showOnboarding && (
         <button
