@@ -92,6 +92,7 @@ function DailyCostChart({ data }: { data: DailyCost[] }) {
         background: { color: "transparent" },
         textColor: "rgba(255,255,255,0.5)",
         fontSize: 11,
+        attributionLogo: false,
       },
       grid: {
         vertLines: { visible: false },

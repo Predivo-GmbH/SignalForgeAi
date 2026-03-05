@@ -31,6 +31,7 @@ export function EquityCurve({ points }: EquityCurveProps) {
           color: isDark ? "#141420" : "#FFFFFF",
         },
         textColor: isDark ? "#8B8BA0" : "#6B6B80",
+        attributionLogo: false,
       },
       grid: {
         vertLines: { color: isDark ? "#2A2A3C" : "#E5E2DC" },

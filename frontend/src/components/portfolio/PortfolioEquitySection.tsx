@@ -32,7 +32,7 @@ export function PortfolioEquitySection() {
   const formatRatio = (v: number | null): string => (v != null ? v.toFixed(2) : "N/A");
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4 overflow-hidden">
       <div className="flex items-center justify-between">
         <Tooltip text="Historical growth of your trading account over time, showing returns and drawdowns."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Equity Curve</h3></Tooltip>
         <Link

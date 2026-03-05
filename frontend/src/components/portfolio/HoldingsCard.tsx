@@ -372,6 +372,7 @@ type PerfPeriod = (typeof PERF_PERIODS)[number];
 /**
  * Build a synthetic 24h portfolio value curve from individual holding 24h changes.
  * Returns lightweight-charts compatible data with UTCTimestamps.
+ * Timestamps are snapped to hour boundaries to prevent drift across re-renders.
  */
 function build24hCurve(
   currentTotal: number,
@@ -388,14 +389,17 @@ function build24hCurve(
 
   const points = 24;
   const result: { time: UTCTimestamp; value: number }[] = [];
-  const now = new Date();
+
+  // Snap to the start of the current hour so timestamps stay stable across re-renders
+  const HOUR_S = 3600;
+  const nowS = Math.floor(Date.now() / 1000);
+  const snappedNowS = Math.floor(nowS / HOUR_S) * HOUR_S;
 
   for (let i = 0; i <= points; i++) {
     const t = i / points;
-    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    const value = prevTotal + (currentTotal - prevTotal) * ease;
-    const hourDate = new Date(now.getTime() - (points - i) * 60 * 60 * 1000);
-    result.push({ time: Math.floor(hourDate.getTime() / 1000) as UTCTimestamp, value });
+    const value = prevTotal + (currentTotal - prevTotal) * t;
+    const ts = snappedNowS - (points - i) * HOUR_S;
+    result.push({ time: ts as UTCTimestamp, value });
   }
 
   return result;
@@ -421,9 +425,18 @@ function PortfolioValueChart({
   const has24hData = holdings.some((h) => h.change24hPct != null);
   const canRender = period === "24H" && has24hData && totalValue > 0;
 
+  // Stable key for holdings to avoid re-renders on every poll (reference changes)
+  const holdingsKey = useMemo(
+    () => holdings.map((h) => `${Math.round(h.value)}:${h.change24hPct != null ? Math.round(h.change24hPct * 100) : "n"}`).join(","),
+    [holdings],
+  );
+  // Quantize totalValue to nearest $10 to avoid micro-tick jitter
+  const stableTotal = Math.round(totalValue / 10) * 10;
+
   const chartData = useMemo(
     () => (canRender ? build24hCurve(totalValue, holdings) : []),
-    [canRender, totalValue, holdings],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [canRender, stableTotal, holdingsKey],
   );
 
   const isPositive = change24hUsd >= 0;
@@ -442,6 +455,7 @@ function PortfolioValueChart({
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: isDark ? "#8B8BA0" : "#6B6B80",
         fontSize: 11,
+        attributionLogo: false,
       },
       grid: {
         vertLines: { visible: false },
@@ -512,30 +526,33 @@ function PortfolioValueChart({
     };
   }, []);
 
-  // Update data when chartData or colors change
+  // Update data when chartData or colors change — update in place to avoid flicker
   useEffect(() => {
     if (!chartRef.current || chartData.length === 0) return;
 
-    if (seriesRef.current) {
-      chartRef.current.removeSeries(seriesRef.current);
-      seriesRef.current = null;
+    if (!seriesRef.current) {
+      seriesRef.current = chartRef.current.addSeries(AreaSeries, {
+        lineColor,
+        topColor,
+        bottomColor,
+        lineWidth: 2,
+        crosshairMarkerBackgroundColor: lineColor,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBorderWidth: 2,
+        crosshairMarkerBorderColor: "#FFFFFF",
+        lastValueVisible: false,
+        priceLineVisible: false,
+      });
+    } else {
+      seriesRef.current.applyOptions({
+        lineColor,
+        topColor,
+        bottomColor,
+        crosshairMarkerBackgroundColor: lineColor,
+      });
     }
 
-    const series = chartRef.current.addSeries(AreaSeries, {
-      lineColor,
-      topColor,
-      bottomColor,
-      lineWidth: 2,
-      crosshairMarkerBackgroundColor: lineColor,
-      crosshairMarkerRadius: 4,
-      crosshairMarkerBorderWidth: 2,
-      crosshairMarkerBorderColor: "#FFFFFF",
-      lastValueVisible: false,
-      priceLineVisible: false,
-    });
-
-    series.setData(chartData);
-    seriesRef.current = series;
+    seriesRef.current.setData(chartData);
     chartRef.current.timeScale().fitContent();
   }, [chartData, lineColor, topColor, bottomColor]);
 
@@ -1144,7 +1161,7 @@ export function HoldingsCard() {
       {/* ===== Overview Card ===== */}
       <div
         className={cn(
-          "bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4 sm:space-y-5 transition-all duration-600 ease-out",
+          "bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4 sm:space-y-5 transition-all duration-600 ease-out overflow-hidden",
           reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
         )}
       >
@@ -1176,7 +1193,7 @@ export function HoldingsCard() {
         )}
 
         {/* Holdings donut + Portfolio value chart — CoinGecko-style */}
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5 overflow-hidden">
           {/* Left: Holdings donut */}
           <div
             className={cn(
@@ -1286,7 +1303,7 @@ export function HoldingsCard() {
       {/* ===== Holdings Table Card ===== */}
       <div
         className={cn(
-          "bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4 transition-all duration-600 ease-out",
+          "bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4 transition-all duration-600 ease-out overflow-hidden",
           reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
         )}
         style={{ transitionDelay: "200ms" }}

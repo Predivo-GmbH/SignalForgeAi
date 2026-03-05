@@ -22,7 +22,7 @@ export function PortfolioPage() {
   const showOnboarding = !strategiesLoading && !hasActiveStrategy;
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 max-w-[1600px] mx-auto w-full">
+    <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 max-w-[1600px] mx-auto w-full overflow-x-hidden">
       {/* System health — warns when services are down */}
       <SystemHealthBanner />
 
