@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export interface ServiceStatus {
@@ -32,5 +32,15 @@ export function useSystemStatus() {
     queryKey: ["system", "status"],
     queryFn: () => api.get<SystemStatus>("/system/status"),
     refetchInterval: 30_000,
+  });
+}
+
+export function useRestartWorker() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<{ status: string; detail: string }>("/system/restart"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["system", "status"] });
+    },
   });
 }

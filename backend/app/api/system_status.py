@@ -160,3 +160,21 @@ async def get_system_status(
         pass
 
     return result
+
+
+@router.post("/restart")
+async def restart_worker(
+    _user_id: str = Depends(get_current_user),
+):
+    """Soft-restart the Celery worker pool (cycles worker processes)."""
+    from app.worker import celery_app
+
+    def _restart():
+        celery_app.control.pool_restart(reload=True)
+
+    try:
+        await asyncio.to_thread(_restart)
+        return {"status": "ok", "detail": "Worker pool restart initiated"}
+    except Exception as e:
+        logger.exception("Worker restart failed")
+        return {"status": "error", "detail": str(e)[:200]}

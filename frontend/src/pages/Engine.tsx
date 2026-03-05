@@ -11,16 +11,15 @@ import {
   ChevronLeft,
   ChevronRight,
   FlaskConical,
+  RotateCcw,
+  MinusCircle,
 } from "lucide-react";
-import { useSystemStatus } from "@/hooks/useSystemStatus";
+import { useSystemStatus, useRestartWorker } from "@/hooks/useSystemStatus";
 import { useEngineStatus } from "@/hooks/useEngineStatus";
 import { useRegimeStatus, type RegimeStatus } from "@/hooks/useRegimeStatus";
 import { useSimulation } from "@/hooks/useSimulation";
-import {
-  usePipelineLog,
-  usePipelineSummary,
-  type PipelineLogParams,
-} from "@/hooks/usePipelineLog";
+import { usePipelineLog, usePipelineSummary } from "@/hooks/usePipelineLog";
+import { usePipelineRuns, type PipelineRun } from "@/hooks/usePipelineRuns";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -70,6 +69,23 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
+function formatRunTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const isToday =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (isToday) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return (
+    d.toLocaleDateString([], { month: "short", day: "numeric" }) +
+    " " +
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Page                                                              */
 /* ------------------------------------------------------------------ */
@@ -93,7 +109,7 @@ export function EnginePage() {
 
       <SimulationStatusCard />
       <PipelineSummaryCard />
-      <PipelineLogTable />
+      <PipelineRunList />
     </div>
   );
 }
@@ -104,6 +120,7 @@ export function EnginePage() {
 
 function SystemHealthCard() {
   const { data, isLoading } = useSystemStatus();
+  const restart = useRestartWorker();
 
   if (isLoading) return <SkeletonCard title="System Health" />;
 
@@ -195,6 +212,28 @@ function SystemHealthCard() {
           ))}
         </div>
       )}
+
+      {/* Restart worker button */}
+      <div className="border-t border-[var(--color-border)] pt-3 flex items-center gap-3">
+        <button
+          onClick={() => restart.mutate()}
+          disabled={restart.isPending}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-base)] disabled:opacity-50 transition-colors"
+        >
+          <RotateCcw className={`h-3.5 w-3.5 ${restart.isPending ? "animate-spin" : ""}`} />
+          {restart.isPending ? "Restarting…" : "Restart Worker"}
+        </button>
+        {restart.isSuccess && (
+          <span className="text-xs text-[var(--color-positive)]">
+            Worker restart initiated
+          </span>
+        )}
+        {restart.isError && (
+          <span className="text-xs text-[var(--color-negative)]">
+            Restart failed
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -446,135 +485,246 @@ function PipelineSummaryCard() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Pipeline Decision Log                                             */
+/*  Pipeline Run History                                              */
 /* ------------------------------------------------------------------ */
 
-function PipelineLogTable() {
-  const [params, setParams] = useState<PipelineLogParams>({
-    page: 1,
-    per_page: 25,
-  });
+function PipelineRunList() {
+  const [page, setPage] = useState(1);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
-  const { data, isLoading } = usePipelineLog(params);
-  const items = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / (params.per_page || 25));
+  const { data, isLoading } = usePipelineRuns({ page, per_page: 20 });
+  const runs = data?.runs ?? [];
+  const totalRuns = data?.total_runs ?? 0;
+  const totalPages = Math.ceil(totalRuns / 20);
 
   return (
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-      {/* Header + filters */}
-      <div className="px-5 py-4 border-b border-[var(--color-border)] space-y-3">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-[var(--color-accent)]" />
           <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-            Pipeline Decision History
+            Pipeline Run History
           </h3>
           <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
-            {total} entries
+            {totalRuns} runs
           </span>
         </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          <FilterSelect
-            value={params.symbol || ""}
-            onChange={(v) => setParams((p) => ({ ...p, symbol: v || undefined, page: 1 }))}
-            placeholder="All Symbols"
-            options={[
-              "BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT",
-              "LTC/USDT", "DASH/USDT", "INJ/USDT", "ONT/USDT", "LUNC/USDT",
-              "TAO/USDT", "RENDER/USDT", "XMR/USDT",
-            ]}
-          />
-          <FilterSelect
-            value={params.action || ""}
-            onChange={(v) => setParams((p) => ({ ...p, action: v || undefined, page: 1 }))}
-            placeholder="All Actions"
-            options={["NO_TRADE", "BUY", "SELL"]}
-          />
-          <FilterSelect
-            value={params.block_reason || ""}
-            onChange={(v) => setParams((p) => ({ ...p, block_reason: v || undefined, page: 1 }))}
-            placeholder="All Reasons"
-            options={[
-              "passed", "chaotic_regime", "no_trend", "no_zones", "low_confluence",
-              "no_trigger", "insufficient_candles", "cooldown", "feedback_filter",
-              "confluence_override", "position_filter", "mtf_filter", "dedup",
-              "ai_reject", "error",
-            ]}
-          />
-        </div>
+        <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+          Click a run to see individual symbol decisions
+        </p>
       </div>
 
-      {/* Table */}
+      {/* Run cards */}
+      <div className="divide-y divide-[var(--color-border)]">
+        {isLoading &&
+          Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="px-5 py-3 flex items-center gap-3">
+              <div className="h-4 w-4 rounded-full bg-[var(--color-bg-elevated)] animate-pulse" />
+              <div className="h-3 w-12 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
+              <div className="h-3 w-32 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
+              <div className="ml-auto h-3 w-20 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
+            </div>
+          ))}
+
+        {!isLoading && runs.length === 0 && (
+          <div className="px-5 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+            No pipeline runs found. The pipeline runs every 5 minutes.
+          </div>
+        )}
+
+        {runs.map((run) => (
+          <PipelineRunCard
+            key={run.run_time}
+            run={run}
+            isExpanded={expandedRun === run.run_time}
+            onToggle={() =>
+              setExpandedRun(expandedRun === run.run_time ? null : run.run_time)
+            }
+          />
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]">
+          <span className="text-xs text-[var(--color-text-secondary)]">
+            Page {page} of {totalPages}
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pipeline Run Card                                                 */
+/* ------------------------------------------------------------------ */
+
+function PipelineRunCard({
+  run,
+  isExpanded,
+  onToggle,
+}: {
+  run: PipelineRun;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const StatusIcon = run.has_trades ? CheckCircle2 : MinusCircle;
+  const statusColor = run.has_trades
+    ? "var(--color-positive)"
+    : "var(--color-warning)";
+
+  return (
+    <div>
+      {/* Summary row — always visible */}
+      <button
+        onClick={onToggle}
+        className="w-full px-5 py-3 flex items-center gap-3 hover:bg-[var(--color-bg-elevated)] transition-colors text-left"
+      >
+        {/* Status icon */}
+        <StatusIcon className="h-4 w-4 shrink-0" style={{ color: statusColor }} />
+
+        {/* Timestamp */}
+        <span className="text-xs font-mono text-[var(--color-text-secondary)] whitespace-nowrap w-28 shrink-0">
+          {formatRunTime(run.run_time)}
+        </span>
+
+        {/* Quick summary */}
+        <span className="text-xs text-[var(--color-text-primary)]">
+          {run.passed > 0 ? (
+            <>
+              <span style={{ color: "var(--color-positive)" }}>{run.passed} passed</span>
+              {", "}
+              {run.blocked} blocked
+            </>
+          ) : (
+            `All ${run.total} blocked`
+          )}
+        </span>
+
+        {/* Top block reason badges */}
+        <div className="hidden sm:flex gap-1 ml-auto mr-2">
+          {run.top_block_reasons.slice(0, 2).map((r) => (
+            <span
+              key={r.reason}
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${reasonColor(r.reason)} 12%, transparent)`,
+                color: reasonColor(r.reason),
+              }}
+            >
+              {reasonLabel(r.reason)} ({r.count})
+            </span>
+          ))}
+        </div>
+
+        {/* Chevron */}
+        <ChevronRight
+          className={`h-4 w-4 shrink-0 text-[var(--color-text-secondary)] transition-transform duration-150 ${
+            isExpanded ? "rotate-90" : ""
+          }`}
+        />
+      </button>
+
+      {/* Detail panel — shown when expanded */}
+      {isExpanded && <PipelineRunDetail runTime={run.run_time} />}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pipeline Run Detail (expanded)                                    */
+/* ------------------------------------------------------------------ */
+
+function PipelineRunDetail({ runTime }: { runTime: string }) {
+  const since = runTime;
+  const untilDate = new Date(new Date(runTime).getTime() + 5 * 60 * 1000);
+  const until = untilDate.toISOString();
+
+  const { data, isLoading } = usePipelineLog({ since, until, per_page: 200 });
+  const items = data?.items ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="px-5 py-4 bg-[var(--color-bg-elevated)]">
+        <div className="space-y-2">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="h-3 w-48 rounded bg-[var(--color-bg-surface)] animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="px-5 py-4 bg-[var(--color-bg-elevated)] text-xs text-[var(--color-text-secondary)]">
+        No entries found for this run.
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[var(--color-bg-elevated)] border-t border-[var(--color-border)]">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-[var(--color-bg-elevated)]">
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-                Time
-              </th>
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+            <tr>
+              <th className="px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Symbol
               </th>
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 TF
               </th>
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Action
               </th>
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Result
               </th>
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-right">
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-right">
                 Confluence
               </th>
-              <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Regime
               </th>
             </tr>
           </thead>
           <tbody>
-            {isLoading &&
-              Array.from({ length: 5 }, (_, i) => (
-                <tr key={i} className="border-t border-[var(--color-border)]">
-                  {Array.from({ length: 7 }, (_, j) => (
-                    <td key={j} className="px-4 py-3">
-                      <div className="h-3 w-16 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-
-            {!isLoading && items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
-                  No pipeline decisions found. The pipeline runs every 5 minutes.
-                </td>
-              </tr>
-            )}
-
             {items.map((entry) => (
               <tr
                 key={entry.id}
-                className="border-t border-[var(--color-border)] hover:bg-[var(--color-bg-elevated)] transition-colors"
+                className="border-t border-[var(--color-border)]"
+                style={{
+                  backgroundColor: !entry.block_reason
+                    ? "color-mix(in srgb, var(--color-positive) 6%, transparent)"
+                    : undefined,
+                }}
               >
-                <td className="px-4 py-2.5 text-xs text-[var(--color-text-secondary)] font-mono whitespace-nowrap">
-                  {entry.created_at
-                    ? new Date(entry.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })
-                    : "—"}
-                </td>
-                <td className="px-4 py-2.5 text-xs font-medium text-[var(--color-text-primary)]">
+                <td className="px-5 py-2 text-xs font-medium text-[var(--color-text-primary)]">
                   {entry.symbol}
                 </td>
-                <td className="px-4 py-2.5 text-xs text-[var(--color-text-secondary)]">
+                <td className="px-4 py-2 text-xs text-[var(--color-text-secondary)]">
                   {entry.timeframe}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2">
                   <span
                     className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
                     style={{
@@ -585,7 +735,7 @@ function PipelineLogTable() {
                     {entry.action}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-2">
                   <span
                     className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
                     style={{
@@ -596,10 +746,10 @@ function PipelineLogTable() {
                     {reasonLabel(entry.block_reason)}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-xs font-mono text-right text-[var(--color-text-primary)]">
+                <td className="px-4 py-2 text-xs font-mono text-right text-[var(--color-text-primary)]">
                   {entry.confluence_score ?? "—"}
                 </td>
-                <td className="px-4 py-2.5 text-xs text-[var(--color-text-secondary)] capitalize">
+                <td className="px-4 py-2 text-xs text-[var(--color-text-secondary)] capitalize">
                   {entry.regime?.replace("_", " ") ?? "—"}
                 </td>
               </tr>
@@ -607,31 +757,6 @@ function PipelineLogTable() {
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]">
-          <span className="text-xs text-[var(--color-text-secondary)]">
-            Page {params.page ?? 1} of {totalPages}
-          </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setParams((p) => ({ ...p, page: Math.max(1, (p.page ?? 1) - 1) }))}
-              disabled={(params.page ?? 1) <= 1}
-              className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setParams((p) => ({ ...p, page: Math.min(totalPages, (p.page ?? 1) + 1) }))}
-              disabled={(params.page ?? 1) >= totalPages}
-              className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -653,33 +778,6 @@ function StatBox({ label, value, color }: { label: string; value: string; color?
         {value}
       </p>
     </div>
-  );
-}
-
-function FilterSelect({
-  value,
-  onChange,
-  placeholder,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  options: string[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-xs text-[var(--color-text-primary)] rounded-lg px-2.5 py-1.5 outline-none focus:border-[var(--color-accent)]"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {REASON_LABELS[opt] || opt}
-        </option>
-      ))}
-    </select>
   );
 }
 

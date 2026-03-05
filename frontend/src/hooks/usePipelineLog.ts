@@ -36,6 +36,7 @@ export interface PipelineLogParams {
   block_reason?: string;
   action?: string;
   since?: string;
+  until?: string;
 }
 
 export function usePipelineLog(params: PipelineLogParams = {}) {
@@ -46,6 +47,7 @@ export function usePipelineLog(params: PipelineLogParams = {}) {
   if (params.block_reason) qs.set("block_reason", params.block_reason);
   if (params.action) qs.set("action", params.action);
   if (params.since) qs.set("since", params.since);
+  if (params.until) qs.set("until", params.until);
   const query = qs.toString();
 
   return useQuery({

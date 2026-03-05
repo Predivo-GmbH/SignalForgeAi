@@ -1,11 +1,12 @@
-"""Engine monitor API — pipeline decision log and summary stats."""
+"""Engine monitor API — pipeline decision log, grouped runs, and summary stats."""
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from collections import Counter
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -28,6 +29,7 @@ async def get_pipeline_log(
     block_reason: str | None = Query(None),
     action: str | None = Query(None),
     since: str | None = Query(None),
+    until: str | None = Query(None),
 ):
     """Paginated pipeline decision log for the user's strategies."""
     uid = uuid.UUID(user_id)
@@ -64,6 +66,13 @@ async def get_pipeline_log(
             count_q = count_q.where(PipelineLog.created_at >= since_dt)
         except ValueError:
             pass
+    if until:
+        try:
+            until_dt = datetime.fromisoformat(until)
+            base = base.where(PipelineLog.created_at < until_dt)
+            count_q = count_q.where(PipelineLog.created_at < until_dt)
+        except ValueError:
+            pass
 
     total = (await db.execute(count_q)).scalar() or 0
     offset = (page - 1) * per_page
@@ -93,6 +102,100 @@ async def get_pipeline_log(
         "page": page,
         "per_page": per_page,
     }
+
+
+@router.get("/log/runs")
+async def get_pipeline_runs(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    since: str | None = Query(None),
+):
+    """Pipeline runs grouped into 5-minute buckets with summary stats."""
+    uid = uuid.UUID(user_id)
+
+    strat_result = await db.execute(
+        select(Strategy.id).where(Strategy.user_id == uid)
+    )
+    strategy_ids = [row[0] for row in strat_result.all()]
+    if not strategy_ids:
+        return {"runs": [], "total_runs": 0, "page": page, "per_page": per_page}
+
+    # 5-minute bucket using TimescaleDB time_bucket
+    bucket = func.time_bucket(
+        literal_column("interval '5 minutes'"), PipelineLog.created_at,
+    ).label("run_time")
+
+    base_filter = [PipelineLog.strategy_id.in_(strategy_ids)]
+    if since:
+        try:
+            since_dt = datetime.fromisoformat(since)
+            base_filter.append(PipelineLog.created_at >= since_dt)
+        except ValueError:
+            pass
+
+    # Count total distinct run buckets
+    count_q = select(func.count()).select_from(
+        select(bucket).where(*base_filter).group_by(bucket).subquery()
+    )
+    total_runs = (await db.execute(count_q)).scalar() or 0
+
+    # Get paginated run bucket times
+    bucket_q = (
+        select(bucket)
+        .where(*base_filter)
+        .group_by(bucket)
+        .order_by(bucket.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+    bucket_rows = (await db.execute(bucket_q)).all()
+    run_times = [row[0] for row in bucket_rows]
+
+    if not run_times:
+        return {"runs": [], "total_runs": total_runs, "page": page, "per_page": per_page}
+
+    # Fetch all raw entries for these run buckets
+    raw_q = (
+        select(PipelineLog, bucket)
+        .where(
+            PipelineLog.strategy_id.in_(strategy_ids),
+            bucket.in_(run_times),
+        )
+        .order_by(bucket.desc(), PipelineLog.symbol)
+    )
+    raw_rows = (await db.execute(raw_q)).all()
+
+    # Group by run_time and compute aggregates in Python
+    runs_map: dict[datetime, list] = {}
+    for log_entry, run_time in raw_rows:
+        runs_map.setdefault(run_time, []).append(log_entry)
+
+    runs = []
+    for rt in run_times:
+        entries = runs_map.get(rt, [])
+        passed = sum(1 for e in entries if e.block_reason is None)
+        blocked = sum(1 for e in entries if e.block_reason is not None)
+        symbols = sorted(set(e.symbol for e in entries))
+        reason_counts = Counter(
+            e.block_reason for e in entries if e.block_reason is not None
+        )
+        top_reasons = [
+            {"reason": r, "count": c}
+            for r, c in reason_counts.most_common(3)
+        ]
+        runs.append({
+            "run_time": rt.isoformat() if rt else None,
+            "total": len(entries),
+            "passed": passed,
+            "blocked": blocked,
+            "has_trades": passed > 0,
+            "symbols": symbols,
+            "top_block_reasons": top_reasons,
+        })
+
+    return {"runs": runs, "total_runs": total_runs, "page": page, "per_page": per_page}
 
 
 @router.get("/log/summary")
