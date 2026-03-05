@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { TrendingUp, Target, BarChart3, Activity, DollarSign } from "lucide-react";
 import { useTradeStats } from "@/hooks/useTrades";
 import { pnlColor } from "@/lib/format";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 interface StatCardData {
   label: string;
@@ -68,7 +69,7 @@ export function PerformanceSummary() {
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-(--color-text-primary)">Trading Performance</h3>
+        <Tooltip text="Key trading metrics including win rate, profit factor, and total P&L."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Trading Performance</h3></Tooltip>
         <Link
           to="/analytics"
           className="text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"

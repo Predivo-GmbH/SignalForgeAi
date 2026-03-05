@@ -4,6 +4,7 @@ import { useEquityHistory } from "@/hooks/useAnalytics";
 import { EquityCurve } from "@/components/analytics/EquityCurve";
 import { cn } from "@/lib/cn";
 import { pnlColor } from "@/lib/format";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export function PortfolioEquitySection() {
   const { data, isLoading } = useEquityHistory();
@@ -33,7 +34,7 @@ export function PortfolioEquitySection() {
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-(--color-text-primary)">Equity Curve</h3>
+        <Tooltip text="Historical growth of your trading account over time, showing returns and drawdowns."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Equity Curve</h3></Tooltip>
         <Link
           to="/analytics"
           className="text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"

@@ -238,6 +238,7 @@ const columns: { label: string; align: string }[] = [
   { label: "Entry",       align: "text-right" },
   { label: "Exit",        align: "text-right" },
   { label: "Size",        align: "text-right" },
+  { label: "Total",       align: "text-right" },
   { label: "P&L",         align: "text-right" },
   { label: "P&L %",       align: "text-right" },
   { label: "R:R",         align: "text-right" },
@@ -298,6 +299,9 @@ function TradeRow({ trade }: { trade: Trade }) {
       </td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
         {trade.position_size?.toFixed(4) ?? "--"}
+      </td>
+      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
+        {formatPrice(trade.entry_price * trade.position_size)}
       </td>
       <td className={cn("px-3 py-2.5 text-sm font-mono tabular-nums text-right font-semibold whitespace-nowrap", pnlColor(trade.pnl))}>
         {formatPnl(trade.pnl)}

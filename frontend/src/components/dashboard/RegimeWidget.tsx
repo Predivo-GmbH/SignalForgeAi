@@ -1,4 +1,5 @@
 import { Cpu, Circle, TrendingUp, Shield, AlertTriangle } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useEngineStatus } from "@/hooks/useEngineStatus";
 import { useRegimeStatus, type RegimeStatus } from "@/hooks/useRegimeStatus";
 
@@ -44,8 +45,8 @@ export function RegimeWidget() {
     <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-4">
       <div className="flex items-center gap-2 mb-4">
         <Cpu className="h-4 w-4 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          Engine Status
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
+          Engine Status <Tooltip text="Current state of the trading engine and market regime detected by the HMM model." />
         </h3>
       </div>
 

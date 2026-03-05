@@ -3,6 +3,7 @@ import { ArrowUpRight, ArrowDownRight, Loader2, ArrowUpDown } from "lucide-react
 import { useTrades } from "@/hooks/useTrades";
 import { cn } from "@/lib/cn";
 import { pnlColor } from "@/lib/format";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -40,7 +41,7 @@ export function RecentTradesCard() {
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3 flex-1">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-(--color-text-primary)">Recent Trades</h3>
+        <Tooltip text="The latest trades executed by your active strategies."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Recent Trades</h3></Tooltip>
         <Link
           to="/trades"
           className="text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"

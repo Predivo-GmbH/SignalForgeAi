@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   FlaskConical,
   Play,
@@ -35,9 +36,9 @@ export function SimulationCard() {
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-            Paper Test
-          </h3>
+          <Tooltip text="Compares Buy & Hold vs SignalForge performance using your real portfolio with simulated trades.">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
+          </Tooltip>
         </div>
         <p className="text-xs text-[var(--color-text-secondary)]">
           Compare SignalForge&apos;s active trading against buy &amp; hold using
@@ -87,9 +88,9 @@ export function SimulationCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-            Paper Test
-          </h3>
+          <Tooltip text="Compares Buy & Hold vs SignalForge performance using your real portfolio with simulated trades.">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
+          </Tooltip>
         </div>
         {running && (
           <div className="flex items-center gap-1.5">

@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Loader2, AlertTriangle, CheckCircle } from "l
 import { useAccountState, useDrawdownState } from "@/hooks/usePositions";
 import { cn } from "@/lib/cn";
 import { pnlColor } from "@/lib/format";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 const LEVEL_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
   0: { label: "Normal", color: "text-(--color-positive)", bg: "bg-(--color-positive)/10" },
@@ -38,9 +39,11 @@ export function AccountHero() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Left: Equity + Daily PnL + Positions */}
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Account Equity
-          </p>
+          <Tooltip text="Your trading account balance tracked by the SignalForge engine, including daily P&L from automated trades.">
+            <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">
+              Account Equity
+            </p>
+          </Tooltip>
           <p className="text-3xl font-bold font-mono text-(--color-text-primary)">
             ${equity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
@@ -59,9 +62,11 @@ export function AccountHero() {
               </span>
               <span className="text-xs text-(--color-text-secondary)">today</span>
             </div>
-            <span className="text-xs text-(--color-text-secondary)">
-              {openCount} / {maxPositions} positions
-            </span>
+            <Tooltip text="Number of currently open trading positions out of the maximum allowed by your risk settings.">
+              <span className="text-xs text-(--color-text-secondary) cursor-help">
+                {openCount} / {maxPositions} positions
+              </span>
+            </Tooltip>
           </div>
         </div>
 

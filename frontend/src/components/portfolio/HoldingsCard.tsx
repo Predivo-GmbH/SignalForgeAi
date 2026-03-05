@@ -36,6 +36,7 @@ import {
 import type { HoldingItem, ManualHoldingRequest } from "@/hooks/useHoldings";
 import { useBrokerConnections } from "@/hooks/useBrokerConnections";
 import { AssetDetailModal } from "./AssetDetailModal";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 /* ---- Constants ---- */
 
@@ -356,14 +357,14 @@ function PortfolioOverviewHeader({
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {/* Current Balance */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Current Balance</p>
+        <Tooltip text="The total USD value of all your crypto holdings right now."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">Current Balance</p></Tooltip>
         <p className="text-base sm:text-lg font-bold font-mono text-(--color-text-primary)">{fmtUsd(totalValue)}</p>
         <p className="text-xs text-(--color-text-secondary)">{combined.length} asset{combined.length !== 1 ? "s" : ""}</p>
       </div>
 
       {/* 24h Change */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">24h Portfolio Change</p>
+        <Tooltip text="How much your total portfolio value changed in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">24h Portfolio Change</p></Tooltip>
         <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(change24hUsd))}>
           {change24hUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))}
         </p>
@@ -381,7 +382,7 @@ function PortfolioOverviewHeader({
 
       {/* Total P/L */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Total Profit / Loss</p>
+        <Tooltip text="Cumulative profit or loss based on your cost basis vs current market value."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">Total Profit / Loss</p></Tooltip>
         {hasCostBasis ? (
           <>
             <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(totalPnlUsd))}>
@@ -414,7 +415,7 @@ function PortfolioOverviewHeader({
           topPerformer && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
         )}
       >
-        <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Top Performer 24h</p>
+        <Tooltip text="The asset with the highest dollar gain in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">Top Performer 24h</p></Tooltip>
         {topPerformer ? (
           <>
             <div className="flex items-center gap-2">
@@ -1512,7 +1513,7 @@ export function HoldingsCard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-(--color-accent)" />
-            <h3 className="text-sm font-semibold text-(--color-text-primary)">Crypto Holdings</h3>
+            <Tooltip text="Your complete crypto portfolio aggregated from all connected exchanges and manual entries."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Crypto Holdings</h3></Tooltip>
           </div>
           <button
             onClick={() => setShowForm(true)}
@@ -1555,7 +1556,7 @@ export function HoldingsCard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-(--color-accent)" />
-            <h3 className="text-sm font-semibold text-(--color-text-primary)">Portfolio Overview</h3>
+            <Tooltip text="Allocation breakdown showing how your portfolio is distributed across assets."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Portfolio Overview</h3></Tooltip>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {[...new Set(allHoldings.map((h) => h.source))].map((s) => (
@@ -1696,7 +1697,7 @@ export function HoldingsCard() {
       >
         {/* Table header with controls */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <h3 className="text-sm font-semibold text-(--color-text-primary)">All Assets</h3>
+          <Tooltip text="Detailed list of every asset you hold with live prices, 24h changes, and P&L."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">All Assets</h3></Tooltip>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {/* Search */}

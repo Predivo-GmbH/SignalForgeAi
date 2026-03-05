@@ -3,6 +3,7 @@ import { Target, Loader2, Zap } from "lucide-react";
 import { useStrategies } from "@/hooks/useStrategies";
 import { useEngineStatus } from "@/hooks/useEngineStatus";
 import { cn } from "@/lib/cn";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export function ActiveStrategyCard() {
   const { data: strategiesData, isLoading: strategiesLoading } = useStrategies();
@@ -35,7 +36,7 @@ export function ActiveStrategyCard() {
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-(--color-text-primary)">Active Strategy</h3>
+        <Tooltip text="The currently running trading strategy and its real-time performance."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Active Strategy</h3></Tooltip>
         <Link
           to="/strategies"
           className="text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
