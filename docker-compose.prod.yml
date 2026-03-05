@@ -90,7 +90,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    command: celery -A app.worker.celery_app beat --loglevel=info
+    command: celery -A app.worker.celery_app beat --loglevel=info -s /tmp/celerybeat-schedule
     env_file:
       - backend/.env.prod
     depends_on:
