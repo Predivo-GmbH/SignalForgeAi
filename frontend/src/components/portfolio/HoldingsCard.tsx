@@ -734,11 +734,9 @@ function PortfolioValueChart({
             {isPositive ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))} ({isPositive ? "+" : ""}{change24hPct.toFixed(2)}%)
           </span>
         </div>
-        {hoverValue && (
-          <p className="text-[11px] font-mono text-(--color-text-secondary)">
-            {hoverValue.date}, {hoverValue.time}
-          </p>
-        )}
+        <p className={cn("text-[11px] font-mono text-(--color-text-secondary) h-4", !hoverValue && "invisible")}>
+          {hoverValue ? `${hoverValue.date}, ${hoverValue.time}` : "\u00A0"}
+        </p>
       </div>
 
       {/* Chart — always render container so ref is available */}
