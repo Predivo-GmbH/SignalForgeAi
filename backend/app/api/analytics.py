@@ -3,13 +3,14 @@
 import uuid
 
 import numpy as np
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.strategy import Strategy
 from app.models.trade import Trade
 
@@ -90,7 +91,9 @@ def compute_correlation(prices_a: list[float], prices_b: list[float]) -> float:
 # ---------------------------------------------------------------------------
 
 @router.get("/analytics/equity", response_model=EquityCurveResponse)
+@limiter.limit("60/minute")
 async def get_equity_curve(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=500, le=2000),
@@ -164,7 +167,9 @@ async def get_equity_curve(
 
 
 @router.get("/analytics/compare", response_model=StrategyComparisonResponse)
+@limiter.limit("60/minute")
 async def compare_strategies(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -279,7 +284,9 @@ async def compare_strategies(
 
 
 @router.get("/analytics/correlation", response_model=CorrelationResponse)
+@limiter.limit("60/minute")
 async def get_correlation(
+    request: Request,
     symbol_a: str = Query(..., description="First symbol"),
     symbol_b: str = Query(..., description="Second symbol"),
     _user_id: str = Depends(get_current_user),
