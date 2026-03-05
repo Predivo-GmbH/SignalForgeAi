@@ -251,17 +251,24 @@ async def compare_strategies(
             active_signals=active_signals,
         ))
 
-    # Determine best performers
+    # Determine best performers — only award when the metric is positive.
+    # A strategy with negative returns or <50% win rate shouldn't get a trophy.
     with_trades = [m for m in metrics_list if m.total_trades > 0]
-    best_return = (
-        max(with_trades, key=lambda m: m.total_return_pct).strategy_name
-        if with_trades else None
-    )
+
+    best_return = None
+    profitable = [m for m in with_trades if m.total_return_pct > 0]
+    if profitable:
+        best_return = max(profitable, key=lambda m: m.total_return_pct).strategy_name
+
     best_sharpe = None
-    sharpe_candidates = [m for m in with_trades if m.sharpe_ratio is not None]
-    if sharpe_candidates:
-        best_sharpe = max(sharpe_candidates, key=lambda m: m.sharpe_ratio).strategy_name
-    best_wr = max(with_trades, key=lambda m: m.win_rate).strategy_name if with_trades else None
+    sharpe_pos = [m for m in with_trades if m.sharpe_ratio is not None and m.sharpe_ratio > 0]
+    if sharpe_pos:
+        best_sharpe = max(sharpe_pos, key=lambda m: m.sharpe_ratio).strategy_name
+
+    best_wr = None
+    wr_good = [m for m in with_trades if m.win_rate > 50]
+    if wr_good:
+        best_wr = max(wr_good, key=lambda m: m.win_rate).strategy_name
 
     return StrategyComparisonResponse(
         strategies=metrics_list,

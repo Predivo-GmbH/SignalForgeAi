@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
@@ -29,20 +30,72 @@ export interface SystemStatus {
   issues: string[];
 }
 
+/**
+ * System status query with support for rapid polling after a restart.
+ * Normal interval: 30s.  During restart monitoring: 3s for up to 30s.
+ */
 export function useSystemStatus() {
-  return useQuery({
+  const [rapidPoll, setRapidPoll] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const query = useQuery({
     queryKey: ["system", "status"],
     queryFn: () => api.get<SystemStatus>("/system/status"),
-    refetchInterval: 30_000,
+    refetchInterval: rapidPoll ? 3_000 : 30_000,
   });
+
+  const startRapidPoll = useCallback(() => {
+    setRapidPoll(true);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setRapidPoll(false), 30_000);
+  }, []);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  return { ...query, rapidPoll, startRapidPoll };
 }
+
+export type RestartPhase = "idle" | "requesting" | "restarting" | "recovered" | "failed";
 
 export function useRestartWorker() {
   const qc = useQueryClient();
-  return useMutation({
+  const [phase, setPhase] = useState<RestartPhase>("idle");
+  const [statusBefore, setStatusBefore] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const mutation = useMutation({
     mutationFn: () => api.post<{ status: string; detail: string }>("/system/restart"),
+    onMutate: () => {
+      setPhase("requesting");
+    },
     onSuccess: () => {
+      setPhase("restarting");
       qc.invalidateQueries({ queryKey: ["system", "status"] });
+      // Auto-reset to idle after 30s if we don't detect recovery
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setPhase("idle"), 30_000);
+    },
+    onError: () => {
+      setPhase("failed");
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setPhase("idle"), 5_000);
     },
   });
+
+  const markRecovered = useCallback(() => {
+    setPhase("recovered");
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setPhase("idle"), 5_000);
+  }, []);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  return {
+    mutate: mutation.mutate,
+    phase,
+    setStatusBefore,
+    statusBefore,
+    markRecovered,
+    isPending: mutation.isPending,
+  };
 }

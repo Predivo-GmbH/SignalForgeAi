@@ -489,33 +489,28 @@ function SourceBreakdown({
 
   const totalCount = bySource.reduce((sum, s) => sum + s.count, 0);
   const isAllActive = activeSource === null;
-  // +1 for the "All" card
-  const cols = Math.min(bySource.length + 1, 7);
 
   return (
-    <div
-      className="grid gap-3"
-      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-    >
+    <div className="flex gap-2 overflow-x-auto">
       {/* "All" card — always first, selected by default */}
       <button
         onClick={() => { if (!isAllActive && activeSource) onSourceClick(activeSource); }}
         className={cn(
-          "rounded-lg px-4 py-3 text-left transition-all duration-150 space-y-1",
+          "flex-1 min-w-0 rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
           "hover:-translate-y-0.5",
           isAllActive
             ? "bg-(--color-accent)/10 ring-2 ring-(--color-accent)/40 ring-offset-1 ring-offset-(--color-bg-surface)"
             : "bg-(--color-bg-elevated)/50 opacity-50",
         )}
       >
-        <div className="flex items-center gap-2">
-          <ExchangeLogo source="all" size={18} />
+        <div className="flex items-center gap-1.5">
+          <ExchangeLogo source="all" size={16} />
           <span className="text-xs font-semibold text-(--color-text-primary)">All</span>
         </div>
         <p className="text-sm font-bold font-mono text-(--color-text-primary)">
           {fmtCompact(totalValue)}
         </p>
-        <p className="text-[10px] font-mono text-(--color-text-secondary)">
+        <p className="text-[10px] font-mono text-(--color-text-secondary) truncate">
           {totalCount} asset{totalCount !== 1 ? "s" : ""} · 100%
         </p>
       </button>
@@ -529,7 +524,7 @@ function SourceBreakdown({
             key={s.source}
             onClick={() => onSourceClick(s.source)}
             className={cn(
-              "rounded-lg px-4 py-3 text-left transition-all duration-150 space-y-1",
+              "flex-1 min-w-0 rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
               "hover:-translate-y-0.5",
               isActive
                 ? "ring-2 ring-offset-1 ring-offset-(--color-bg-surface)"
@@ -538,16 +533,16 @@ function SourceBreakdown({
             )}
             style={isActive ? { backgroundColor: `${color}15`, boxShadow: `0 0 0 2px ${color}50` } : undefined}
           >
-            <div className="flex items-center gap-2">
-              <ExchangeLogo source={s.source} size={18} />
-              <span className="text-xs font-semibold text-(--color-text-primary)">
+            <div className="flex items-center gap-1.5">
+              <ExchangeLogo source={s.source} size={16} />
+              <span className="text-xs font-semibold text-(--color-text-primary) truncate">
                 {style?.label ?? s.source}
               </span>
             </div>
             <p className="text-sm font-bold font-mono text-(--color-text-primary)">
               {fmtCompact(s.value)}
             </p>
-            <p className="text-[10px] font-mono text-(--color-text-secondary)">
+            <p className="text-[10px] font-mono text-(--color-text-secondary) truncate">
               {s.count} asset{s.count !== 1 ? "s" : ""} · {s.pct.toFixed(1)}%
             </p>
           </button>

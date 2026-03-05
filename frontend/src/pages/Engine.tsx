@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Activity,
   Cpu,
@@ -14,7 +14,7 @@ import {
   RotateCcw,
   MinusCircle,
 } from "lucide-react";
-import { useSystemStatus, useRestartWorker } from "@/hooks/useSystemStatus";
+import { useSystemStatus, useRestartWorker, type RestartPhase } from "@/hooks/useSystemStatus";
 import { useEngineStatus } from "@/hooks/useEngineStatus";
 import { useRegimeStatus, type RegimeStatus } from "@/hooks/useRegimeStatus";
 import { useSimulation } from "@/hooks/useSimulation";
@@ -158,8 +158,28 @@ export function EnginePage() {
 /* ------------------------------------------------------------------ */
 
 function SystemHealthCard() {
-  const { data, isLoading } = useSystemStatus();
+  const { data, isLoading, rapidPoll, startRapidPoll } = useSystemStatus();
   const restart = useRestartWorker();
+  const prevWorkerStatus = useRef<string | null>(null);
+
+  // Detect worker recovery during rapid polling
+  useEffect(() => {
+    if (restart.phase !== "restarting") return;
+    const workerNow = data?.services?.worker?.status;
+    if (!workerNow) return;
+
+    // Worker went down then came back, or stayed ok throughout
+    if (workerNow === "ok" && prevWorkerStatus.current && prevWorkerStatus.current !== "ok") {
+      restart.markRecovered();
+    }
+    prevWorkerStatus.current = workerNow;
+  }, [data?.services?.worker?.status, restart.phase, restart.markRecovered]);
+
+  const handleRestart = () => {
+    prevWorkerStatus.current = data?.services?.worker?.status ?? null;
+    restart.mutate();
+    startRapidPoll();
+  };
 
   if (isLoading) return <SkeletonCard title="System Health" />;
 
@@ -182,6 +202,12 @@ function SystemHealthCard() {
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
           System Health
         </h3>
+        {rapidPoll && (
+          <span className="ml-auto flex items-center gap-1.5 text-[10px] text-[var(--color-accent)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
+            Live monitoring
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -202,23 +228,26 @@ function SystemHealthCard() {
           {(["database", "redis", "worker", "beat"] as const).map((svc) => {
             const s = services[svc];
             const ok = s.status === "ok";
+            const isRestarting = restart.phase === "restarting" && svc === "worker";
             return (
               <div key={svc} className="flex items-center gap-2 bg-[var(--color-bg-elevated)] rounded-lg px-3 py-2">
                 <div
-                  className="h-2 w-2 rounded-full shrink-0"
+                  className={`h-2 w-2 rounded-full shrink-0 ${isRestarting ? "animate-pulse" : ""}`}
                   style={{
-                    backgroundColor: ok
-                      ? "var(--color-positive)"
-                      : s.status === "stale"
-                        ? "var(--color-warning)"
-                        : "var(--color-negative)",
+                    backgroundColor: isRestarting
+                      ? "var(--color-accent)"
+                      : ok
+                        ? "var(--color-positive)"
+                        : s.status === "stale"
+                          ? "var(--color-warning)"
+                          : "var(--color-negative)",
                   }}
                 />
                 <span className="text-xs font-medium text-[var(--color-text-primary)] capitalize">
                   {svc}
                 </span>
                 <span className="ml-auto text-[10px] text-[var(--color-text-secondary)]">
-                  {s.status}
+                  {isRestarting ? "restarting…" : s.status}
                 </span>
               </div>
             );
@@ -256,27 +285,44 @@ function SystemHealthCard() {
         </div>
       )}
 
-      {/* Restart worker button */}
-      <div className="border-t border-[var(--color-border)] pt-3 flex items-center gap-3">
-        <button
-          onClick={() => restart.mutate()}
-          disabled={restart.isPending}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-base)] disabled:opacity-50 transition-colors"
-        >
-          <RotateCcw className={`h-3.5 w-3.5 ${restart.isPending ? "animate-spin" : ""}`} />
-          {restart.isPending ? "Restarting…" : "Restart Worker"}
-        </button>
-        {restart.isSuccess && (
-          <span className="text-xs text-[var(--color-positive)]">
-            Worker restart initiated
-          </span>
-        )}
-        {restart.isError && (
-          <span className="text-xs text-[var(--color-negative)]">
-            Restart failed
-          </span>
-        )}
+      {/* Restart worker */}
+      <div className="border-t border-[var(--color-border)] pt-3">
+        <RestartButton phase={restart.phase} onRestart={handleRestart} />
       </div>
+    </div>
+  );
+}
+
+function RestartButton({ phase, onRestart }: { phase: RestartPhase; onRestart: () => void }) {
+  const config: Record<RestartPhase, { label: string; color: string; spin: boolean; disabled: boolean }> = {
+    idle:       { label: "Restart Worker", color: "var(--color-text-secondary)", spin: false, disabled: false },
+    requesting: { label: "Sending restart…", color: "var(--color-accent)", spin: true, disabled: true },
+    restarting: { label: "Worker restarting…", color: "var(--color-accent)", spin: true, disabled: true },
+    recovered:  { label: "Worker recovered", color: "var(--color-positive)", spin: false, disabled: true },
+    failed:     { label: "Restart failed", color: "var(--color-negative)", spin: false, disabled: true },
+  };
+  const c = config[phase];
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={onRestart}
+        disabled={c.disabled}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-xs font-medium hover:bg-[var(--color-bg-base)] disabled:opacity-60 transition-colors"
+        style={{ color: c.color }}
+      >
+        {phase === "recovered" ? (
+          <CheckCircle2 className="h-3.5 w-3.5" />
+        ) : (
+          <RotateCcw className={`h-3.5 w-3.5 ${c.spin ? "animate-spin" : ""}`} />
+        )}
+        {c.label}
+      </button>
+      {phase === "restarting" && (
+        <span className="text-[10px] text-[var(--color-text-secondary)]">
+          Polling every 3s…
+        </span>
+      )}
     </div>
   );
 }
