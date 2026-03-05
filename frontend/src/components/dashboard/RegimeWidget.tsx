@@ -45,9 +45,9 @@ export function RegimeWidget() {
     <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-4">
       <div className="flex items-center gap-2 mb-4">
         <Cpu className="h-4 w-4 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-          Engine Status <Tooltip text="Current state of the trading engine and market regime detected by the HMM model." />
-        </h3>
+        <Tooltip text="Current state of the trading engine and market regime detected by the HMM model.">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Engine Status</h3>
+        </Tooltip>
       </div>
 
       <div className="flex items-center gap-2 mb-4">

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -356,9 +357,9 @@ export function TradesPage() {
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-(--color-text-primary)">
-          Trades
-        </h1>
+        <Tooltip text="Complete history of all trades executed by the system with detailed metrics.">
+          <h1 className="text-2xl font-bold text-(--color-text-primary) cursor-help">Trades</h1>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-1">
           Execution log and performance metrics
         </p>

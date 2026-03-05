@@ -133,9 +133,9 @@ export function EnginePage() {
   return (
     <div className="max-w-[1200px] mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
-          Engine Monitor
-        </h1>
+        <Tooltip text="Real-time status of the trading engine, signal pipeline, and background workers.">
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)] cursor-help">Engine Monitor</h1>
+        </Tooltip>
         <p className="text-sm text-[var(--color-text-secondary)] mt-1">
           System health, pipeline decisions, and simulation status — updated every 5 minutes
         </p>
@@ -199,9 +199,9 @@ function SystemHealthCard() {
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Activity className="h-5 w-5 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          System Health
-        </h3>
+        <Tooltip text="Live status of all backend services — database, Redis, worker, and scheduler.">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">System Health</h3>
+        </Tooltip>
         {rapidPoll && (
           <span className="ml-auto flex items-center gap-1.5 text-[10px] text-[var(--color-accent)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
@@ -351,9 +351,11 @@ function EngineStatusCard() {
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Cpu className="h-5 w-5 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          Engine Status
-        </h3>
+        <Tooltip text="Current state of the trading engine and whether it's actively processing signals.">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+            Engine Status
+          </h3>
+        </Tooltip>
       </div>
 
       <div className="flex items-center gap-2">
@@ -442,9 +444,11 @@ function SimulationStatusCard() {
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5">
         <div className="flex items-center gap-2 mb-2">
           <FlaskConical className="h-5 w-5 text-[var(--color-accent)]" />
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-            Paper Simulation
-          </h3>
+          <Tooltip text="Buy & Hold vs SignalForge comparison running on your real portfolio data.">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+              Paper Simulation
+            </h3>
+          </Tooltip>
         </div>
         <p className="text-sm text-[var(--color-text-secondary)]">
           No simulation running. Start one from the Portfolio page.
@@ -462,9 +466,11 @@ function SimulationStatusCard() {
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
         <FlaskConical className="h-5 w-5 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          Paper Simulation
-        </h3>
+        <Tooltip text="Buy & Hold vs SignalForge comparison running on your real portfolio data.">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+            Paper Simulation
+          </h3>
+        </Tooltip>
         <span
           className="ml-auto flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
           style={{
@@ -518,9 +524,11 @@ function PipelineSummaryCard() {
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Activity className="h-5 w-5 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          Pipeline Summary (Today)
-        </h3>
+        <Tooltip text="Overview of today's signal pipeline runs — how many symbols were evaluated and passed.">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+            Pipeline Summary (Today)
+          </h3>
+        </Tooltip>
         {data?.last_run_at && (
           <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
             Last run: {timeAgo(data.last_run_at)}
@@ -596,9 +604,11 @@ function PipelineRunList() {
       <div className="px-5 py-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-[var(--color-accent)]" />
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-            Pipeline Run History
-          </h3>
+          <Tooltip text="Log of recent pipeline executions with timestamps and results.">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+              Pipeline Run History
+            </h3>
+          </Tooltip>
           <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
             {totalRuns} runs
           </span>

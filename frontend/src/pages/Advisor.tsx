@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Search,
@@ -674,7 +675,9 @@ export function AdvisorPage() {
     <div className="p-6 max-w-[1400px] mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-(--color-text-primary)">AI Investment Advisor</h1>
+        <Tooltip text="AI-powered market scanner that analyzes coins and recommends optimal strategy parameters.">
+          <h1 className="text-2xl font-bold text-(--color-text-primary) cursor-help">AI Investment Advisor</h1>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-1">
           Scan the crypto market, get AI-powered recommendations, and deploy automated paper trading
         </p>

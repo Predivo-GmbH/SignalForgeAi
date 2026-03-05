@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   Trash2,
   Power,
@@ -339,9 +340,9 @@ export function StrategiesPage() {
     <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-(--color-text-primary)">
-          Strategies
-        </h1>
+        <Tooltip text="All configured trading strategies with their parameters and activation status.">
+          <h1 className="text-2xl font-bold text-(--color-text-primary) cursor-help">Strategies</h1>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-1">
           Monitor and manage your active trading strategies
         </p>

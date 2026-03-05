@@ -176,9 +176,9 @@ export function AnalyticsPage() {
     <div className="max-w-[1200px] mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-(--color-text-primary)">
-          Analytics
-        </h1>
+        <Tooltip text="Performance metrics and comparison across all your trading strategies.">
+          <h1 className="text-2xl font-bold text-(--color-text-primary) cursor-help">Analytics</h1>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-1">
           Portfolio performance, risk metrics, and strategy comparison
         </p>

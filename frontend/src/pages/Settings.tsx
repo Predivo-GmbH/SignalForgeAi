@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   Shield,
   ExternalLink,
@@ -1053,9 +1054,9 @@ export function SettingsPage() {
   return (
     <div className="p-6 space-y-6 max-w-[900px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-(--color-text-primary)">
-          Settings
-        </h1>
+        <Tooltip text="Account settings, broker connections, alert preferences, and two-factor authentication.">
+          <h1 className="text-2xl font-bold text-(--color-text-primary) cursor-help">Settings</h1>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-1">
           Manage broker connections, notifications, and AI usage
         </p>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Briefcase, X } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { formatPrice } from "@/lib/format";
 import type { Position } from "@/hooks/usePositions";
 import { useClosePosition } from "@/hooks/usePositions";
@@ -76,9 +77,9 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
     <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border)]">
         <Briefcase className="h-4 w-4 text-[var(--color-accent)]" />
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          Open Positions
-        </h3>
+        <Tooltip text="Currently active trading positions managed by the engine with live P&L.">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Open Positions</h3>
+        </Tooltip>
         {!loading && (
           <span className="ml-auto text-xs font-mono text-[var(--color-text-secondary)]">
             {openPositions.length} open

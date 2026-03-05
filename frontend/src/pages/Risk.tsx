@@ -421,7 +421,9 @@ export function RiskPage() {
     <div className="max-w-[1200px] mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-(--color-text-primary)">Risk Management</h1>
+        <Tooltip text="Monitor and control portfolio risk with drawdown breakers, CPPI, and correlation limits.">
+          <h1 className="text-2xl font-bold text-(--color-text-primary) cursor-help">Risk Management</h1>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-1">
           Portfolio protection, drawdown monitoring, and correlation analysis
         </p>
