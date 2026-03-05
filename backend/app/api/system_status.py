@@ -133,7 +133,34 @@ async def get_system_status(
     except Exception as e:
         result["services"]["beat"] = {"status": "unknown", "detail": str(e)[:100]}
 
-    # --- 5. Signal pipeline freshness ---
+    # --- 5. Pipeline run freshness (from PipelineLog) ---
+    # PipelineLog tracks ALL evaluations, including blocked ones.
+    # This shows when the pipeline last ran, regardless of whether
+    # any signals passed.
+    try:
+        from app.models.pipeline_log import PipelineLog
+
+        last_eval_row = await db.execute(
+            select(func.max(PipelineLog.created_at))
+        )
+        last_eval_time = last_eval_row.scalar()
+
+        if last_eval_time:
+            if last_eval_time.tzinfo is None:
+                last_eval_time = last_eval_time.replace(tzinfo=timezone.utc)
+            eval_age = (now - last_eval_time).total_seconds()
+            result["data"]["last_pipeline_run_at"] = last_eval_time.isoformat()
+            result["data"]["pipeline_age_seconds"] = round(eval_age)
+            # Pipeline runs every 5min. Fresh if under 10min.
+            result["data"]["pipeline_fresh"] = eval_age < 600
+        else:
+            result["data"]["last_pipeline_run_at"] = None
+            result["data"]["pipeline_age_seconds"] = None
+            result["data"]["pipeline_fresh"] = result["data"]["candles_fresh"]
+    except Exception:
+        pass
+
+    # --- 6. Signal freshness (actionable signals only) ---
     try:
         from app.models.signal import Signal
 
@@ -148,14 +175,6 @@ async def get_system_status(
             sig_age = (now - last_signal_time).total_seconds()
             result["data"]["last_signal_at"] = last_signal_time.isoformat()
             result["data"]["signal_age_seconds"] = round(sig_age)
-            # Pipeline runs every 5min. If no signal in 30min that's fine —
-            # market conditions may not produce signals. We only flag if
-            # candles are fresh but no signals ever existed.
-            result["data"]["pipeline_fresh"] = True
-        else:
-            result["data"]["pipeline_fresh"] = result["data"]["candles_fresh"]
-            # No signals ever is OK if the system just started or market
-            # conditions don't produce signals — don't flag as issue.
     except Exception:
         pass
 

@@ -21,6 +21,8 @@ export interface SystemStatus {
     last_candle_at: string | null;
     candle_age_seconds: number | null;
     pipeline_fresh: boolean;
+    last_pipeline_run_at: string | null;
+    pipeline_age_seconds: number | null;
     last_signal_at: string | null;
     signal_age_seconds: number | null;
   };

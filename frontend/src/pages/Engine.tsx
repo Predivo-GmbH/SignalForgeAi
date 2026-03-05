@@ -20,6 +20,7 @@ import { useRegimeStatus, type RegimeStatus } from "@/hooks/useRegimeStatus";
 import { useSimulation } from "@/hooks/useSimulation";
 import { usePipelineLog, usePipelineSummary } from "@/hooks/usePipelineLog";
 import { usePipelineRuns, type PipelineRun } from "@/hooks/usePipelineRuns";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -43,9 +44,47 @@ const REASON_LABELS: Record<string, string> = {
   error: "Pipeline Error",
 };
 
+const REASON_DESCRIPTIONS: Record<string, string> = {
+  chaotic_regime:
+    "The market regime detector classified conditions as chaotic (high ADX + high ATR). Trading is blocked to avoid unpredictable price action.",
+  no_trend:
+    "The multi-timeframe trend filter found no clear directional trend. The system requires EMA alignment, ADX confirmation, or Ichimoku support before considering a trade.",
+  no_zones:
+    "No valid entry zones were identified. The zone identifier looks for Fibonacci retracements, support/resistance levels, and VWAP zones to define optimal entry areas.",
+  low_confluence:
+    "The confluence score (0–100) fell below the strategy's minimum threshold. The scorer combines 9 weighted technical factors — the signal didn't meet enough criteria.",
+  no_trigger:
+    "No entry trigger fired. The trigger detector requires at least 2 confirmations from 5 trigger types (e.g., candlestick patterns, momentum crossovers, zone bounces).",
+  insufficient_candles:
+    "Not enough historical candle data is available (requires at least 100 candles). This typically happens when a new symbol is added or the timeframe has limited history.",
+  risk_rejected:
+    "The risk manager rejected this trade. Possible causes: position size exceeded max risk per trade, ATR-based stop loss was too wide, or Kelly criterion sizing was unfavorable.",
+  feedback_filter:
+    "The self-learning feedback filter blocked this signal based on learned patterns from past trades. FeedbackRules are generated nightly by analyzing trade outcomes.",
+  confluence_override:
+    "The learned confluence threshold (from the feedback system) is higher than the signal's score. Past trades showed that signals below this threshold tend to lose.",
+  cooldown:
+    "A cooldown period is active for this symbol. After closing a position, the system waits a configurable number of hours before allowing re-entry to avoid overtrading.",
+  position_filter:
+    "Blocked by the position-aware safety filter. For BUY: an open position already exists for this symbol. For SELL: no open position exists to close.",
+  mtf_filter:
+    "Multi-timeframe conflict detected. A BUY was blocked because the higher timeframe is bearish, or a SELL was blocked because the higher timeframe is bullish.",
+  dedup:
+    "An identical pending signal already exists for this symbol, timeframe, and direction. Duplicate signals are skipped to prevent double entries.",
+  ai_reject:
+    "Claude AI analyzed this signal and recommended rejection. The AI quality gate scores signals 0–100 and provides a recommendation based on market context analysis.",
+  error:
+    "An unexpected error occurred during pipeline evaluation for this symbol. Check the API logs for details.",
+};
+
 function reasonLabel(reason: string | null): string {
   if (!reason) return "Passed";
   return REASON_LABELS[reason] || reason;
+}
+
+function reasonDescription(reason: string | null): string {
+  if (!reason) return "This signal passed all pipeline gates and was accepted for execution.";
+  return REASON_DESCRIPTIONS[reason] || `Blocked by: ${reason}`;
 }
 
 function reasonColor(reason: string | null): string {
@@ -195,7 +234,11 @@ function SystemHealthCard() {
             <span className="font-mono">{timeAgo(data.data.last_candle_at)}</span>
           </div>
           <div className="flex justify-between text-xs text-[var(--color-text-secondary)]">
-            <span>Last signal</span>
+            <span>Last pipeline run</span>
+            <span className="font-mono">{timeAgo(data.data.last_pipeline_run_at ?? null)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-[var(--color-text-secondary)]">
+            <span>Last signal passed</span>
             <span className="font-mono">{timeAgo(data.data.last_signal_at)}</span>
           </div>
         </div>
@@ -457,7 +500,11 @@ function PipelineSummaryCard() {
             {Object.entries(reasons).map(([reason, count]) => (
               <div key={reason}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[var(--color-text-secondary)]">{reasonLabel(reason)}</span>
+                  <Tooltip text={reasonDescription(reason)}>
+                    <span className="text-[var(--color-text-secondary)] cursor-help border-b border-dotted border-[var(--color-text-secondary)]/30">
+                      {reasonLabel(reason)}
+                    </span>
+                  </Tooltip>
                   <span className="font-mono text-[var(--color-text-primary)]">{count}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
@@ -622,16 +669,17 @@ function PipelineRunCard({
         {/* Top block reason badges */}
         <div className="hidden sm:flex gap-1 ml-auto mr-2">
           {run.top_block_reasons.slice(0, 2).map((r) => (
-            <span
-              key={r.reason}
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${reasonColor(r.reason)} 12%, transparent)`,
-                color: reasonColor(r.reason),
-              }}
-            >
-              {reasonLabel(r.reason)} ({r.count})
-            </span>
+            <Tooltip key={r.reason} text={reasonDescription(r.reason)}>
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap cursor-help"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${reasonColor(r.reason)} 12%, transparent)`,
+                  color: reasonColor(r.reason),
+                }}
+              >
+                {reasonLabel(r.reason)} ({r.count})
+              </span>
+            </Tooltip>
           ))}
         </div>
 
@@ -736,15 +784,17 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
                   </span>
                 </td>
                 <td className="px-4 py-2">
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                    style={{
-                      backgroundColor: `color-mix(in srgb, ${reasonColor(entry.block_reason)} 15%, transparent)`,
-                      color: reasonColor(entry.block_reason),
-                    }}
-                  >
-                    {reasonLabel(entry.block_reason)}
-                  </span>
+                  <Tooltip text={reasonDescription(entry.block_reason)}>
+                    <span
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold cursor-help"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${reasonColor(entry.block_reason)} 15%, transparent)`,
+                        color: reasonColor(entry.block_reason),
+                      }}
+                    >
+                      {reasonLabel(entry.block_reason)}
+                    </span>
+                  </Tooltip>
                 </td>
                 <td className="px-4 py-2 text-xs font-mono text-right text-[var(--color-text-primary)]">
                   {entry.confluence_score ?? "—"}
