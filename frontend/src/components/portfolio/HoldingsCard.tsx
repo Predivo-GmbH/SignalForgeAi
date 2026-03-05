@@ -13,7 +13,16 @@ import {
   Search,
   EyeOff,
   Eye,
+  LayoutGrid,
 } from "lucide-react";
+import {
+  createChart,
+  AreaSeries,
+  type IChartApi,
+  type ISeriesApi,
+  type UTCTimestamp,
+  ColorType,
+} from "lightweight-charts";
 import { cn } from "@/lib/cn";
 import { pnlColor, formatPrice } from "@/lib/format";
 import { CRYPTO_LIST, CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
@@ -121,6 +130,76 @@ function SourceBadge({ source, onClick, active }: { source: string; onClick?: ()
   );
 }
 
+/* ---- Exchange Logo ---- */
+
+function ExchangeLogo({ source, size = 18 }: { source: string; size?: number }) {
+  const color = SOURCE_STYLE[source]?.color ?? "#6b7280";
+
+  if (source === "manual") return <Wallet size={size} className="shrink-0 text-(--color-text-secondary)" />;
+  if (source === "all") return <LayoutGrid size={size} className="shrink-0 text-(--color-accent)" />;
+
+  // Inline SVG logos for each exchange
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0">
+      {source === "binance" && (
+        /* Binance diamond mark */
+        <g fill={color}>
+          <polygon points="12,2.5 14.5,5 12,7.5 9.5,5" />
+          <polygon points="5.5,9 8,6.5 10.5,9 8,11.5" />
+          <polygon points="18.5,9 16,6.5 13.5,9 16,11.5" />
+          <polygon points="12,9.5 14.5,12 12,14.5 9.5,12" />
+          <polygon points="5.5,15 8,12.5 10.5,15 8,17.5" />
+          <polygon points="18.5,15 16,12.5 13.5,15 16,17.5" />
+          <polygon points="12,16.5 14.5,19 12,21.5 9.5,19" />
+        </g>
+      )}
+      {source === "kucoin" && (
+        /* KuCoin hexagonal K mark */
+        <g fill={color}>
+          <circle cx="12" cy="5" r="2.5" />
+          <rect x="10.5" y="7" width="3" height="10" rx="1.5" />
+          <path d="M13.5 12 L19 7.5 L20 9 L15 12.5 L20 16 L19 17.5 L13.5 13Z" />
+        </g>
+      )}
+      {source === "mexc" && (
+        /* MEXC stylized M */
+        <g fill={color}>
+          <path d="M4 19V6l4 6.5L12 5l4 7.5L20 6v13h-3V13l-1.5 2.5L12 10l-3.5 5.5L7 13v6H4Z" />
+        </g>
+      )}
+      {source === "kraken" && (
+        /* Kraken K tentacle */
+        <g fill={color}>
+          <path d="M7 3v18h3.5V14l5.5 7h4.5l-6.5-8L19.5 5H15l-4.5 5.5V3H7Z" />
+        </g>
+      )}
+      {source === "cryptocom" && (
+        /* Crypto.com shield C */
+        <g fill={color}>
+          <path d="M12 2L3 6.5v5c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11v-5L12 2Zm0 3l6 3.2v3.3c0 3.7-2.6 7.2-6 8.2-3.4-1-6-4.5-6-8.2V8.2L12 5Z" />
+          <path d="M15 10.5h-2.5V9.2c0-.7-.5-1.2-1.2-1.2-.7 0-1.3.5-1.3 1.2v5.6c0 .7.6 1.2 1.3 1.2.7 0 1.2-.5 1.2-1.2V13.5H15v1.3c0 2-1.6 3.7-3.7 3.7-2 0-3.8-1.7-3.8-3.7V9.2c0-2 1.8-3.7 3.8-3.7 2.1 0 3.7 1.7 3.7 3.7V10.5Z" />
+        </g>
+      )}
+      {source === "bitstamp" && (
+        /* Bitstamp shield/stamp */
+        <g fill={color}>
+          <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Zm0 17.5c-4.1 0-7.5-3.4-7.5-7.5S7.9 4.5 12 4.5s7.5 3.4 7.5 7.5-3.4 7.5-7.5 7.5Z" />
+          <path d="M14.5 9h-5v2h5c.6 0 1 .4 1 1s-.4 1-1 1h-5v2h5c1.7 0 3-1.3 3-3s-1.3-3-3-3Z" />
+        </g>
+      )}
+      {/* Fallback for unknown exchanges */}
+      {!["binance", "kucoin", "mexc", "kraken", "cryptocom", "bitstamp"].includes(source) && (
+        <g>
+          <circle cx="12" cy="12" r="9" fill={color} opacity="0.15" />
+          <text x="12" y="16" textAnchor="middle" fill={color} fontSize="12" fontWeight="bold">
+            {(SOURCE_STYLE[source]?.label ?? source).charAt(0).toUpperCase()}
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+}
+
 /* ---- SVG Donut Chart ---- */
 
 interface DonutSlice {
@@ -180,14 +259,13 @@ function DonutChart({
   });
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Top: donut centered */}
-      <div className="flex justify-center">
-        <div className="relative">
+    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+      {/* Donut — responsive, left on desktop, centered on mobile */}
+      <div className="flex justify-center lg:justify-start lg:w-[45%] shrink-0">
+        <div className="relative w-full max-w-[200px]">
           <svg
-            width={size}
-            height={size}
             viewBox={`0 0 ${size} ${size}`}
+            className="w-full h-auto"
           >
             {arcs.map((arc) => (
               <path
@@ -220,35 +298,37 @@ function DonutChart({
         </div>
       </div>
 
-      {/* Legend — 2-column grid fills width */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {slices.map((s, i) => (
-          <div
-            key={`${s.label}-${i}`}
-            className={cn(
-              "flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 transition-colors duration-100",
-              hoveredIdx === i && "bg-(--color-bg-elevated)/60",
-            )}
-            onMouseEnter={() => setHoveredIdx(i)}
-            onMouseLeave={() => setHoveredIdx(null)}
-            onClick={() => onSliceClick?.(s.label)}
+      {/* Legend — single column on desktop (beside donut), 2-col on mobile */}
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-x-3 gap-y-0.5">
+          {slices.map((s, i) => (
+            <div
+              key={`${s.label}-${i}`}
+              className={cn(
+                "flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 transition-colors duration-100",
+                hoveredIdx === i && "bg-(--color-bg-elevated)/60",
+              )}
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              onClick={() => onSliceClick?.(s.label)}
+            >
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+              <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
+              <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
+                {s.pct.toFixed(2)}%
+              </span>
+            </div>
+          ))}
+        </div>
+        {slices.length >= 8 && (
+          <button
+            onClick={() => onSliceClick?.("")}
+            className="text-[11px] font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors text-left px-2"
           >
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-            <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
-            <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
-              {s.pct.toFixed(2)}%
-            </span>
-          </div>
-        ))}
+            View All
+          </button>
+        )}
       </div>
-      {slices.length >= 8 && (
-        <button
-          onClick={() => onSliceClick?.("")}
-          className="text-[11px] font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors text-left px-2"
-        >
-          View All
-        </button>
-      )}
     </div>
   );
 }
@@ -429,7 +509,7 @@ function SourceBreakdown({
         )}
       >
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-(--color-accent)" />
+          <ExchangeLogo source="all" size={18} />
           <span className="text-xs font-semibold text-(--color-text-primary)">All</span>
         </div>
         <p className="text-sm font-bold font-mono text-(--color-text-primary)">
@@ -459,7 +539,7 @@ function SourceBreakdown({
             style={isActive ? { backgroundColor: `${color}15`, boxShadow: `0 0 0 2px ${color}50` } : undefined}
           >
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <ExchangeLogo source={s.source} size={18} />
               <span className="text-xs font-semibold text-(--color-text-primary)">
                 {style?.label ?? s.source}
               </span>
@@ -484,39 +564,34 @@ type PerfPeriod = (typeof PERF_PERIODS)[number];
 
 /**
  * Build a synthetic 24h portfolio value curve from individual holding 24h changes.
- * We know the current value and each holding's 24h change %, so we can
- * interpolate a smooth curve from yesterday's implied value to today's.
+ * Returns lightweight-charts compatible data with UTCTimestamps.
  */
 function build24hCurve(
   currentTotal: number,
   holdings: { value: number; change24hPct: number | null }[],
-): { values: number[]; labels: string[] } {
-  // Compute portfolio value 24h ago
+): { time: UTCTimestamp; value: number }[] {
   let prevTotal = 0;
   for (const h of holdings) {
     if (h.change24hPct != null && h.value > 0) {
       prevTotal += h.value / (1 + h.change24hPct / 100);
     } else {
-      prevTotal += h.value; // assume no change
+      prevTotal += h.value;
     }
   }
 
-  // Generate 24 hourly points (smooth interpolation with slight noise for realism)
   const points = 24;
-  const values: number[] = [];
-  const labels: string[] = [];
+  const result: { time: UTCTimestamp; value: number }[] = [];
   const now = new Date();
 
   for (let i = 0; i <= points; i++) {
     const t = i / points;
-    // Ease-in-out interpolation for more natural curve
     const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    values.push(prevTotal + (currentTotal - prevTotal) * ease);
-    const hour = new Date(now.getTime() - (points - i) * 60 * 60 * 1000);
-    labels.push(hour.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    const value = prevTotal + (currentTotal - prevTotal) * ease;
+    const hourDate = new Date(now.getTime() - (points - i) * 60 * 60 * 1000);
+    result.push({ time: Math.floor(hourDate.getTime() / 1000) as UTCTimestamp, value });
   }
 
-  return { values, labels };
+  return result;
 }
 
 function PortfolioValueChart({
@@ -531,99 +606,128 @@ function PortfolioValueChart({
   holdings: { value: number; change24hPct: number | null }[];
 }) {
   const [period, setPeriod] = useState<PerfPeriod>("24H");
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  const [hoverValue, setHoverValue] = useState<{ value: number; time: string } | null>(null);
 
   const has24hData = holdings.some((h) => h.change24hPct != null);
   const canRender = period === "24H" && has24hData && totalValue > 0;
 
-  const { values, labels } = useMemo(
-    () => (canRender ? build24hCurve(totalValue, holdings) : { values: [], labels: [] }),
+  const chartData = useMemo(
+    () => (canRender ? build24hCurve(totalValue, holdings) : []),
     [canRender, totalValue, holdings],
   );
 
-  // Chart dimensions with margins for axes
-  const W = 400;
-  const H = 180;
-  const marginLeft = 58;
-  const marginRight = 12;
-  const marginTop = 12;
-  const marginBottom = 24;
-  const chartW = W - marginLeft - marginRight;
-  const chartH = H - marginTop - marginBottom;
-
-  // Compute nice Y-axis ticks
-  const yTicks = useMemo(() => {
-    if (values.length < 2) return [];
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
-    const range = maxVal - minVal || 1;
-    const padding = range * 0.05;
-    const lo = minVal - padding;
-    const hi = maxVal + padding;
-    const tickCount = 4;
-    const step = (hi - lo) / (tickCount - 1);
-    return Array.from({ length: tickCount }, (_, i) => lo + step * i);
-  }, [values]);
-
-  // X-axis labels — pick ~5 evenly spaced labels
-  const xTicks = useMemo(() => {
-    if (labels.length < 2) return [];
-    const count = 5;
-    const step = (labels.length - 1) / (count - 1);
-    return Array.from({ length: count }, (_, i) => {
-      const idx = Math.round(step * i);
-      return { idx, label: labels[idx] };
-    });
-  }, [labels]);
-
-  // Build SVG paths
-  let line = "";
-  let area = "";
-  let pts: { x: number; y: number }[] = [];
-  const minVal = values.length >= 2 ? Math.min(...values) : 0;
-  const maxVal = values.length >= 2 ? Math.max(...values) : 1;
-  const valRange = maxVal - minVal || 1;
-  const padding = valRange * 0.05;
-
-  if (values.length >= 2) {
-    pts = values.map((v, i) => ({
-      x: marginLeft + (i / (values.length - 1)) * chartW,
-      y: marginTop + chartH - ((v - (minVal - padding)) / (valRange + 2 * padding)) * chartH,
-    }));
-    line = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-    area = `${line} L ${marginLeft + chartW} ${marginTop + chartH} L ${marginLeft} ${marginTop + chartH} Z`;
-  }
-
   const isPositive = change24hUsd >= 0;
-  const strokeColor = isPositive ? "#10b981" : "#ef4444";
-  const gradId = "portfolio-grad";
+  const lineColor = isPositive ? "#10b981" : "#ef4444";
+  const topColor = isPositive ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)";
+  const bottomColor = isPositive ? "rgba(16, 185, 129, 0)" : "rgba(239, 68, 68, 0)";
 
-  // Hover handler
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!chartContainerRef.current || pts.length < 2) return;
-      const rect = chartContainerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const svgX = (mouseX / rect.width) * W;
-      // Find nearest point
-      const chartLeft = marginLeft;
-      const chartRight = marginLeft + chartW;
-      const clampedX = Math.max(chartLeft, Math.min(chartRight, svgX));
-      const ratio = (clampedX - chartLeft) / chartW;
-      const idx = Math.round(ratio * (values.length - 1));
-      setHoverIdx(Math.max(0, Math.min(values.length - 1, idx)));
-    },
-    [pts.length, values.length, W, chartW, marginLeft],
-  );
+  // Create chart on mount
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
+    const isDark = document.documentElement.classList.contains("dark");
 
-  // Hovered point data
-  const hoverPoint = hoverIdx != null && pts[hoverIdx] ? { x: pts[hoverIdx].x, y: pts[hoverIdx].y, value: values[hoverIdx], label: labels[hoverIdx] } : null;
+    const chart = createChart(containerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "transparent" },
+        textColor: isDark ? "#8B8BA0" : "#6B6B80",
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { visible: false },
+        horzLines: { color: isDark ? "rgba(42, 42, 60, 0.4)" : "rgba(229, 226, 220, 0.6)", style: 1 },
+      },
+      width: containerRef.current.clientWidth,
+      height: containerRef.current.clientHeight,
+      crosshair: {
+        vertLine: {
+          color: isDark ? "rgba(139, 139, 160, 0.3)" : "rgba(107, 107, 128, 0.3)",
+          width: 1,
+          labelBackgroundColor: isDark ? "#1C1C2E" : "#F0EDE8",
+        },
+        horzLine: {
+          color: isDark ? "rgba(139, 139, 160, 0.3)" : "rgba(107, 107, 128, 0.3)",
+          width: 1,
+          labelBackgroundColor: isDark ? "#1C1C2E" : "#F0EDE8",
+        },
+      },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      rightPriceScale: {
+        borderVisible: false,
+      },
+      localization: {
+        priceFormatter: (price: number) => fmtCompact(price),
+      },
+      handleScroll: false,
+      handleScale: false,
+    });
 
-  // Map Y value to SVG Y
-  const yToSvg = (v: number) => marginTop + chartH - ((v - (minVal - padding)) / (valRange + 2 * padding)) * chartH;
+    chartRef.current = chart;
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData.size) {
+        setHoverValue(null);
+        return;
+      }
+      const data = param.seriesData.values().next().value as { value?: number } | undefined;
+      if (data?.value != null) {
+        const d = new Date((param.time as number) * 1000);
+        setHoverValue({
+          value: data.value,
+          time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        });
+      }
+    });
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        chart.applyOptions({ width, height });
+      }
+    });
+    observer.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+    };
+  }, []);
+
+  // Update data when chartData or colors change
+  useEffect(() => {
+    if (!chartRef.current || chartData.length === 0) return;
+
+    if (seriesRef.current) {
+      chartRef.current.removeSeries(seriesRef.current);
+      seriesRef.current = null;
+    }
+
+    const series = chartRef.current.addSeries(AreaSeries, {
+      lineColor,
+      topColor,
+      bottomColor,
+      lineWidth: 2,
+      crosshairMarkerBackgroundColor: lineColor,
+      crosshairMarkerRadius: 4,
+      crosshairMarkerBorderWidth: 2,
+      crosshairMarkerBorderColor: "#FFFFFF",
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+
+    series.setData(chartData);
+    seriesRef.current = series;
+    chartRef.current.timeScale().fitContent();
+  }, [chartData, lineColor, topColor, bottomColor]);
 
   return (
     <div className="flex flex-col h-full">
@@ -653,11 +757,11 @@ function PortfolioValueChart({
       {/* Value + change — shows hovered value or current */}
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-lg font-bold font-mono text-(--color-text-primary)">
-          {hoverPoint ? fmtUsd(hoverPoint.value) : fmtUsd(totalValue)}
+          {hoverValue ? fmtUsd(hoverValue.value) : fmtUsd(totalValue)}
         </span>
-        {hoverPoint ? (
+        {hoverValue ? (
           <span className="text-xs font-mono text-(--color-text-secondary)">
-            {hoverPoint.label}
+            {hoverValue.time}
           </span>
         ) : (
           <span className={cn("text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
@@ -666,109 +770,15 @@ function PortfolioValueChart({
         )}
       </div>
 
-      {/* Chart */}
-      <div
-        ref={chartContainerRef}
-        className="flex-1 min-h-[180px] max-h-[280px] relative"
-        onMouseMove={canRender ? handleMouseMove : undefined}
-        onMouseLeave={canRender ? handleMouseLeave : undefined}
-      >
-        {canRender && values.length >= 2 ? (
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={strokeColor} stopOpacity="0.15" />
-                <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal grid lines + Y-axis labels */}
-            {yTicks.map((tick, i) => {
-              const y = yToSvg(tick);
-              return (
-                <g key={`y-${i}`}>
-                  <line
-                    x1={marginLeft}
-                    x2={marginLeft + chartW}
-                    y1={y}
-                    y2={y}
-                    stroke="currentColor"
-                    className="text-(--color-border)"
-                    strokeOpacity="0.4"
-                    strokeDasharray="3,3"
-                  />
-                  <text
-                    x={marginLeft - 6}
-                    y={y + 3}
-                    textAnchor="end"
-                    fontSize="8"
-                    className="fill-(--color-text-secondary)"
-                  >
-                    {fmtCompact(tick)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* X-axis labels */}
-            {xTicks.map((tick, i) => {
-              const x = marginLeft + (tick.idx / (values.length - 1)) * chartW;
-              return (
-                <text
-                  key={`x-${i}`}
-                  x={x}
-                  y={H - 4}
-                  textAnchor="middle"
-                  fontSize="8"
-                  className="fill-(--color-text-secondary)"
-                >
-                  {tick.label}
-                </text>
-              );
-            })}
-
-            {/* Area fill */}
-            <path d={area} fill={`url(#${gradId})`} />
-
-            {/* Line */}
-            <path d={line} fill="none" stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-
-            {/* Hover crosshair */}
-            {hoverPoint && (
-              <>
-                <line
-                  x1={hoverPoint.x}
-                  x2={hoverPoint.x}
-                  y1={marginTop}
-                  y2={marginTop + chartH}
-                  stroke={strokeColor}
-                  strokeWidth="0.8"
-                  strokeDasharray="3,2"
-                  opacity="0.6"
-                />
-                <line
-                  x1={marginLeft}
-                  x2={marginLeft + chartW}
-                  y1={hoverPoint.y}
-                  y2={hoverPoint.y}
-                  stroke={strokeColor}
-                  strokeWidth="0.5"
-                  strokeDasharray="3,2"
-                  opacity="0.4"
-                />
-                <circle
-                  cx={hoverPoint.x}
-                  cy={hoverPoint.y}
-                  r="3"
-                  fill={strokeColor}
-                  stroke="white"
-                  strokeWidth="1.5"
-                />
-              </>
-            )}
-          </svg>
-        ) : (
-          <div className="flex items-center justify-center h-full">
+      {/* Chart — always render container so ref is available */}
+      <div className="flex-1 min-h-[200px] relative">
+        <div
+          ref={containerRef}
+          className={cn("w-full h-full", !(canRender && chartData.length >= 2) && "invisible")}
+          onMouseLeave={() => setHoverValue(null)}
+        />
+        {!(canRender && chartData.length >= 2) && (
+          <div className="absolute inset-0 flex items-center justify-center">
             <p className="text-[11px] text-(--color-text-secondary)/50 text-center">
               {period !== "24H"
                 ? "Historical tracking coming soon"
@@ -1581,7 +1591,7 @@ export function HoldingsCard() {
         )}
 
         {/* Holdings donut + Portfolio value chart — CoinGecko-style */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5">
           {/* Left: Holdings donut */}
           <div
             className={cn(

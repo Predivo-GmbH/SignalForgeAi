@@ -44,3 +44,20 @@ export function useDisconnectBroker() {
     onSuccess: () => qc.invalidateQueries({ queryKey: BROKER_KEY }),
   });
 }
+
+export interface BrokerHealth {
+  id: string;
+  broker: string;
+  ok: boolean;
+  error: string | null;
+}
+
+export function useBrokerHealth(connectionId: string | null) {
+  return useQuery({
+    queryKey: ["broker-health", connectionId],
+    queryFn: () => api.get<BrokerHealth>(`/broker/${connectionId}/health`),
+    enabled: !!connectionId,
+    staleTime: 5 * 60_000, // cache for 5 minutes
+    retry: false,
+  });
+}

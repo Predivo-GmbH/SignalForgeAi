@@ -1,5 +1,6 @@
 """Broker connection management API — CRUD for API credentials."""
 
+import logging
 import uuid
 from typing import Literal
 
@@ -11,7 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.core.encryption import decrypt_value, encrypt_value
+from app.execution.adapters.ccxt_adapter import CCXTAdapter
 from app.models.strategy import BrokerConnection
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/broker", tags=["broker"])
 
@@ -143,3 +147,53 @@ async def delete_broker_connection(
         raise HTTPException(status_code=404, detail="Broker connection not found")
     await db.delete(conn)
     await db.commit()
+
+
+class BrokerHealthResponse(BaseModel):
+    id: str
+    broker: str
+    ok: bool
+    error: str | None = None
+
+
+@router.get("/{connection_id}/health", response_model=BrokerHealthResponse)
+async def check_broker_health(
+    connection_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Test a broker connection by fetching the account balance."""
+    result = await db.execute(
+        select(BrokerConnection).where(
+            BrokerConnection.id == uuid.UUID(connection_id),
+            BrokerConnection.user_id == uuid.UUID(user_id),
+        )
+    )
+    conn = result.scalar_one_or_none()
+    if not conn:
+        raise HTTPException(status_code=404, detail="Broker connection not found")
+
+    if conn.is_paper:
+        return BrokerHealthResponse(id=str(conn.id), broker=conn.broker, ok=True)
+
+    try:
+        api_key = decrypt_value(conn.api_key_enc)
+        api_secret = decrypt_value(conn.api_secret_enc)
+        passphrase = decrypt_value(conn.api_passphrase_enc) if conn.api_passphrase_enc else ""
+        adapter = CCXTAdapter(
+            exchange_id=conn.broker,
+            api_key=api_key,
+            api_secret=api_secret,
+            password=passphrase,
+            testnet=False,
+        )
+        try:
+            await adapter.get_full_balance()
+            return BrokerHealthResponse(id=str(conn.id), broker=conn.broker, ok=True)
+        finally:
+            await adapter.close()
+    except Exception as exc:
+        logger.debug("Health check failed for %s: %s", conn.broker, exc)
+        return BrokerHealthResponse(
+            id=str(conn.id), broker=conn.broker, ok=False, error=str(exc)[:200],
+        )

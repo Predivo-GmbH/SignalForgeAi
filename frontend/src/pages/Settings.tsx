@@ -28,6 +28,7 @@ import {
   useBrokerConnections,
   useConnectBroker,
   useDisconnectBroker,
+  useBrokerHealth,
 } from "@/hooks/useBrokerConnections";
 import { useAlertConfig, useUpdateAlertConfig } from "@/hooks/useAlertConfig";
 import type { ConnectBrokerRequest } from "@/hooks/useBrokerConnections";
@@ -360,16 +361,25 @@ function ConnectionCard({
   createdAt: string;
 }) {
   const disconnect = useDisconnectBroker();
+  const health = useBrokerHealth(id);
   const meta = SUPPORTED_BROKERS.find(
     (b) => b.ccxtId === broker || b.name.toLowerCase() === broker.toLowerCase(),
   );
+
+  const isHealthy = health.data?.ok === true;
+  const isChecking = health.isLoading || health.isFetching;
+  const StatusIcon = isChecking ? Loader2 : isHealthy ? Wifi : WifiOff;
 
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-(--color-bg-elevated) rounded-lg flex items-center justify-center">
-            <Wifi className="w-5 h-5 text-(--color-positive)" />
+            <StatusIcon className={cn(
+              "w-5 h-5",
+              isChecking ? "animate-spin text-(--color-text-secondary)" :
+              isHealthy ? "text-(--color-positive)" : "text-(--color-negative)",
+            )} />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -415,6 +425,13 @@ function ConnectionCard({
           {apiKeyMasked}
         </span>
       </div>
+
+      {!isChecking && !isHealthy && health.data?.error && (
+        <div className="flex items-start gap-2 bg-(--color-negative)/10 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-4 h-4 text-(--color-negative) shrink-0 mt-0.5" />
+          <p className="text-xs text-(--color-negative)">{health.data.error}</p>
+        </div>
+      )}
 
       {meta?.keyExpiryDays && createdAt && (
         <KeyExpiryBadge createdAt={createdAt} expiryDays={meta.keyExpiryDays} />
