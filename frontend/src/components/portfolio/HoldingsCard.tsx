@@ -396,73 +396,38 @@ function SourceBreakdown({
 
   if (bySource.length <= 1) return null;
 
-  // Stacked bar showing source proportions
-  const barSegments = bySource.filter((s) => s.pct > 0);
-
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          By Source
-        </p>
-        {activeSource && (
+    <div className="flex flex-wrap gap-2">
+      {bySource.map((s) => {
+        const style = SOURCE_STYLE[s.source];
+        const isActive = activeSource === s.source;
+        const color = style?.color ?? "#6b7280";
+        return (
           <button
-            onClick={() => onSourceClick(activeSource)}
-            className="text-[10px] text-(--color-accent) hover:underline"
+            key={s.source}
+            onClick={() => onSourceClick(s.source)}
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all duration-150 border",
+              "hover:border-current/30 hover:-translate-y-0.5",
+              isActive
+                ? "border-current/40 bg-current/8"
+                : "border-(--color-border) bg-(--color-bg-elevated)/40",
+              activeSource && !isActive && "opacity-50",
+            )}
+            style={isActive ? { borderColor: `${color}60`, backgroundColor: `${color}10` } : undefined}
           >
-            Clear filter
-          </button>
-        )}
-      </div>
-      {/* Proportional bar */}
-      <div className="flex h-2 rounded-full overflow-hidden gap-px">
-        {barSegments.map((s) => {
-          const style = SOURCE_STYLE[s.source];
-          return (
-            <div
-              key={s.source}
-              onClick={() => onSourceClick(s.source)}
-              className={cn(
-                "h-full transition-all duration-200 cursor-pointer hover:opacity-80",
-                activeSource && activeSource !== s.source && "opacity-40",
-              )}
-              style={{
-                width: `${Math.max(s.pct, 1)}%`,
-                backgroundColor: style?.color ?? "#6b7280",
-              }}
-              title={`${style?.label ?? s.source}: ${fmtUsd(s.value)} (${s.pct.toFixed(1)}%)`}
-            />
-          );
-        })}
-      </div>
-      {/* Compact legend row */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {bySource.map((s) => {
-          const style = SOURCE_STYLE[s.source];
-          const isActive = activeSource === s.source;
-          return (
-            <div
-              key={s.source}
-              onClick={() => onSourceClick(s.source)}
-              className={cn(
-                "flex items-center gap-1.5 cursor-pointer transition-opacity duration-150",
-                activeSource && !isActive && "opacity-40",
-              )}
-            >
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: style?.color ?? "#6b7280" }} />
-              <span className="text-[11px] font-medium text-(--color-text-primary)">
+            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-(--color-text-primary) leading-tight">
                 {style?.label ?? s.source}
               </span>
-              <span className="text-[11px] font-mono text-(--color-text-secondary)">
-                {fmtCompact(s.value)}
-              </span>
-              <span className="text-[10px] font-mono text-(--color-text-secondary)/60">
-                {s.pct.toFixed(1)}%
+              <span className="text-[10px] font-mono text-(--color-text-secondary) leading-tight">
+                {fmtCompact(s.value)} · {s.pct.toFixed(1)}%
               </span>
             </div>
-          );
-        })}
-      </div>
+          </button>
+        );
+      })}
     </div>
   );
 }

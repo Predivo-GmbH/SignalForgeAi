@@ -6,8 +6,8 @@ Two distinct operations:
 2. Cost basis overrides — for ALL 15 coins from CoinGecko snapshot,
    so exchange holdings also get P&L tracking.
 
-Cost basis derived from CoinGecko PNL% snapshot (March 2026):
-  purchase_price = current_price / (1 + pnl_pct / 100)
+Cost basis derived from CoinGecko PNL$ snapshot (March 2026):
+  cost_per_unit = (current_value - pnl_dollar) / quantity
 
 Usage:
     python -m scripts.seed_portfolio            # dry-run (prints data)
@@ -37,13 +37,13 @@ MANUAL_HOLDINGS: list[dict] = [
     {
         "symbol": "BTC",
         "quantity": 0.90207,
-        "purchase_price": 41841.94,  # +74.7% PNL
+        "purchase_price": 33110.69,  # PNL$-derived
         "notes": "Ledger",
     },
     {
         "symbol": "BTC",
         "quantity": 0.00951335,
-        "purchase_price": 41841.94,
+        "purchase_price": 33110.69,
         "notes": "Crypto.com",
     },
     {
@@ -60,8 +60,8 @@ MANUAL_HOLDINGS: list[dict] = [
     },
     {
         "symbol": "QUBIC",
-        "quantity": 115598000,
-        "purchase_price": 0.00004420,  # -87.8% PNL
+        "quantity": 1166127000,
+        "purchase_price": 0.00000437,  # PNL$-derived
         "notes": "CoinGecko import",
     },
     {
@@ -85,7 +85,7 @@ MANUAL_HOLDINGS: list[dict] = [
     {
         "symbol": "AYIN",
         "quantity": 255.847,
-        "purchase_price": 19.36,  # -99.9% PNL
+        "purchase_price": 18.08,  # PNL$-derived
         "notes": "CoinGecko import",
     },
 ]
@@ -96,21 +96,21 @@ MANUAL_HOLDINGS: list[dict] = [
 # show correct P&L without duplicating quantities.
 
 COST_BASIS_OVERRIDES: list[dict] = [
-    {"symbol": "BTC", "purchase_price": 41841.94, "notes": "CoinGecko +74.7%"},
+    {"symbol": "BTC", "purchase_price": 33110.69, "notes": "PNL$-derived"},
     {"symbol": "RENDER", "purchase_price": 0.9510, "notes": "CoinGecko ~+50.4%"},
     {"symbol": "CRO", "purchase_price": 0.08892, "notes": "CoinGecko -12.3%"},
     {"symbol": "TAO", "purchase_price": 280.85, "notes": "CoinGecko -32.9%"},
     {"symbol": "ALPH", "purchase_price": 0.2682, "notes": "CoinGecko -70.7%"},
-    {"symbol": "INJ", "purchase_price": 27.79, "notes": "CoinGecko -88.7%"},
-    {"symbol": "QUBIC", "purchase_price": 0.00004420, "notes": "CoinGecko -87.8%"},
+    {"symbol": "INJ", "purchase_price": 30.60, "notes": "PNL$-derived"},
+    {"symbol": "QUBIC", "purchase_price": 0.00000437, "notes": "PNL$-derived"},
     {"symbol": "RIO", "purchase_price": 1.4990, "notes": "CoinGecko -95.1%"},
-    {"symbol": "ORAI", "purchase_price": 12.567, "notes": "CoinGecko -96.4%"},
+    {"symbol": "ORAI", "purchase_price": 12.42, "notes": "PNL$-derived"},
     {"symbol": "ZEPH", "purchase_price": 0.8193, "notes": "CoinGecko -47.2%"},
     {"symbol": "USDT", "purchase_price": 1.00, "notes": "Stablecoin"},
     {"symbol": "ABX", "purchase_price": 0.1602, "notes": "CoinGecko -90.3%"},
     # APAD excluded — airdrop, no cost basis
     {"symbol": "EX", "purchase_price": 0.01127, "notes": "CoinGecko +4.3%"},
-    {"symbol": "AYIN", "purchase_price": 19.36, "notes": "CoinGecko -99.9%"},
+    {"symbol": "AYIN", "purchase_price": 18.08, "notes": "PNL$-derived"},
 ]
 
 
