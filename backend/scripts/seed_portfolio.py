@@ -31,7 +31,7 @@ MANUAL_HOLDINGS: list[dict] = [
     {
         "symbol": "ALPH",
         "quantity": 18811.78,
-        "purchase_price": 0.2682,  # -70.7% PNL
+        "purchase_price": 1.0888,  # PNL$-derived
         "notes": "Ledger",
     },
     {
@@ -100,13 +100,13 @@ COST_BASIS_OVERRIDES: list[dict] = [
     {"symbol": "RENDER", "purchase_price": 0.9510, "notes": "CoinGecko ~+50.4%"},
     {"symbol": "CRO", "purchase_price": 0.08892, "notes": "CoinGecko -12.3%"},
     {"symbol": "TAO", "purchase_price": 280.85, "notes": "CoinGecko -32.9%"},
-    {"symbol": "ALPH", "purchase_price": 0.2682, "notes": "CoinGecko -70.7%"},
+    {"symbol": "ALPH", "purchase_price": 1.0888, "notes": "PNL$-derived"},
     {"symbol": "INJ", "purchase_price": 30.60, "notes": "PNL$-derived"},
     {"symbol": "QUBIC", "purchase_price": 0.00000437, "notes": "PNL$-derived"},
     {"symbol": "RIO", "purchase_price": 1.4990, "notes": "CoinGecko -95.1%"},
     {"symbol": "ORAI", "purchase_price": 12.42, "notes": "PNL$-derived"},
-    {"symbol": "ZEPH", "purchase_price": 0.8193, "notes": "CoinGecko -47.2%"},
-    {"symbol": "USDT", "purchase_price": 1.00, "notes": "Stablecoin"},
+    {"symbol": "ZEPH", "purchase_price": 43.22, "notes": "PNL$-derived"},
+    {"symbol": "USDT", "purchase_price": 8.59, "notes": "PNL$-derived"},
     {"symbol": "ABX", "purchase_price": 0.1602, "notes": "CoinGecko -90.3%"},
     # APAD excluded — airdrop, no cost basis
     {"symbol": "EX", "purchase_price": 0.01127, "notes": "CoinGecko +4.3%"},

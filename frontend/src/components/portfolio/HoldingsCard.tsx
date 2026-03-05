@@ -26,8 +26,6 @@ import {
 } from "@/hooks/useHoldings";
 import type { HoldingItem, ManualHoldingRequest } from "@/hooks/useHoldings";
 import { useBrokerConnections } from "@/hooks/useBrokerConnections";
-import { useEquityHistory } from "@/hooks/useAnalytics";
-import type { EquityPoint } from "@/hooks/useAnalytics";
 import { AssetDetailModal } from "./AssetDetailModal";
 
 /* ---- Constants ---- */
@@ -222,26 +220,36 @@ function DonutChart({
         </div>
       </div>
 
-      {/* Legend — grid on mobile, single column on desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-1.5 sm:pt-1 min-w-0 w-full sm:w-auto">
-        {slices.map((s, i) => (
-          <div
-            key={`${s.label}-${i}`}
-            className={cn(
-              "flex items-center gap-2 sm:gap-2.5 cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-colors duration-100",
-              hoveredIdx === i && "bg-(--color-bg-elevated)/60",
-            )}
-            onMouseEnter={() => setHoveredIdx(i)}
-            onMouseLeave={() => setHoveredIdx(null)}
-            onClick={() => onSliceClick?.(s.label)}
+      {/* Legend */}
+      <div className="flex flex-col gap-1 sm:pt-1 min-w-0">
+        <div className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-1">
+          {slices.map((s, i) => (
+            <div
+              key={`${s.label}-${i}`}
+              className={cn(
+                "flex items-center gap-2.5 cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-colors duration-100",
+                hoveredIdx === i && "bg-(--color-bg-elevated)/60",
+              )}
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              onClick={() => onSliceClick?.(s.label)}
+            >
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+              <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
+              <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
+                {s.pct.toFixed(2)}%
+              </span>
+            </div>
+          ))}
+        </div>
+        {slices.length >= 8 && (
+          <button
+            onClick={() => onSliceClick?.("")}
+            className="text-[11px] font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors text-left px-1.5 mt-0.5"
           >
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-            <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
-            <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
-              {s.pct.toFixed(2)}%
-            </span>
-          </div>
-        ))}
+            View All
+          </button>
+        )}
       </div>
     </div>
   );
@@ -278,8 +286,13 @@ function PortfolioOverviewHeader({
 
   // Top performer 24h (exclude small positions)
   const withChange = combined.filter((c) => c.change24hPct != null && c.totalValue >= TOP_PERFORMER_MIN_VALUE);
+  // Pick by highest 24h dollar gain: value * pct / (100 + pct)
+  const dollarGain = (c: (typeof withChange)[0]) => {
+    const pct = c.change24hPct ?? 0;
+    return (c.totalValue * pct) / (100 + pct);
+  };
   const topPerformer = withChange.length > 0
-    ? withChange.reduce((a, b) => ((a.change24hPct ?? 0) > (b.change24hPct ?? 0) ? a : b))
+    ? withChange.reduce((a, b) => (dollarGain(a) > dollarGain(b) ? a : b))
     : null;
 
   // 24h change value for top performer
@@ -396,8 +409,39 @@ function SourceBreakdown({
 
   if (bySource.length <= 1) return null;
 
+  const totalCount = bySource.reduce((sum, s) => sum + s.count, 0);
+  const isAllActive = activeSource === null;
+  // +1 for the "All" card
+  const cols = Math.min(bySource.length + 1, 7);
+
   return (
-    <div className="flex flex-wrap gap-2">
+    <div
+      className="grid gap-3"
+      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+    >
+      {/* "All" card — always first, selected by default */}
+      <button
+        onClick={() => { if (!isAllActive && activeSource) onSourceClick(activeSource); }}
+        className={cn(
+          "rounded-lg px-4 py-3 text-left transition-all duration-150 space-y-1",
+          "hover:-translate-y-0.5",
+          isAllActive
+            ? "bg-(--color-accent)/10 ring-2 ring-(--color-accent)/40 ring-offset-1 ring-offset-(--color-bg-surface)"
+            : "bg-(--color-bg-elevated)/50 opacity-50",
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-(--color-accent)" />
+          <span className="text-xs font-semibold text-(--color-text-primary)">All</span>
+        </div>
+        <p className="text-sm font-bold font-mono text-(--color-text-primary)">
+          {fmtCompact(totalValue)}
+        </p>
+        <p className="text-[10px] font-mono text-(--color-text-secondary)">
+          {totalCount} asset{totalCount !== 1 ? "s" : ""} · 100%
+        </p>
+      </button>
+
       {bySource.map((s) => {
         const style = SOURCE_STYLE[s.source];
         const isActive = activeSource === s.source;
@@ -407,24 +451,27 @@ function SourceBreakdown({
             key={s.source}
             onClick={() => onSourceClick(s.source)}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all duration-150 border",
-              "hover:border-current/30 hover:-translate-y-0.5",
+              "rounded-lg px-4 py-3 text-left transition-all duration-150 space-y-1",
+              "hover:-translate-y-0.5",
               isActive
-                ? "border-current/40 bg-current/8"
-                : "border-(--color-border) bg-(--color-bg-elevated)/40",
-              activeSource && !isActive && "opacity-50",
+                ? "ring-2 ring-offset-1 ring-offset-(--color-bg-surface)"
+                : "bg-(--color-bg-elevated)/50",
+              !isActive && !isAllActive && "opacity-50",
             )}
-            style={isActive ? { borderColor: `${color}60`, backgroundColor: `${color}10` } : undefined}
+            style={isActive ? { backgroundColor: `${color}15`, boxShadow: `0 0 0 2px ${color}50` } : undefined}
           >
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-(--color-text-primary) leading-tight">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <span className="text-xs font-semibold text-(--color-text-primary)">
                 {style?.label ?? s.source}
               </span>
-              <span className="text-[10px] font-mono text-(--color-text-secondary) leading-tight">
-                {fmtCompact(s.value)} · {s.pct.toFixed(1)}%
-              </span>
             </div>
+            <p className="text-sm font-bold font-mono text-(--color-text-primary)">
+              {fmtCompact(s.value)}
+            </p>
+            <p className="text-[10px] font-mono text-(--color-text-secondary)">
+              {s.count} asset{s.count !== 1 ? "s" : ""} · {s.pct.toFixed(1)}%
+            </p>
           </button>
         );
       })}
@@ -432,62 +479,99 @@ function SourceBreakdown({
   );
 }
 
-/* ---- Mini Performance Chart (SVG area) ---- */
+/* ---- Portfolio Value Chart ---- */
 
 const PERF_PERIODS = ["24H", "7D", "1M", "3M", "1Y"] as const;
 type PerfPeriod = (typeof PERF_PERIODS)[number];
 
-function filterPointsByPeriod(points: EquityPoint[], period: PerfPeriod): EquityPoint[] {
-  if (points.length === 0) return [];
-  const now = new Date();
-  let cutoff: Date;
-  switch (period) {
-    case "24H": cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000); break;
-    case "7D": cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
-    case "1M": cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
-    case "3M": cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
-    case "1Y": cutoff = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); break;
+/**
+ * Build a synthetic 24h portfolio value curve from individual holding 24h changes.
+ * We know the current value and each holding's 24h change %, so we can
+ * interpolate a smooth curve from yesterday's implied value to today's.
+ */
+function build24hCurve(
+  currentTotal: number,
+  holdings: { value: number; change24hPct: number | null }[],
+): { values: number[]; labels: string[] } {
+  // Compute portfolio value 24h ago
+  let prevTotal = 0;
+  for (const h of holdings) {
+    if (h.change24hPct != null && h.value > 0) {
+      prevTotal += h.value / (1 + h.change24hPct / 100);
+    } else {
+      prevTotal += h.value; // assume no change
+    }
   }
-  const filtered = points.filter((p) => new Date(p.date) >= cutoff);
-  return filtered.length >= 2 ? filtered : points;
+
+  // Generate 24 hourly points (smooth interpolation with slight noise for realism)
+  const points = 24;
+  const values: number[] = [];
+  const labels: string[] = [];
+  const now = new Date();
+
+  for (let i = 0; i <= points; i++) {
+    const t = i / points;
+    // Ease-in-out interpolation for more natural curve
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    values.push(prevTotal + (currentTotal - prevTotal) * ease);
+    const hour = new Date(now.getTime() - (points - i) * 60 * 60 * 1000);
+    labels.push(hour.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  }
+
+  return { values, labels };
 }
 
-function MiniPerformanceChart({ points }: { points: EquityPoint[] }) {
-  const [period, setPeriod] = useState<PerfPeriod>("7D");
+function PortfolioValueChart({
+  totalValue,
+  change24hUsd,
+  change24hPct,
+  holdings,
+}: {
+  totalValue: number;
+  change24hUsd: number;
+  change24hPct: number;
+  holdings: { value: number; change24hPct: number | null }[];
+}) {
+  const [period, setPeriod] = useState<PerfPeriod>("24H");
 
-  const filtered = useMemo(() => filterPointsByPeriod(points, period), [points, period]);
+  const has24hData = holdings.some((h) => h.change24hPct != null);
+  const canRender = period === "24H" && has24hData && totalValue > 0;
 
-  const values = filtered.map((p) => p.equity);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
-  const range = maxVal - minVal || 1;
+  const { values } = useMemo(
+    () => (canRender ? build24hCurve(totalValue, holdings) : { values: [], labels: [] }),
+    [canRender, totalValue, holdings],
+  );
 
-  const W = 320;
+  const W = 400;
   const H = 140;
   const padTop = 8;
   const padBottom = 4;
   const chartH = H - padTop - padBottom;
 
-  // Build polyline + area path
-  const pts = filtered.map((_, i) => {
-    const x = filtered.length > 1 ? (i / (filtered.length - 1)) * W : W / 2;
-    const y = padTop + chartH - ((values[i] - minVal) / range) * chartH;
-    return { x, y };
-  });
+  let line = "";
+  let area = "";
+  if (values.length >= 2) {
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const range = maxVal - minVal || 1;
+    const pts = values.map((v, i) => ({
+      x: (i / (values.length - 1)) * W,
+      y: padTop + chartH - ((v - minVal) / range) * chartH,
+    }));
+    line = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+    area = `${line} L ${W} ${H} L 0 ${H} Z`;
+  }
 
-  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-  const area = `${line} L ${W} ${H} L 0 ${H} Z`;
-
-  const isPositive = values.length >= 2 && values[values.length - 1] >= values[0];
+  const isPositive = change24hUsd >= 0;
   const strokeColor = isPositive ? "#10b981" : "#ef4444";
-  const gradId = "perf-grad";
+  const gradId = "portfolio-grad";
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header row */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-1">
         <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Performance
+          Portfolio Value
         </p>
         <div className="flex gap-0.5">
           {PERF_PERIODS.map((p) => (
@@ -507,28 +591,38 @@ function MiniPerformanceChart({ points }: { points: EquityPoint[] }) {
         </div>
       </div>
 
+      {/* Value + change */}
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="text-lg font-bold font-mono text-(--color-text-primary)">
+          {fmtUsd(totalValue)}
+        </span>
+        <span className={cn("text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
+          {isPositive ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))} ({isPositive ? "+" : ""}{change24hPct.toFixed(2)}%)
+        </span>
+      </div>
+
       {/* Chart */}
-      <div className="flex-1 min-h-0">
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full">
-          <defs>
-            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
-              <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d={area} fill={`url(#${gradId})`} />
-          <path d={line} fill="none" stroke={strokeColor} strokeWidth="2" vectorEffect="non-scaling-stroke" />
-          {/* End dot */}
-          {pts.length > 0 && (
-            <circle
-              cx={pts[pts.length - 1].x}
-              cy={pts[pts.length - 1].y}
-              r="3"
-              fill={strokeColor}
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
-        </svg>
+      <div className="flex-1 min-h-[160px] max-h-[260px]">
+        {canRender && values.length >= 2 ? (
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full">
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={strokeColor} stopOpacity="0.2" />
+                <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={area} fill={`url(#${gradId})`} />
+            <path d={line} fill="none" stroke={strokeColor} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+          </svg>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[11px] text-(--color-text-secondary)/50 text-center">
+              {period !== "24H"
+                ? "Historical tracking coming soon"
+                : "Waiting for price data..."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1076,7 +1170,6 @@ function SortHeader({
 export function HoldingsCard() {
   const { data, isLoading } = useHoldings();
   const { data: brokerConns } = useBrokerConnections();
-  const { data: equityData } = useEquityHistory();
   const deleteMutation = useDeleteHolding();
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<HoldingItem | null>(null);
@@ -1204,9 +1297,12 @@ export function HoldingsCard() {
   const donutTotal = donutSource.reduce((sum, c) => sum + c.totalValue, 0);
 
   const donutSlices: DonutSlice[] = useMemo(() => {
-    if (!donutTotal || donutTotal <= 0) return [];
+    // Show donut if there are any holdings, even if total value is tiny/zero
+    const hasAny = donutSource.some((c) => c.totalQty > 0 || c.totalValue > 0);
+    if (!hasAny) return [];
+    const effectiveTotal = donutTotal > 0 ? donutTotal : donutSource.reduce((s, c) => s + Math.max(c.totalValue, 0.01), 0);
     const byValue = [...donutSource]
-      .filter((c) => c.totalValue > 0)
+      .filter((c) => c.totalQty > 0 || c.totalValue > 0)
       .sort((a, b) => b.totalValue - a.totalValue);
 
     const topN = byValue.slice(0, 9);
@@ -1216,21 +1312,41 @@ export function HoldingsCard() {
     const slices: DonutSlice[] = topN.map((c, i) => ({
       label: c.symbol,
       value: c.totalValue,
-      pct: (c.totalValue / donutTotal) * 100,
+      pct: (Math.max(c.totalValue, 0.01) / effectiveTotal) * 100,
       color: DONUT_COLORS[i % DONUT_COLORS.length],
     }));
 
-    if (restValue > 0) {
+    if (restValue > 0 || rest.length > 0) {
+      const rv = rest.length > 0 ? Math.max(restValue, 0.01 * rest.length) : restValue;
       slices.push({
         label: `Other (${rest.length})`,
         value: restValue,
-        pct: (restValue / donutTotal) * 100,
+        pct: (rv / effectiveTotal) * 100,
         color: "#4b5563", // gray
       });
     }
 
     return slices;
   }, [donutSource, donutTotal]);
+
+  // 24h portfolio change (computed from holdings for the chart)
+  const portfolioChange = useMemo(() => {
+    const changeUsd = allCombined.reduce((sum, c) => {
+      if (c.change24hPct != null && c.totalValue > 0) {
+        return sum + (c.totalValue * c.change24hPct) / (100 + c.change24hPct);
+      }
+      return sum;
+    }, 0);
+    const tv = totalValue ?? 0;
+    const changePct = tv > 0 ? (changeUsd / (tv - changeUsd)) * 100 : 0;
+    return { changeUsd, changePct };
+  }, [allCombined, totalValue]);
+
+  // Holdings data for chart (value + 24h change per holding)
+  const chartHoldings = useMemo(
+    () => allCombined.map((c) => ({ value: c.totalValue, change24hPct: c.change24hPct })),
+    [allCombined],
+  );
 
   if (isLoading) {
     const connectedBrokers = (brokerConns ?? [])
@@ -1311,20 +1427,20 @@ export function HoldingsCard() {
           />
         )}
 
-        {/* Holdings donut + Performance chart — CoinGecko-style 2-col */}
+        {/* Holdings donut + Portfolio value chart — CoinGecko-style */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Left: Holdings donut */}
-          {donutSlices.length > 0 && donutTotal > 0 && (
-            <div
-              className={cn(
-                "bg-(--color-bg-elevated)/30 rounded-lg p-4 transition-all duration-700 ease-out space-y-3",
-                reveal ? "opacity-100 scale-100" : "opacity-0 scale-90",
-              )}
-              style={{ transitionDelay: "150ms" }}
-            >
-              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-                Holdings
-              </p>
+          <div
+            className={cn(
+              "bg-(--color-bg-elevated)/30 rounded-lg p-4 transition-all duration-700 ease-out space-y-3",
+              reveal ? "opacity-100 scale-100" : "opacity-0 scale-90",
+            )}
+            style={{ transitionDelay: "150ms" }}
+          >
+            <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              Holdings
+            </p>
+            {donutSlices.length > 0 ? (
               <DonutChart
                 slices={donutSlices}
                 totalValue={donutTotal}
@@ -1332,31 +1448,32 @@ export function HoldingsCard() {
                   if (!label.startsWith("Other")) setDetailSymbol(label);
                 }}
               />
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 gap-2">
+                <Wallet className="w-8 h-8 text-(--color-text-secondary)/20" />
+                <p className="text-xs text-(--color-text-secondary)/60">
+                  {sourceFilter
+                    ? `No holdings from ${SOURCE_STYLE[sourceFilter]?.label ?? sourceFilter}`
+                    : "No holdings to display"}
+                </p>
+              </div>
+            )}
+          </div>
 
-          {/* Right: Performance chart */}
+          {/* Right: Portfolio value chart */}
           <div
             className={cn(
-              "bg-(--color-bg-elevated)/30 rounded-lg p-4 transition-all duration-600 ease-out",
+              "bg-(--color-bg-elevated)/30 rounded-lg p-4 transition-all duration-600 ease-out min-w-0",
               reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3",
             )}
             style={{ transitionDelay: "250ms" }}
           >
-            {equityData && equityData.points.length >= 2 ? (
-              <MiniPerformanceChart points={equityData.points} />
-            ) : (
-              <div className="flex flex-col h-full">
-                <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider mb-2">
-                  Performance
-                </p>
-                <div className="flex-1 flex items-center justify-center min-h-[140px]">
-                  <p className="text-xs text-(--color-text-secondary)/60">
-                    Start trading to see performance
-                  </p>
-                </div>
-              </div>
-            )}
+            <PortfolioValueChart
+              totalValue={totalValue ?? 0}
+              change24hUsd={portfolioChange.changeUsd}
+              change24hPct={portfolioChange.changePct}
+              holdings={chartHoldings}
+            />
           </div>
         </div>
 
