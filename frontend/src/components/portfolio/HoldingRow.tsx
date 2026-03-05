@@ -18,7 +18,6 @@ export const SOURCE_STYLE: Record<string, { label: string; cls: string; color: s
   cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500", color: "#6366f1" },
   kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500", color: "#8b5cf6" },
   manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)", color: "#6b7280" },
-  trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)", color: "#3b82f6" },
 };
 
 /* ---- Shared types ---- */

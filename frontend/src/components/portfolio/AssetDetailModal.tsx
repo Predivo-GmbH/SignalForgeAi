@@ -26,7 +26,6 @@ const SOURCE_STYLE: Record<string, { label: string; cls: string }> = {
   cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500" },
   kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500" },
   manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" },
-  trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)" },
 };
 
 const DONUT_COLORS = [

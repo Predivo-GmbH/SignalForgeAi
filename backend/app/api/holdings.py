@@ -17,7 +17,6 @@ from app.core.encryption import decrypt_value
 from app.core.rate_limit import limiter
 from app.execution.adapters.ccxt_adapter import CCXTAdapter
 from app.models.holding import CostBasisOverride, ManualHolding
-from app.models.position import Position
 from app.models.strategy import BrokerConnection
 
 logger = logging.getLogger(__name__)
@@ -343,31 +342,6 @@ async def _fetch_exchange_holdings(
     return holdings
 
 
-async def _fetch_trading_holdings(
-    db: AsyncSession, user_id: str,
-) -> list[HoldingItem]:
-    """Get open trading positions grouped by base symbol."""
-    result = await db.execute(
-        select(Position).where(
-            Position.user_id == uuid.UUID(user_id),
-            Position.is_open.is_(True),
-        )
-    )
-    positions = result.scalars().all()
-    grouped: dict[str, float] = {}
-    for p in positions:
-        # Extract base symbol (e.g. "BTC" from "BTC/USDT")
-        base = p.symbol.split("/")[0] if "/" in p.symbol else p.symbol
-        sign = 1.0 if p.direction.upper() in ("LONG", "BUY") else -1.0
-        grouped[base] = grouped.get(base, 0) + (p.quantity * sign)
-
-    return [
-        HoldingItem(symbol=sym, quantity=qty, source="trading")
-        for sym, qty in grouped.items()
-        if abs(qty) > 1e-12
-    ]
-
-
 async def _fetch_manual_holdings(
     db: AsyncSession, user_id: str,
 ) -> list[HoldingItem]:
@@ -400,13 +374,12 @@ async def get_aggregated_holdings(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Aggregated view: exchange balances + manual holdings + trading positions."""
+    """Aggregated view: exchange balances + manual holdings."""
     # DB queries are fast (ms) — keep sequential to avoid session conflicts.
     # Exchange API calls (the bottleneck) are parallelized inside _fetch_exchange_holdings.
     exchange = await _fetch_exchange_holdings(db, user_id)
     manual = await _fetch_manual_holdings(db, user_id)
-    trading = await _fetch_trading_holdings(db, user_id)
-    all_holdings = exchange + manual + trading
+    all_holdings = exchange + manual
 
     # Fetch cost basis overrides (apply to holdings without avg_price)
     uid = uuid.UUID(user_id)
