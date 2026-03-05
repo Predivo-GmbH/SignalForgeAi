@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# TODO: Add git-secrets or detect-secrets scanning
+# - name: Scan for secrets
+#   run: pip install detect-secrets && detect-secrets scan --all-files
+
 jobs:
   backend-test:
     runs-on: ubuntu-latest
@@ -17,9 +21,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "backend/pyproject.toml"
       - run: pip install -e ".[dev]"
       - run: ruff check app/
       - run: pytest -v --tb=short
+      - name: Security scan
+        run: pip install bandit && bandit -r app/ -ll -q || true
 
   frontend-test:
     runs-on: ubuntu-latest
@@ -31,6 +39,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run build
+      - name: Dependency audit
+        run: npm audit --audit-level=high || true

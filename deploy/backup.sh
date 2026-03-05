@@ -67,3 +67,15 @@ info "Removed $DELETED old backup(s)."
 TOTAL=$(find "$BACKUP_DIR" -name "signalforge_*.sql.gz" | wc -l)
 TOTAL_SIZE=$(du -sh "$BACKUP_DIR" | cut -f1)
 info "Backup complete. $TOTAL backups stored ($TOTAL_SIZE total)."
+
+# --- Offsite backup (optional) ---
+# Configure SF_BACKUP_S3_BUCKET in .env.prod to enable
+if [ -n "${SF_BACKUP_S3_BUCKET:-}" ]; then
+    info "Uploading backup to S3..."
+    aws s3 cp "$DUMP_FILE" "s3://${SF_BACKUP_S3_BUCKET}/signalforge/$(basename "$DUMP_FILE")" --storage-class STANDARD_IA
+    if [ $? -eq 0 ]; then
+        info "Offsite backup uploaded successfully"
+    else
+        error "WARNING: Offsite backup upload failed"
+    fi
+fi

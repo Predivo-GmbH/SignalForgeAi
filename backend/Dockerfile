@@ -1,8 +1,9 @@
-FROM python:3.12-slim
+FROM python:3.12.8-slim
 
 WORKDIR /code
 
 # Install ta-lib C library
+# TODO: Pin ta-lib version and verify checksum for supply chain security
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ make wget \
     && wget -q https://github.com/TA-Lib/ta-lib/releases/download/v0.6.4/ta-lib-0.6.4-src.tar.gz \

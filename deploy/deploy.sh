@@ -237,8 +237,11 @@ rollback() {
 
   echo ""
   info "Rollback complete! Services are running the previous version."
-  warn "If you need to rollback database migrations, do so manually:"
-  echo "  docker compose -f docker-compose.prod.yml exec api python -m alembic downgrade -1"
+
+  echo ""
+  warn "Database rollback (if needed):"
+  echo "    docker compose -f docker-compose.prod.yml exec api alembic downgrade -1"
+  echo "    Run this manually if the previous version requires an older schema."
 }
 
 verify() {
