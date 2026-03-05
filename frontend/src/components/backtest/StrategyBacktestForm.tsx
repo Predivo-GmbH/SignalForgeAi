@@ -74,9 +74,11 @@ export function StrategyBacktestForm({
       onSubmit={handleSubmit}
       className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5"
     >
-      <h2 className="text-lg font-semibold text-(--color-text-primary)">
-        Strategy Validation
-      </h2>
+      <Tooltip text="Test your strategy against historical data to see how it would have performed before risking real capital.">
+        <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
+          Strategy Validation
+        </h2>
+      </Tooltip>
 
       {/* Source toggle */}
       <div className="space-y-1.5">
@@ -203,15 +205,11 @@ export function StrategyBacktestForm({
 
       {/* Days slider */}
       <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+        <Tooltip text="How far back in time to test this strategy. Uses real market data when available, synthetic data as fallback.">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">
             Historical Period
           </label>
-          <Tooltip
-            icon
-            text="How far back in time to test this strategy. Uses real market data when available, synthetic data as fallback."
-          />
-        </div>
+        </Tooltip>
         <input
           type="range"
           min={7}
@@ -231,15 +229,11 @@ export function StrategyBacktestForm({
       {/* AI Enhancement toggle */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+          <Tooltip text="Runs each signal through Claude AI for quality assessment. Rejects trap signals and adjusts position sizing. Costs ~$0.05–$0.20 per backtest. Falls back to algorithmic scoring if AI is unavailable.">
+            <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">
               AI-Enhanced
             </label>
-            <Tooltip
-              icon
-              text="Runs each signal through Claude AI for quality assessment. Rejects trap signals and adjusts position sizing. Costs ~$0.05–$0.20 per backtest. Falls back to algorithmic scoring if AI is unavailable."
-            />
-          </div>
+          </Tooltip>
           <button
             type="button"
             onClick={() => setAiEnhanced((v) => !v)}

@@ -465,9 +465,11 @@ function ConnectionsTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-(--color-text-primary)">
-            Broker Connections
-          </h2>
+          <Tooltip text="Manage exchange API keys. Each exchange supports separate read-only and trading keys for security. Required for live trading and portfolio syncing.">
+            <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
+              Broker Connections
+            </h2>
+          </Tooltip>
           <p className="text-sm text-(--color-text-secondary) mt-0.5">
             Connect exchange API keys for live trading
           </p>
@@ -568,9 +570,11 @@ function AlertsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-(--color-text-primary)">
-          Alert Preferences
-        </h2>
+        <Tooltip text="Configure when and how you receive notifications about signals, trade executions, and daily performance summaries.">
+          <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
+            Alert Preferences
+          </h2>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-0.5">
           Configure email notifications for signals and daily summaries
         </p>
@@ -924,9 +928,11 @@ function ProfileTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-(--color-text-primary)">
-          Profile
-        </h2>
+        <Tooltip text="Your account details, email, password, and two-factor authentication settings. Keep your security settings up to date.">
+          <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
+            Profile
+          </h2>
+        </Tooltip>
         <p className="text-sm text-(--color-text-secondary) mt-0.5">
           Your account information and security settings
         </p>

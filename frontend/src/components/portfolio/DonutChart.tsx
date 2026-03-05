@@ -44,29 +44,46 @@ export function DonutChart({
     const angle = (s.pct / 100) * 360;
     const startAngle = cumAngle;
     cumAngle += angle;
-    const endAngle = cumAngle;
-    const largeArc = angle > 180 ? 1 : 0;
 
     const r = outerR;
     const ir = innerR;
 
-    const toRad = (a: number) => (a * Math.PI) / 180;
-    const x1o = cx + r * Math.cos(toRad(startAngle));
-    const y1o = cy + r * Math.sin(toRad(startAngle));
-    const x2o = cx + r * Math.cos(toRad(endAngle));
-    const y2o = cy + r * Math.sin(toRad(endAngle));
-    const x1i = cx + ir * Math.cos(toRad(endAngle));
-    const y1i = cy + ir * Math.sin(toRad(endAngle));
-    const x2i = cx + ir * Math.cos(toRad(startAngle));
-    const y2i = cy + ir * Math.sin(toRad(startAngle));
+    let d: string;
 
-    const d = [
-      `M ${x1o} ${y1o}`,
-      `A ${r} ${r} 0 ${largeArc} 1 ${x2o} ${y2o}`,
-      `L ${x1i} ${y1i}`,
-      `A ${ir} ${ir} 0 ${largeArc} 0 ${x2i} ${y2i}`,
-      "Z",
-    ].join(" ");
+    // Full-circle arc (360°) is degenerate in SVG — start/end points overlap.
+    // Draw two semicircles instead.
+    if (angle >= 359.9) {
+      d = [
+        `M ${cx} ${cy - r}`,
+        `A ${r} ${r} 0 1 1 ${cx} ${cy + r}`,
+        `A ${r} ${r} 0 1 1 ${cx} ${cy - r}`,
+        `L ${cx} ${cy - ir}`,
+        `A ${ir} ${ir} 0 1 0 ${cx} ${cy + ir}`,
+        `A ${ir} ${ir} 0 1 0 ${cx} ${cy - ir}`,
+        "Z",
+      ].join(" ");
+    } else {
+      const endAngle = startAngle + angle;
+      const largeArc = angle > 180 ? 1 : 0;
+
+      const toRad = (a: number) => (a * Math.PI) / 180;
+      const x1o = cx + r * Math.cos(toRad(startAngle));
+      const y1o = cy + r * Math.sin(toRad(startAngle));
+      const x2o = cx + r * Math.cos(toRad(endAngle));
+      const y2o = cy + r * Math.sin(toRad(endAngle));
+      const x1i = cx + ir * Math.cos(toRad(endAngle));
+      const y1i = cy + ir * Math.sin(toRad(endAngle));
+      const x2i = cx + ir * Math.cos(toRad(startAngle));
+      const y2i = cy + ir * Math.sin(toRad(startAngle));
+
+      d = [
+        `M ${x1o} ${y1o}`,
+        `A ${r} ${r} 0 ${largeArc} 1 ${x2o} ${y2o}`,
+        `L ${x1i} ${y1i}`,
+        `A ${ir} ${ir} 0 ${largeArc} 0 ${x2i} ${y2i}`,
+        "Z",
+      ].join(" ");
+    }
 
     return { d, color: s.color, label: s.label, pct: s.pct, value: s.value, idx: i };
   });

@@ -236,10 +236,6 @@ class ClaudeClient:
             from app.core.redis_client import redis_client as aredis
 
             await aredis.incrbyfloat("ai_cumulative_cost", cost_usd)
-            # Ensure key expires after 30 days so it resets naturally
-            ttl = await aredis.ttl("ai_cumulative_cost")
-            if ttl == -1:  # no expiry set
-                await aredis.expire("ai_cumulative_cost", 30 * 86400)
         except Exception:
             logger.warning("Failed to increment cumulative cost (async)", exc_info=True)
 
@@ -272,9 +268,6 @@ class ClaudeClient:
 
                 # Increment cumulative cost for credit hard stop
                 r.incrbyfloat("ai_cumulative_cost", cost_usd)
-                # Ensure key expires after 30 days so it resets naturally
-                if r.ttl("ai_cumulative_cost") == -1:
-                    r.expire("ai_cumulative_cost", 30 * 86400)
             finally:
                 r.close()
         except Exception:

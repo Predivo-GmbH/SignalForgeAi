@@ -53,12 +53,13 @@ function StrategyComparisonSection() {
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-(--color-text-primary)">Strategy Comparison</h2>
+          <Tooltip text="All active strategies run in parallel on their configured symbols and timeframes. Compare metrics to find the best-performing configuration.">
+            <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">Strategy Comparison</h2>
+          </Tooltip>
           <p className="text-xs text-(--color-text-secondary) mt-0.5">
             Side-by-side performance of all strategies
           </p>
         </div>
-        <Tooltip icon text="All active strategies run in parallel on their configured symbols and timeframes. Compare metrics to find the best-performing configuration." />
       </div>
 
       {/* Winner badges */}

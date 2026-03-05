@@ -42,10 +42,11 @@ function MetricCard({
     <div className="bg-(--color-bg-elevated)/50 rounded-lg p-4 space-y-1">
       <div className="flex items-center gap-2">
         <Icon className="w-4 h-4 text-(--color-text-secondary)" />
-        <span className="text-xs text-(--color-text-secondary) uppercase tracking-wider">
-          {label}
-        </span>
-        <Tooltip icon text={tooltip} />
+        <Tooltip text={tooltip}>
+          <span className="text-xs text-(--color-text-secondary) uppercase tracking-wider cursor-help">
+            {label}
+          </span>
+        </Tooltip>
       </div>
       <p
         className={cn(
@@ -177,9 +178,11 @@ export function StrategyBacktestResults({
 
       {/* Portfolio metrics */}
       <div>
-        <h3 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider mb-3">
-          Portfolio Performance
-        </h3>
+        <Tooltip text="Aggregated performance across all symbols in this backtest. Shows how the strategy would have performed as a complete portfolio.">
+          <h3 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider mb-3 cursor-help">
+            Portfolio Performance
+          </h3>
+        </Tooltip>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <MetricCard
             label="Total Return"
@@ -252,9 +255,11 @@ export function StrategyBacktestResults({
       {/* Per-symbol breakdown */}
       {sorted.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider mb-3">
-            Per-Symbol Breakdown
-          </h3>
+          <Tooltip text="Individual performance for each symbol tested. Sort columns to find the best and worst performers.">
+            <h3 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider mb-3 cursor-help">
+              Per-Symbol Breakdown
+            </h3>
+          </Tooltip>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -346,9 +351,11 @@ export function StrategyBacktestResults({
       {/* Equity curve placeholder */}
       {portfolio.equity_curve && portfolio.equity_curve.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Combined Equity Curve
-          </h3>
+          <Tooltip text="Visual timeline of how portfolio value changed throughout the backtest period. Shows the growth trajectory and drawdown events.">
+            <h3 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">
+              Combined Equity Curve
+            </h3>
+          </Tooltip>
           <div className="bg-(--color-bg-elevated)/50 rounded-lg p-4 h-48 flex items-center justify-center">
             <p className="text-xs text-(--color-text-secondary)">
               {portfolio.equity_curve.length} data points &mdash; chart

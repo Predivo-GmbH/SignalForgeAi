@@ -29,11 +29,13 @@ function StatCard({
   value,
   icon: Icon,
   valueColor,
+  tooltip,
 }: {
   label: string;
   value: string;
   icon: React.ComponentType<{ className?: string }>;
   valueColor?: string;
+  tooltip?: string;
 }) {
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 flex items-center gap-3">
@@ -41,9 +43,17 @@ function StatCard({
         <Icon className="w-5 h-5 text-(--color-accent)" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-(--color-text-secondary) uppercase tracking-wider">
-          {label}
-        </p>
+        {tooltip ? (
+          <Tooltip text={tooltip}>
+            <p className="text-xs text-(--color-text-secondary) uppercase tracking-wider cursor-help">
+              {label}
+            </p>
+          </Tooltip>
+        ) : (
+          <p className="text-xs text-(--color-text-secondary) uppercase tracking-wider">
+            {label}
+          </p>
+        )}
         <p className={cn("text-lg font-semibold font-mono", valueColor ?? "text-(--color-text-primary)")}>
           {value}
         </p>
@@ -355,11 +365,13 @@ export function TradesPage() {
           <>
             <StatCard
               label="Total Trades"
+              tooltip="Total number of completed and open trades executed by all strategies combined."
               value={stats?.total_trades?.toString() ?? "0"}
               icon={BarChart3}
             />
             <StatCard
               label="Win Rate"
+              tooltip="Percentage of closed trades that ended in profit. Above 50% is generally considered good."
               value={stats ? `${stats.win_rate.toFixed(1)}%` : "0%"}
               icon={Target}
               valueColor={
@@ -370,6 +382,7 @@ export function TradesPage() {
             />
             <StatCard
               label="Profit Factor"
+              tooltip="Ratio of gross profits to gross losses. Above 1.0 means profitable overall. Above 2.0 is excellent."
               value={stats?.profit_factor != null ? (Number.isFinite(stats.profit_factor) ? stats.profit_factor.toFixed(2) : "\u221E") : "0.00"}
               icon={TrendingUp}
               valueColor={
@@ -380,6 +393,7 @@ export function TradesPage() {
             />
             <StatCard
               label="Total P&L"
+              tooltip="Cumulative profit and loss across all closed trades. Green = net profit, red = net loss."
               value={formatPnl(stats?.total_pnl)}
               icon={DollarSign}
               valueColor={pnlColor(stats?.total_pnl)}

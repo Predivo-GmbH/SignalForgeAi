@@ -137,6 +137,10 @@ async def update_credit(
     await redis_client.set("ai_prepaid_credit", str(body.prepaid_usd))
     # Reset cumulative cost counter when credit is replenished
     await redis_client.delete("ai_cumulative_cost")
+    # Record reset timestamp so DB fallback knows which records to sum
+    await redis_client.set(
+        "ai_credit_reset_at", datetime.now(UTC).isoformat(),
+    )
     return {"prepaid_usd": body.prepaid_usd}
 
 
@@ -351,10 +355,10 @@ async def _query_local(
         for r in recent_rows
     ]
 
-    # Credit — use Redis cumulative cost (tracks spending since last
-    # credit update, reset to 0 when credit is replenished).
+    # Credit — Redis cumulative cost with DB fallback (tracks spending
+    # since last credit update, reset to 0 when credit is replenished).
     prepaid = await _get_prepaid_credit()
-    spent_since_update = await _get_cumulative_cost()
+    spent_since_update = await _get_cumulative_cost(db)
 
     return {
         "total_calls": total_calls,
@@ -415,11 +419,13 @@ async def _get_prepaid_credit() -> float:
     return _settings.ai_prepaid_credit_usd
 
 
-async def _get_cumulative_cost() -> float:
-    """Read cumulative cost since last credit update from Redis.
+async def _get_cumulative_cost(db: AsyncSession | None = None) -> float:
+    """Read cumulative cost since last credit update.
 
-    This counter is incremented on every AI API call and reset to 0
-    when the prepaid credit is replenished via PUT /ai-usage/credit.
+    Primary source: Redis ``ai_cumulative_cost`` (fast counter incremented
+    on every AI call).  Fallback: ``SUM(ai_insights.cost_usd)`` from the DB
+    since the last credit reset — guarantees the display is always accurate
+    even after a Redis flush, restart, or key expiry.
     """
     try:
         from app.core.redis_client import redis_client
@@ -427,6 +433,51 @@ async def _get_cumulative_cost() -> float:
         val = await redis_client.get("ai_cumulative_cost")
         if val is not None:
             return float(val)
+
+        # Redis key missing — reconstruct from DB
+        cost = await _reconstruct_cumulative_from_db(db)
+        # Re-seed Redis so subsequent reads are fast
+        if cost > 0:
+            await redis_client.set("ai_cumulative_cost", str(cost))
+        return cost
     except Exception as e:
         logger.warning("Redis read failed for cumulative cost: %s", e, exc_info=True)
+
+    # Last-resort: try DB without relying on Redis at all
+    try:
+        return await _reconstruct_cumulative_from_db(db)
+    except Exception:
+        logger.warning("DB fallback also failed for cumulative cost", exc_info=True)
     return 0.0
+
+
+async def _reconstruct_cumulative_from_db(
+    db: AsyncSession | None = None,
+) -> float:
+    """Sum AI costs from DB since the last credit reset."""
+    async def _query(session: AsyncSession) -> float:
+        # Check if there's a recorded credit reset timestamp
+        reset_at = None
+        try:
+            from app.core.redis_client import redis_client
+
+            val = await redis_client.get("ai_credit_reset_at")
+            if val:
+                reset_at = datetime.fromisoformat(val)
+        except Exception:
+            pass
+
+        q = select(func.coalesce(func.sum(AIInsight.cost_usd), 0.0))
+        if reset_at:
+            q = q.where(AIInsight.created_at >= reset_at)
+        result = await session.execute(q)
+        return float(result.scalar_one())
+
+    if db is not None:
+        return await _query(db)
+
+    # No session passed — create one
+    from app.core.database import async_session
+
+    async with async_session() as session:
+        return await _query(session)

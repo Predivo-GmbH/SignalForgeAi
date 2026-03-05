@@ -141,6 +141,35 @@ async def _execute_async():
                     await db.commit()
                     continue
 
+                # --- Minimum notional check (exchange-enforced floor) ---
+                try:
+                    from app.execution.min_notional import (
+                        check_min_notional,
+                        resolve_exchange_for_symbol,
+                    )
+
+                    target_exchange = resolve_exchange_for_symbol(
+                        sig.symbol, cfg,
+                    )
+                    entry_price = sig.entry_price or 0.0
+                    passes, notional, minimum = check_min_notional(
+                        symbol=sig.symbol,
+                        quantity=quantity,
+                        price=entry_price,
+                        exchange=target_exchange,
+                    )
+                    if not passes:
+                        logger.warning(
+                            "Min notional REJECT: signal %s for %s — "
+                            "notional $%.4f < $%.2f minimum on %s",
+                            sig.id, sig.symbol, notional, minimum, target_exchange,
+                        )
+                        sig.status = "rejected"
+                        await db.commit()
+                        continue
+                except Exception as e:
+                    logger.warning("Min notional check failed (proceeding): %s", e)
+
                 # --- Holdings-based position cap (use actual exchange balances) ---
                 try:
                     from app.api.holdings import _fetch_exchange_holdings

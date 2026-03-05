@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Briefcase, X } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, fmtUsd } from "@/lib/format";
 import type { Position } from "@/hooks/usePositions";
 import { useClosePosition } from "@/hooks/usePositions";
 
@@ -103,6 +103,9 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
               <th className="px-3 sm:px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hidden md:table-cell">
                 Qty
               </th>
+              <th className="px-3 sm:px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hidden md:table-cell">
+                Total
+              </th>
               <th className="px-3 sm:px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hidden lg:table-cell">
                 SL
               </th>
@@ -122,7 +125,7 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
             ) : openPositions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-3 sm:px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]"
                 >
                   No open positions
@@ -156,6 +159,9 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-right font-mono text-[var(--color-text-primary)] hidden md:table-cell">
                       {pos.quantity}
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 text-right font-mono text-[var(--color-text-primary)] hidden md:table-cell">
+                      {fmtUsd(pos.entry_price * pos.quantity)}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-right font-mono text-[var(--color-text-secondary)] hidden lg:table-cell">
                       {pos.stop_loss != null ? formatPrice(pos.stop_loss) : "--"}

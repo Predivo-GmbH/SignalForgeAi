@@ -17,6 +17,7 @@ from app.core.encryption import decrypt_value
 from app.core.rate_limit import limiter
 from app.execution.adapters.ccxt_adapter import CCXTAdapter
 from app.models.holding import CostBasisOverride, ManualHolding
+from app.models.position import Position
 from app.models.strategy import BrokerConnection
 
 logger = logging.getLogger(__name__)
@@ -361,6 +362,30 @@ async def _fetch_manual_holdings(
             notes=h.notes,
         )
         for h in rows
+    ]
+
+
+async def _fetch_trading_holdings(
+    db: AsyncSession, user_id: str,
+) -> list[HoldingItem]:
+    """Get holdings from open trading positions (long only)."""
+    result = await db.execute(
+        select(Position).where(
+            Position.user_id == uuid.UUID(user_id),
+            Position.is_open == True,  # noqa: E712
+            Position.direction == "BUY",
+        )
+    )
+    rows = result.scalars().all()
+    return [
+        HoldingItem(
+            id=str(p.id),
+            symbol=p.symbol.split("/")[0] if "/" in p.symbol else p.symbol,
+            quantity=p.quantity,
+            avg_price=p.entry_price,
+            source="trading",
+        )
+        for p in rows
     ]
 
 

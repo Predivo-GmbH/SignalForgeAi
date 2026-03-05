@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Activity,
   Cpu,
@@ -10,15 +10,17 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   FlaskConical,
   RotateCcw,
   MinusCircle,
+  Filter,
 } from "lucide-react";
 import { useSystemStatus, useRestartWorker, type RestartPhase } from "@/hooks/useSystemStatus";
 import { useEngineStatus } from "@/hooks/useEngineStatus";
 import { useRegimeStatus, type RegimeStatus } from "@/hooks/useRegimeStatus";
 import { useSimulation } from "@/hooks/useSimulation";
-import { usePipelineLog, usePipelineSummary } from "@/hooks/usePipelineLog";
+import { usePipelineLog, usePipelineSummary, type PipelineLogEntry } from "@/hooks/usePipelineLog";
 import { usePipelineRuns, type PipelineRun } from "@/hooks/usePipelineRuns";
 import { Tooltip } from "@/components/ui/Tooltip";
 
@@ -85,6 +87,68 @@ function reasonLabel(reason: string | null): string {
 function reasonDescription(reason: string | null): string {
   if (!reason) return "This signal passed all pipeline gates and was accepted for execution.";
   return REASON_DESCRIPTIONS[reason] || `Blocked by: ${reason}`;
+}
+
+/** Build a context-specific tooltip from an individual pipeline log entry. */
+function entryDescription(e: PipelineLogEntry): string {
+  const sym = e.symbol;
+  const tf = e.timeframe;
+  const dir = e.action;
+  const score = e.confluence_score;
+  const regime = e.regime?.replace("_", " ") ?? "unknown";
+  const reason = e.block_reason;
+
+  if (!reason) {
+    // Passed — explain what it cleared
+    const parts = [
+      `${sym} ${dir} signal on ${tf} passed all pipeline gates`,
+    ];
+    if (score != null) parts[0] += ` with a confluence score of ${score}/100`;
+    parts[0] += ".";
+    parts.push(
+      `Market regime: ${regime}. The signal cleared regime detection, trend filter, zone identification, confluence scoring, trigger confirmation, risk management, position checks, cooldown, deduplication, and AI quality review.`,
+    );
+    return parts.join(" ");
+  }
+
+  switch (reason) {
+    case "chaotic_regime":
+      return `${sym} ${dir} on ${tf} blocked — market regime is chaotic (high ADX + high ATR simultaneously). The regime detector prevents trading during unpredictable conditions to protect capital.`;
+    case "no_trend":
+      return `${sym} ${dir} on ${tf} blocked — no clear directional trend detected. The multi-timeframe trend filter requires EMA alignment, ADX confirmation, or Ichimoku support. Current regime: ${regime}.`;
+    case "no_zones":
+      return `${sym} ${dir} on ${tf} blocked — no valid entry zones found. The zone identifier could not locate Fibonacci retracements, support/resistance levels, or VWAP zones that align with the ${dir.toLowerCase()} direction.`;
+    case "low_confluence":
+      return `${sym} ${dir} on ${tf} blocked — confluence score ${score ?? "?"}/100 is below the strategy threshold (default: 50). The signal did not accumulate enough points across the 14 technical factors (Fibonacci, S/R, VWAP, volume, RSI, MACD, candlestick patterns, etc.).`;
+    case "no_trigger":
+      return `${sym} ${dir} on ${tf} blocked — no entry triggers fired. The system requires at least 2 of 5 confirmation types (candlestick patterns, momentum crossovers, zone bounces, breakout signals, volume spikes) before entering a position.`;
+    case "insufficient_candles":
+      return `${sym} on ${tf} blocked — not enough candle data loaded yet (minimum 100, ideally 200+ for the 200-EMA filter). The ingestion task backfills 500 candles on first run. This should clear within ~60 seconds.`;
+    case "risk_rejected":
+      return `${sym} ${dir} on ${tf} blocked by risk management — position size, ATR-based stop loss distance, or Kelly criterion sizing fell outside acceptable bounds. Confluence: ${score ?? "?"}. Regime: ${regime}.`;
+    case "feedback_filter":
+      return `${sym} ${dir} on ${tf} blocked by the self-learning feedback filter. Past trade analysis identified a pattern suggesting this type of signal (${sym}/${tf}/${dir}) underperforms. FeedbackRules are updated nightly.`;
+    case "confluence_override":
+      return `${sym} ${dir} on ${tf} blocked — the learned confluence threshold (from past trade feedback) is higher than this signal's score of ${score ?? "?"}. Historical data shows signals below this threshold for ${sym} tend to lose.`;
+    case "cooldown":
+      return `${sym} ${dir} on ${tf} blocked — cooldown period is active. A position on ${sym} was recently closed and the system is waiting before allowing re-entry to avoid overtrading.`;
+    case "position_filter":
+      return dir === "BUY"
+        ? `${sym} BUY on ${tf} blocked — an open position already exists for ${sym}. The system prevents opening duplicate positions on the same symbol.`
+        : `${sym} SELL on ${tf} blocked — no open position exists for ${sym} to close. A SELL signal requires an existing long position.`;
+    case "mtf_filter":
+      return dir === "BUY"
+        ? `${sym} BUY on ${tf} blocked — the higher timeframe shows bearish alignment, conflicting with this bullish entry. The multi-timeframe filter requires the higher TF to support the trade direction.`
+        : `${sym} SELL on ${tf} blocked — the higher timeframe shows bullish alignment, conflicting with this bearish exit. The multi-timeframe filter requires the higher TF to support the trade direction.`;
+    case "dedup":
+      return `${sym} ${dir} on ${tf} blocked — an identical pending signal already exists for ${sym}/${tf}/${dir}. Duplicate signals are skipped to prevent double entries.`;
+    case "ai_reject":
+      return `${sym} ${dir} on ${tf} rejected by Claude AI quality gate. The AI analyzed market context, technical setup, and signal quality, then recommended against this trade. Confluence was ${score ?? "?"}, regime: ${regime}.`;
+    case "error":
+      return `An unexpected error occurred while evaluating ${sym} ${dir} on ${tf}. Check the API logs for the full stack trace.`;
+    default:
+      return `${sym} ${dir} on ${tf} blocked by: ${reason}. Confluence: ${score ?? "—"}, regime: ${regime}.`;
+  }
 }
 
 function reasonColor(reason: string | null): string {
@@ -764,8 +828,43 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
   const untilDate = new Date(new Date(runTime).getTime() + 5 * 60 * 1000);
   const until = untilDate.toISOString();
 
+  const [actionFilter, setActionFilter] = useState<string>("all");
+  const [resultFilter, setResultFilter] = useState<string>("all");
+
   const { data, isLoading } = usePipelineLog({ since, until, per_page: 200 });
   const items = data?.items ?? [];
+
+  // Derive available result options from this run's data
+  const resultOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of items) set.add(e.block_reason ?? "passed");
+    // Sort: "passed" first, then alphabetical
+    return Array.from(set).sort((a, b) => {
+      if (a === "passed") return -1;
+      if (b === "passed") return 1;
+      return reasonLabel(a).localeCompare(reasonLabel(b));
+    });
+  }, [items]);
+
+  // Derive available action options from this run's data
+  const actionOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of items) set.add(e.action);
+    return Array.from(set).sort();
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    return items.filter((e) => {
+      if (actionFilter !== "all" && e.action !== actionFilter) return false;
+      if (resultFilter !== "all") {
+        const entryResult = e.block_reason ?? "passed";
+        if (entryResult !== resultFilter) return false;
+      }
+      return true;
+    });
+  }, [items, actionFilter, resultFilter]);
+
+  const hasActiveFilter = actionFilter !== "all" || resultFilter !== "all";
 
   if (isLoading) {
     return (
@@ -789,6 +888,62 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
 
   return (
     <div className="bg-[var(--color-bg-elevated)] border-t border-[var(--color-border)]">
+      {/* Filters */}
+      <div className="px-5 py-3 flex flex-wrap items-center gap-2 border-b border-[var(--color-border)]">
+        <Filter className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" />
+        <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold mr-1">
+          Filter
+        </span>
+
+        {/* Action filter */}
+        <FilterDropdown
+          label="Action"
+          value={actionFilter}
+          onChange={setActionFilter}
+          options={[
+            { value: "all", label: "All Actions" },
+            ...actionOptions.map((a) => ({ value: a, label: a })),
+          ]}
+          activeColor={
+            actionFilter !== "all" ? actionColor(actionFilter) : undefined
+          }
+        />
+
+        {/* Result filter */}
+        <FilterDropdown
+          label="Result"
+          value={resultFilter}
+          onChange={setResultFilter}
+          options={[
+            { value: "all", label: "All Results" },
+            ...resultOptions.map((r) => ({
+              value: r,
+              label: reasonLabel(r === "passed" ? null : r),
+            })),
+          ]}
+          activeColor={
+            resultFilter !== "all"
+              ? reasonColor(resultFilter === "passed" ? null : resultFilter)
+              : undefined
+          }
+        />
+
+        {hasActiveFilter && (
+          <>
+            <button
+              onClick={() => { setActionFilter("all"); setResultFilter("all"); }}
+              className="text-[10px] text-[var(--color-accent)] hover:underline ml-1"
+            >
+              Clear filters
+            </button>
+            <span className="ml-auto text-[10px] text-[var(--color-text-secondary)]">
+              {filtered.length} of {items.length}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -814,7 +969,14 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
             </tr>
           </thead>
           <tbody>
-            {items.map((entry) => (
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-5 py-4 text-center text-xs text-[var(--color-text-secondary)]">
+                  No entries match the selected filters.
+                </td>
+              </tr>
+            )}
+            {filtered.map((entry) => (
               <tr
                 key={entry.id}
                 className="border-t border-[var(--color-border)]"
@@ -842,7 +1004,7 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
                   </span>
                 </td>
                 <td className="px-4 py-2">
-                  <Tooltip text={reasonDescription(entry.block_reason)}>
+                  <Tooltip text={entryDescription(entry)}>
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold cursor-help"
                       style={{
@@ -866,6 +1028,119 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
         </table>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Filter Dropdown                                                    */
+/* ------------------------------------------------------------------ */
+
+function FilterDropdown({
+  label,
+  value,
+  onChange,
+  options,
+  activeColor,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  activeColor?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isActive = value !== "all";
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? label;
+
+  // Position state for the fixed menu
+  const [pos, setPos] = useState<{ top: number; left: number; openUp: boolean }>({
+    top: 0, left: 0, openUp: false,
+  });
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      const t = e.target as Node;
+      if (
+        btnRef.current && !btnRef.current.contains(t) &&
+        menuRef.current && !menuRef.current.contains(t)
+      ) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Close on scroll (menu is fixed-positioned)
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => setOpen(false);
+    window.addEventListener("scroll", handler, true);
+    return () => window.removeEventListener("scroll", handler, true);
+  }, [open]);
+
+  const handleToggle = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const menuHeight = options.length * 28 + 8; // approx
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+      setPos({
+        top: openUp ? rect.top : rect.bottom + 4,
+        left: rect.left,
+        openUp,
+      });
+    }
+    setOpen(!open);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={handleToggle}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+        style={{
+          backgroundColor: isActive
+            ? `color-mix(in srgb, ${activeColor || "var(--color-accent)"} 15%, transparent)`
+            : "var(--color-bg-surface)",
+          color: isActive
+            ? activeColor || "var(--color-accent)"
+            : "var(--color-text-secondary)",
+          border: `1px solid ${isActive ? "transparent" : "var(--color-border)"}`,
+        }}
+      >
+        {selectedLabel}
+        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] min-w-[160px] max-h-[240px] overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-lg py-1"
+          style={{
+            top: pos.openUp ? undefined : pos.top,
+            bottom: pos.openUp ? window.innerHeight - pos.top + 4 : undefined,
+            left: pos.left,
+          }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors hover:bg-[var(--color-bg-elevated)] ${
+                opt.value === value
+                  ? "font-semibold text-[var(--color-accent)]"
+                  : "text-[var(--color-text-secondary)]"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 

@@ -174,7 +174,9 @@ function ScanSidebar({
       {/* Entry list */}
       {history.length > 0 && (
         <div className="px-4 pt-3 pb-1">
-          <h3 className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">Recent Scans</h3>
+          <Tooltip text="History of previous market scans. Click any entry to reload its results and investment plan.">
+            <h3 className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider cursor-help">Recent Scans</h3>
+          </Tooltip>
         </div>
       )}
       <div className="max-h-48 lg:max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -506,7 +508,9 @@ function PlanDisplay({ plan }: { plan: InvestmentPlan }) {
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold text-(--color-text-primary) mb-2">Selected Assets ({plan.selected_cryptos.length})</h3>
+        <Tooltip text="Crypto assets chosen by the AI based on volume, trend strength, and volatility. Each asset includes the AI's reasoning for its selection.">
+          <h3 className="text-sm font-semibold text-(--color-text-primary) mb-2 cursor-help">Selected Assets ({plan.selected_cryptos.length})</h3>
+        </Tooltip>
         <div className="grid gap-2">
           {plan.selected_cryptos.map((c) => (
             <div key={c.symbol} className="flex items-start gap-3 bg-(--color-bg-elevated)/30 rounded-lg px-3 py-2">
@@ -525,7 +529,9 @@ function PlanDisplay({ plan }: { plan: InvestmentPlan }) {
       )}
 
       <div>
-        <h3 className="text-sm font-semibold text-(--color-text-primary) mb-2">Strategy Configuration</h3>
+        <Tooltip text="Parameters the AI selected for the trading strategy — including risk limits, timeframes, confluence thresholds, and position sizing rules.">
+          <h3 className="text-sm font-semibold text-(--color-text-primary) mb-2 cursor-help">Strategy Configuration</h3>
+        </Tooltip>
         <div className="flex flex-wrap gap-3">
           {Object.entries(plan.strategy_config).map(([key, val]) => (
             <span key={key} className="text-xs bg-(--color-bg-elevated) rounded px-2 py-1">
@@ -890,9 +896,11 @@ export function AdvisorPage() {
               {plan && (
                 <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between px-5 py-3 border-b border-(--color-border)">
-                    <h2 className="text-sm font-semibold text-(--color-text-primary)">
-                      Investment Plan — AI Optimal Strategy
-                    </h2>
+                    <Tooltip text="AI-generated plan with optimized parameters for your portfolio. Review before deploying, or validate against historical data first.">
+                      <h2 className="text-sm font-semibold text-(--color-text-primary) cursor-help">
+                        Investment Plan — AI Optimal Strategy
+                      </h2>
+                    </Tooltip>
                     <div className="flex items-center gap-3">
                       {!deployed && (
                         <button
@@ -937,9 +945,11 @@ export function AdvisorPage() {
               {/* Scan Results Table */}
               <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 px-5 py-3 border-b border-(--color-border)">
-                  <h2 className="text-sm font-semibold text-(--color-text-primary)">
-                    Market Scan Results ({scanResults.length} pairs analyzed)
-                  </h2>
+                  <Tooltip text="All trading pairs analyzed in this scan, ranked by the AI's composite score. Higher scores indicate stronger trading opportunities based on volume, trend, and volatility.">
+                    <h2 className="text-sm font-semibold text-(--color-text-primary) cursor-help">
+                      Market Scan Results ({scanResults.length} pairs analyzed)
+                    </h2>
+                  </Tooltip>
                 </div>
                 <ScanResultsTable results={scanResults} />
               </div>

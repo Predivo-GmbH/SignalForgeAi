@@ -1,5 +1,6 @@
 """Paper trading adapter -- simulates order execution locally."""
 
+import logging
 import uuid
 
 from app.execution.adapters.base import (
@@ -11,6 +12,9 @@ from app.execution.adapters.base import (
     OrderStatus,
     OrderType,
 )
+from app.execution.min_notional import SAFE_MIN_NOTIONAL
+
+logger = logging.getLogger(__name__)
 
 
 class PaperAdapter(BrokerAdapter):
@@ -38,6 +42,26 @@ class PaperAdapter(BrokerAdapter):
         quantity: float,
         price: float | None = None,
     ) -> BrokerOrder:
+        # Enforce minimum notional even in paper mode for realism
+        notional = (price or 0.0) * quantity
+        if notional < SAFE_MIN_NOTIONAL:
+            logger.warning(
+                "Paper REJECT: %s %s %s — notional $%.4f < $%.2f minimum",
+                side.value, symbol, quantity, notional, SAFE_MIN_NOTIONAL,
+            )
+            return BrokerOrder(
+                broker_order_id=f"paper-rejected-{uuid.uuid4().hex[:8]}",
+                symbol=symbol,
+                side=side,
+                order_type=order_type,
+                quantity=quantity,
+                price=price,
+                filled_quantity=0.0,
+                average_fill_price=None,
+                status=OrderStatus.REJECTED,
+                broker="paper",
+            )
+
         order_id = f"paper-{uuid.uuid4().hex[:12]}"
         fill_price = price or 0.0
         if side == OrderSide.BUY:
