@@ -6,17 +6,20 @@ import { Tooltip } from "@/components/ui/Tooltip";
 
 interface StatCardData {
   label: string;
+  shortLabel?: string;
   value: string;
   icon: typeof TrendingUp;
   colorClass?: string;
 }
 
-function StatCard({ label, value, icon: Icon, colorClass }: StatCardData) {
+function StatCard({ label, shortLabel, value, icon: Icon, colorClass }: StatCardData) {
   return (
     <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
       <div className="flex items-center gap-1.5 sm:gap-2">
         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" />
-        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider">{label}</span>
+        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider">
+          {shortLabel ? (<><span className="sm:hidden">{shortLabel}</span><span className="hidden sm:inline">{label}</span></>) : label}
+        </span>
       </div>
       <p className={`text-base sm:text-xl font-semibold font-mono ${colorClass ?? "text-(--color-text-primary)"}`}>
         {value}
@@ -51,8 +54,8 @@ export function PerformanceSummary() {
       colorClass: pnlColor(stats.total_pnl),
     },
     { label: "Win Rate", value: `${stats.win_rate}%`, icon: Target },
-    { label: "Profit Factor", value: stats.profit_factor.toFixed(2), icon: BarChart3 },
-    { label: "Total Trades", value: String(stats.total_trades), icon: Activity },
+    { label: "Profit Factor", shortLabel: "PF", value: stats.profit_factor.toFixed(2), icon: BarChart3 },
+    { label: "Total Trades", shortLabel: "Trades", value: String(stats.total_trades), icon: Activity },
     {
       label: "Avg P&L",
       value: formatPnl(stats.avg_pnl),
