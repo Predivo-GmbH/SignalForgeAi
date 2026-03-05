@@ -39,7 +39,7 @@ export function PortfolioPage() {
             <p className="text-sm font-semibold text-(--color-text-primary) group-hover:text-(--color-accent) transition-colors">
               Get started with the AI Advisor
             </p>
-            <p className="text-xs text-(--color-text-secondary) mt-0.5">
+            <p className="text-xs text-(--color-text-secondary) mt-0.5 truncate">
               Scan the market, pick the best trading pairs, and deploy an optimized strategy — all automated.
             </p>
           </div>

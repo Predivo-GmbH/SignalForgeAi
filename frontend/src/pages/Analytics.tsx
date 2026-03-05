@@ -90,29 +90,29 @@ function StrategyComparisonSection() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-(--color-border)">
-              <th className="text-left py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">Strategy</th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-left py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">Strategy</th>
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 <Tooltip text="Total number of completed trades (entry + exit).">Trades</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 <Tooltip text="Percentage of trades that were profitable.">Win Rate</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 <Tooltip text="Total profit/loss in dollar terms.">P&L</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden sm:table-cell">
                 <Tooltip text="Percentage return on initial equity ($10,000).">Return %</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
                 <Tooltip text="Largest peak-to-trough decline. Lower is better.">Max DD</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
                 <Tooltip text="Risk-adjusted return. Above 1.0 is good, above 2.0 is excellent.">Sharpe</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
                 <Tooltip text="Ratio of gross profits to gross losses. Above 1.0 = profitable.">PF</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden sm:table-cell">
                 <Tooltip text="Signals currently pending or active for this strategy.">Signals</Tooltip>
               </th>
             </tr>
@@ -124,39 +124,39 @@ function StrategyComparisonSection() {
               const isBestWR = s.strategy_name === data.best_by_win_rate;
               return (
                 <tr key={s.strategy_id} className="border-b border-(--color-border)/50 hover:bg-(--color-bg-elevated)/30 transition-colors">
-                  <td className="py-3 px-3">
+                  <td className="py-3 px-2 sm:px-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-(--color-text-primary)">{s.strategy_name}</span>
+                      <span className="font-medium text-(--color-text-primary) text-xs sm:text-sm">{s.strategy_name}</span>
                       {(isBestReturn || isBestSharpe || isBestWR) && (
-                        <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                        <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       )}
                     </div>
                   </td>
-                  <td className="text-right py-3 px-3 font-mono text-(--color-text-primary)">
+                  <td className="text-right py-3 px-2 sm:px-3 font-mono text-(--color-text-primary) text-xs sm:text-sm">
                     {s.total_trades}
-                    <span className="text-(--color-text-secondary) text-xs ml-1">
+                    <span className="text-(--color-text-secondary) text-xs ml-1 hidden sm:inline">
                       ({s.winning_trades}W/{s.losing_trades}L)
                     </span>
                   </td>
-                  <td className={cn("text-right py-3 px-3 font-mono", s.win_rate >= 50 ? "text-(--color-positive)" : "text-(--color-negative)")}>
+                  <td className={cn("text-right py-3 px-2 sm:px-3 font-mono text-xs sm:text-sm", s.win_rate >= 50 ? "text-(--color-positive)" : "text-(--color-negative)")}>
                     {s.win_rate.toFixed(1)}%
                   </td>
-                  <td className={cn("text-right py-3 px-3 font-mono font-medium", pnlColor(s.total_pnl))}>
+                  <td className={cn("text-right py-3 px-2 sm:px-3 font-mono font-medium text-xs sm:text-sm", pnlColor(s.total_pnl))}>
                     {s.total_pnl >= 0 ? "+" : ""}{s.total_pnl.toFixed(2)}
                   </td>
-                  <td className={cn("text-right py-3 px-3 font-mono", pnlColor(s.total_return_pct))}>
+                  <td className={cn("text-right py-3 px-2 sm:px-3 font-mono hidden sm:table-cell", pnlColor(s.total_return_pct))}>
                     {s.total_return_pct >= 0 ? "+" : ""}{s.total_return_pct.toFixed(2)}%
                   </td>
-                  <td className="text-right py-3 px-3 font-mono text-(--color-negative)">
+                  <td className="text-right py-3 px-2 sm:px-3 font-mono text-(--color-negative) hidden md:table-cell">
                     {s.max_drawdown_pct.toFixed(2)}%
                   </td>
-                  <td className={cn("text-right py-3 px-3 font-mono", s.sharpe_ratio != null ? pnlColor(s.sharpe_ratio) : "text-(--color-text-secondary)")}>
+                  <td className={cn("text-right py-3 px-2 sm:px-3 font-mono hidden md:table-cell", s.sharpe_ratio != null ? pnlColor(s.sharpe_ratio) : "text-(--color-text-secondary)")}>
                     {s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : "—"}
                   </td>
-                  <td className={cn("text-right py-3 px-3 font-mono", s.profit_factor != null ? pnlColor(s.profit_factor - 1) : "text-(--color-text-secondary)")}>
+                  <td className={cn("text-right py-3 px-2 sm:px-3 font-mono hidden md:table-cell", s.profit_factor != null ? pnlColor(s.profit_factor - 1) : "text-(--color-text-secondary)")}>
                     {s.profit_factor != null ? s.profit_factor.toFixed(2) : "—"}
                   </td>
-                  <td className="text-right py-3 px-3 font-mono text-(--color-text-primary)">
+                  <td className="text-right py-3 px-2 sm:px-3 font-mono text-(--color-text-primary) hidden sm:table-cell">
                     {s.active_signals}
                   </td>
                 </tr>

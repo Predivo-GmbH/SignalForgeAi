@@ -1,10 +1,8 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Loader2,
   Plus,
   X,
-  Pencil,
-  Trash2,
   Wallet,
   TrendingUp,
   TrendingDown,
@@ -24,45 +22,25 @@ import {
   ColorType,
 } from "lightweight-charts";
 import { cn } from "@/lib/cn";
-import { pnlColor, formatPrice, fmtUsd } from "@/lib/format";
-import { CRYPTO_LIST, CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
-import type { CryptoEntry } from "@/lib/cryptoSymbols";
+import { pnlColor, fmtUsd } from "@/lib/format";
+import { CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
 import {
   useHoldings,
-  useAddHolding,
-  useUpdateHolding,
   useDeleteHolding,
 } from "@/hooks/useHoldings";
-import type { HoldingItem, ManualHoldingRequest } from "@/hooks/useHoldings";
+import type { HoldingItem } from "@/hooks/useHoldings";
 import { useBrokerConnections } from "@/hooks/useBrokerConnections";
 import { AssetDetailModal } from "./AssetDetailModal";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { CoinIcon } from "./CoinIcon";
+import { DONUT_COLORS } from "./CoinIcon";
+import { DonutChart } from "./DonutChart";
+import type { DonutSlice } from "./DonutChart";
+import { HoldingForm } from "./HoldingFormModal";
+import { HoldingRow, SOURCE_STYLE } from "./HoldingRow";
+import type { CombinedHolding } from "./HoldingRow";
 
 /* ---- Constants ---- */
-
-const DONUT_COLORS = [
-  "#3b82f6", // blue
-  "#f59e0b", // amber
-  "#10b981", // emerald
-  "#8b5cf6", // violet
-  "#f43f5e", // rose
-  "#06b6d4", // cyan
-  "#f97316", // orange
-  "#ec4899", // pink
-  "#14b8a6", // teal
-  "#6366f1", // indigo
-];
-
-const SOURCE_STYLE: Record<string, { label: string; cls: string; color: string }> = {
-  binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500", color: "#f59e0b" },
-  kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500", color: "#10b981" },
-  mexc: { label: "MEXC", cls: "bg-blue-500/10 text-blue-500", color: "#3b82f6" },
-  bitstamp: { label: "Bitstamp", cls: "bg-green-500/10 text-green-500", color: "#22c55e" },
-  cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500", color: "#6366f1" },
-  kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500", color: "#8b5cf6" },
-  manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)", color: "#6b7280" },
-  trading: { label: "Trading", cls: "bg-(--color-accent)/10 text-(--color-accent)", color: "#3b82f6" },
-};
 
 const STABLECOINS = new Set(["USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"]);
 const SMALL_BALANCE_THRESHOLD = 1; // $1
@@ -76,36 +54,6 @@ function fmtCompact(val: number): string {
   if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
   if (val >= 1e3) return `$${(val / 1e3).toFixed(1)}K`;
   return fmtUsd(val);
-}
-
-/* ---- Coin Icon ---- */
-
-function CoinIcon({ symbol, imageUrl, size = 24 }: { symbol: string; imageUrl: string | null; size?: number }) {
-  const [error, setError] = useState(false);
-
-  if (imageUrl && !error) {
-    return (
-      <img
-        src={imageUrl}
-        alt={symbol}
-        width={size}
-        height={size}
-        className="rounded-full shrink-0"
-        onError={() => setError(true)}
-        loading="lazy"
-      />
-    );
-  }
-
-  const colorIndex = symbol.charCodeAt(0) % DONUT_COLORS.length;
-  return (
-    <div
-      className="rounded-full shrink-0 flex items-center justify-center text-white font-bold"
-      style={{ width: size, height: size, backgroundColor: DONUT_COLORS[colorIndex], fontSize: size * 0.45 }}
-    >
-      {symbol.charAt(0)}
-    </div>
-  );
 }
 
 /* ---- Source badge ---- */
@@ -194,113 +142,6 @@ function ExchangeLogo({ source, size = 18 }: { source: string; size?: number }) 
         </g>
       )}
     </svg>
-  );
-}
-
-/* ---- SVG Donut Chart ---- */
-
-interface DonutSlice {
-  label: string;
-  value: number;
-  pct: number;
-  color: string;
-}
-
-function DonutChart({
-  slices,
-  totalValue,
-  onSliceClick,
-}: {
-  slices: DonutSlice[];
-  totalValue: number;
-  onSliceClick?: (label: string) => void;
-}) {
-  const size = 180;
-  const cx = size / 2;
-  const cy = size / 2;
-  const outerR = 80;
-  const innerR = 56;
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-
-  // Build arcs
-  let cumAngle = -90; // start at top
-  const arcs = slices.map((s, i) => {
-    const angle = (s.pct / 100) * 360;
-    const startAngle = cumAngle;
-    cumAngle += angle;
-    const endAngle = cumAngle;
-    const largeArc = angle > 180 ? 1 : 0;
-
-    const r = outerR;
-    const ir = innerR;
-
-    const toRad = (a: number) => (a * Math.PI) / 180;
-    const x1o = cx + r * Math.cos(toRad(startAngle));
-    const y1o = cy + r * Math.sin(toRad(startAngle));
-    const x2o = cx + r * Math.cos(toRad(endAngle));
-    const y2o = cy + r * Math.sin(toRad(endAngle));
-    const x1i = cx + ir * Math.cos(toRad(endAngle));
-    const y1i = cy + ir * Math.sin(toRad(endAngle));
-    const x2i = cx + ir * Math.cos(toRad(startAngle));
-    const y2i = cy + ir * Math.sin(toRad(startAngle));
-
-    const d = [
-      `M ${x1o} ${y1o}`,
-      `A ${r} ${r} 0 ${largeArc} 1 ${x2o} ${y2o}`,
-      `L ${x1i} ${y1i}`,
-      `A ${ir} ${ir} 0 ${largeArc} 0 ${x2i} ${y2i}`,
-      "Z",
-    ].join(" ");
-
-    return { d, color: s.color, label: s.label, pct: s.pct, value: s.value, idx: i };
-  });
-
-  const hovered = hoveredIdx != null ? slices[hoveredIdx] : null;
-
-  return (
-    <div className="flex justify-center">
-      <svg
-        viewBox={`0 0 ${size} ${size}`}
-        className="w-full h-auto max-w-[240px]"
-      >
-        {arcs.map((arc) => (
-          <path
-            key={arc.idx}
-            d={arc.d}
-            fill={arc.color}
-            opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.35 : 1}
-            className="transition-opacity duration-150"
-            onMouseEnter={() => setHoveredIdx(arc.idx)}
-            onMouseLeave={() => setHoveredIdx(null)}
-            onClick={() => onSliceClick?.(arc.label)}
-            style={{ cursor: "pointer" }}
-          />
-        ))}
-        {/* Center text — switches between total and hovered slice */}
-        {hovered ? (
-          <>
-            <text x={cx} y={cy - 14} textAnchor="middle" className="fill-(--color-text-secondary)" fontSize="8">
-              {hovered.label}
-            </text>
-            <text x={cx} y={cy + 2} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="12">
-              {fmtUsd(hovered.value)}
-            </text>
-            <text x={cx} y={cy + 16} textAnchor="middle" className="fill-(--color-text-secondary) font-medium" fontSize="9">
-              {hovered.pct.toFixed(1)}%
-            </text>
-          </>
-        ) : (
-          <>
-            <text x={cx} y={cy - 8} textAnchor="middle" className="fill-(--color-text-secondary)" fontSize="8">
-              Total Value
-            </text>
-            <text x={cx} y={cy + 10} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="13">
-              {fmtCompact(totalValue)}
-            </text>
-          </>
-        )}
-      </svg>
-    </div>
   );
 }
 
@@ -462,12 +303,12 @@ function SourceBreakdown({
   const isAllActive = activeSource === null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto p-1 -m-1">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:overflow-x-auto sm:p-1 sm:-m-1 sm:scrollbar-thin">
       {/* "All" card — always first, selected by default */}
       <button
         onClick={() => { if (!isAllActive && activeSource) onSourceClick(activeSource); }}
         className={cn(
-          "flex-1 min-w-[90px] rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
+          "sm:shrink-0 sm:min-w-[90px] sm:flex-1 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 text-left transition-all duration-150 space-y-0.5",
           "hover:-translate-y-0.5",
           isAllActive
             ? "bg-(--color-accent)/10 ring-2 ring-(--color-accent)/40 ring-offset-1 ring-offset-(--color-bg-surface)"
@@ -495,7 +336,7 @@ function SourceBreakdown({
             key={s.source}
             onClick={() => onSourceClick(s.source)}
             className={cn(
-              "flex-1 min-w-[90px] rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
+              "sm:shrink-0 sm:min-w-[90px] sm:flex-1 rounded-lg px-2.5 sm:px-3 py-2 sm:py-2.5 text-left transition-all duration-150 space-y-0.5",
               "hover:-translate-y-0.5",
               isActive
                 ? "ring-2 ring-offset-1 ring-offset-(--color-bg-surface)"
@@ -776,127 +617,6 @@ function PortfolioValueChart({
   );
 }
 
-/* ---- Symbol Autocomplete ---- */
-
-function SymbolAutocomplete({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  const query = value.trim().toUpperCase();
-
-  const suggestions: CryptoEntry[] = useMemo(() => {
-    if (!query) return [];
-    return CRYPTO_LIST.filter(
-      (c) =>
-        c.symbol.includes(query) ||
-        c.name.toUpperCase().includes(query),
-    ).slice(0, 8);
-  }, [query]);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  // Scroll highlighted item into view
-  useEffect(() => {
-    if (highlightIdx >= 0 && listRef.current) {
-      const el = listRef.current.children[highlightIdx] as HTMLElement | undefined;
-      el?.scrollIntoView({ block: "nearest" });
-    }
-  }, [highlightIdx]);
-
-  const selectItem = useCallback(
-    (entry: CryptoEntry) => {
-      onChange(entry.symbol);
-      setOpen(false);
-      setHighlightIdx(-1);
-    },
-    [onChange],
-  );
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (!open || suggestions.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIdx((i) => (i + 1) % suggestions.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIdx((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
-    } else if (e.key === "Enter" && highlightIdx >= 0) {
-      e.preventDefault();
-      selectItem(suggestions[highlightIdx]);
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
-  }
-
-  const showDropdown = open && query.length > 0 && suggestions.length > 0;
-  // Check for exact match to hide dropdown when symbol is already selected
-  const exactMatch = suggestions.length === 1 && suggestions[0].symbol === query;
-
-  return (
-    <div ref={wrapperRef} className="relative">
-      <input
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setOpen(true);
-          setHighlightIdx(-1);
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={handleKeyDown}
-        placeholder="BTC"
-        autoComplete="off"
-        className="w-full bg-(--color-bg-surface) border border-(--color-border) rounded-lg px-2.5 py-1.5 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-      />
-      {showDropdown && !exactMatch && (
-        <div
-          ref={listRef}
-          className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg py-1"
-        >
-          {suggestions.map((entry, i) => (
-            <button
-              key={entry.symbol}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => selectItem(entry)}
-              onMouseEnter={() => setHighlightIdx(i)}
-              className={cn(
-                "w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-colors",
-                i === highlightIdx
-                  ? "bg-(--color-accent)/10"
-                  : "hover:bg-(--color-bg-elevated)",
-              )}
-            >
-              <span className="text-xs font-bold font-mono text-(--color-text-primary) w-14 shrink-0">
-                {entry.symbol}
-              </span>
-              <span className="text-xs text-(--color-text-secondary) truncate">
-                {entry.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ---- Portfolio Loading Animation ---- */
 
 interface LoadingStep {
@@ -1068,127 +788,7 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
   );
 }
 
-/* ---- Add/Edit Form ---- */
-
-function HoldingForm({
-  initial,
-  onClose,
-}: {
-  initial?: HoldingItem;
-  onClose: () => void;
-}) {
-  const addMutation = useAddHolding();
-  const updateMutation = useUpdateHolding();
-
-  const [symbol, setSymbol] = useState(initial?.symbol ?? "");
-  const [quantity, setQuantity] = useState(initial?.quantity?.toString() ?? "");
-  const [price, setPrice] = useState(initial?.avg_price?.toString() ?? "");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
-
-  const isEdit = !!initial?.id;
-  const mutation = isEdit ? updateMutation : addMutation;
-  const canSubmit = symbol.trim() && parseFloat(quantity) > 0 && !mutation.isPending;
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const data: ManualHoldingRequest = {
-      symbol: symbol.trim().toUpperCase(),
-      quantity: parseFloat(quantity),
-      purchase_price: price ? parseFloat(price) : null,
-      notes: notes.trim() || null,
-    };
-    if (isEdit && initial?.id) {
-      updateMutation.mutate({ id: initial.id, ...data }, { onSuccess: onClose });
-    } else {
-      addMutation.mutate(data, { onSuccess: onClose });
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="bg-(--color-bg-elevated)/50 rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-(--color-text-primary)">
-          {isEdit ? "Edit Holding" : "Add Holding"}
-        </span>
-        <button type="button" onClick={onClose} className="p-1 hover:bg-(--color-bg-elevated) rounded">
-          <X className="w-3.5 h-3.5 text-(--color-text-secondary)" />
-        </button>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div>
-          <label className="block text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider mb-1">Symbol</label>
-          <SymbolAutocomplete value={symbol} onChange={setSymbol} />
-        </div>
-        <div>
-          <label className="block text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider mb-1">Quantity</label>
-          <input
-            type="number"
-            step="any"
-            min="0"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            placeholder="0.5"
-            className="w-full bg-(--color-bg-surface) border border-(--color-border) rounded-lg px-2.5 py-1.5 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider mb-1">Cost/Unit (USD)</label>
-          <input
-            type="number"
-            step="any"
-            min="0"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="Optional"
-            className="w-full bg-(--color-bg-surface) border border-(--color-border) rounded-lg px-2.5 py-1.5 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider mb-1">Label</label>
-          <input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. Ledger"
-            className="w-full bg-(--color-bg-surface) border border-(--color-border) rounded-lg px-2.5 py-1.5 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-        </div>
-      </div>
-      {mutation.isError && (
-        <p className="text-xs text-(--color-negative)">
-          {mutation.error instanceof Error ? mutation.error.message : "Failed to save"}
-        </p>
-      )}
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="flex items-center gap-1.5 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-xs font-medium rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-      >
-        {mutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-        {isEdit ? "Update" : "Add"}
-      </button>
-    </form>
-  );
-}
-
-/* ---- Combined holding (merged by symbol) ---- */
-
-interface CombinedHolding {
-  symbol: string;
-  name: string;
-  totalQty: number;
-  currentPrice: number | null;
-  totalValue: number;
-  change24hPct: number | null;
-  allocPct: number | null;
-  sources: { source: string; notes: string | null; qty: number; id?: string; avgPrice?: number | null }[];
-  marketCap: number | null;
-  marketCapRank: number | null;
-  volume24h: number | null;
-  imageUrl: string | null;
-  avgCost: number | null;
-  pnlUsd: number | null;
-  pnlPct: number | null;
-}
+/* ---- Combined holding helpers ---- */
 
 function combineHoldings(holdings: HoldingItem[], totalValue: number | null): CombinedHolding[] {
   const map: Record<string, CombinedHolding> = {};
@@ -1554,7 +1154,7 @@ export function HoldingsCard() {
             <Wallet className="w-4 h-4 text-(--color-accent)" />
             <Tooltip text="Allocation breakdown showing how your portfolio is distributed across assets."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Portfolio Overview</h3></Tooltip>
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
             {[...new Set(allHoldings.map((h) => h.source))].map((s) => (
               <SourceBadge
                 key={s}
@@ -1580,7 +1180,7 @@ export function HoldingsCard() {
           {/* Left: Holdings donut */}
           <div
             className={cn(
-              "bg-(--color-bg-elevated)/30 rounded-lg p-3 sm:p-4 transition-all duration-700 ease-out space-y-3",
+              "bg-(--color-bg-elevated)/30 rounded-lg p-3 sm:p-4 transition-all duration-700 ease-out space-y-3 overflow-hidden min-w-0",
               reveal ? "opacity-100 scale-100" : "opacity-0 scale-90",
             )}
             style={{ transitionDelay: "150ms" }}
@@ -1692,19 +1292,30 @@ export function HoldingsCard() {
         style={{ transitionDelay: "200ms" }}
       >
         {/* Table header with controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <Tooltip text="Detailed list of every asset you hold with live prices, 24h changes, and P&L."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">All Assets</h3></Tooltip>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <Tooltip text="Detailed list of every asset you hold with live prices, 24h changes, and P&L."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">All Assets</h3></Tooltip>
+            {!showForm && !editItem && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add
+              </button>
+            )}
+          </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Search */}
-            <div className="relative">
+            <div className="relative flex-1 min-w-[120px] max-w-[200px]">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary)" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search assets..."
-                className="w-36 sm:w-40 bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-8 pr-3 py-1.5 text-xs text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 placeholder:text-(--color-text-secondary)/50"
+                className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-8 pr-3 py-1.5 text-xs text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 placeholder:text-(--color-text-secondary)/50"
               />
             </div>
 
@@ -1712,7 +1323,7 @@ export function HoldingsCard() {
             <button
               onClick={() => applyFilter("category", "stablecoins")}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap",
                 categoryFilter === "stablecoins"
                   ? "bg-(--color-accent)/10 border-(--color-accent)/30 text-(--color-accent)"
                   : "bg-(--color-bg-elevated) border-(--color-border) text-(--color-text-secondary) hover:text-(--color-text-primary)",
@@ -1726,27 +1337,14 @@ export function HoldingsCard() {
               <button
                 onClick={() => setHideSmall(!hideSmall)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                  "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap",
                   hideSmall
                     ? "bg-(--color-accent)/10 border-(--color-accent)/30 text-(--color-accent)"
                     : "bg-(--color-bg-elevated) border-(--color-border) text-(--color-text-secondary) hover:text-(--color-text-primary)",
                 )}
               >
                 {hideSmall ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                {hideSmall ? `${smallCount} hidden` : `Hide small (<$1)`}
-              </button>
-            )}
-          </div>
-
-          {/* Add holding — right-aligned */}
-          <div className="sm:ml-auto">
-            {!showForm && !editItem && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add
+                {hideSmall ? `${smallCount} hidden` : `Hide <$1`}
               </button>
             )}
           </div>
@@ -1776,155 +1374,28 @@ export function HoldingsCard() {
                   <SortHeader label="24h" sortKey="change" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden sm:table-cell" />
                   <SortHeader label="Mkt Cap" sortKey="marketCap" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden lg:table-cell" />
                   <SortHeader label="Volume" sortKey="volume" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden lg:table-cell" />
-                  <SortHeader label="Holdings" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right" />
+                  <SortHeader label="Holdings" sortKey="value" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right min-w-[90px]" />
                   <SortHeader label="PNL" sortKey="pnl" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-right hidden sm:table-cell" />
                   <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3 hidden md:table-cell">Source</th>
                   <th className="py-2 w-16 hidden sm:table-cell" />
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((c, i) => {
-                  const manualSources = c.sources.filter((s) => s.source === "manual" && s.id);
-                  return (
-                    <tr
-                      key={c.symbol}
-                      className={cn(
-                        "border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 cursor-pointer",
-                        "transition-all duration-500 ease-out",
-                        reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
-                      )}
-                      style={{ transitionDelay: `${350 + i * 40}ms` }}
-                      onClick={() => setDetailSymbol(c.symbol)}
-                    >
-                      {/* Rank */}
-                      <td className="py-2.5 px-2 text-xs font-mono text-(--color-text-secondary) w-10 hidden sm:table-cell">
-                        {c.marketCapRank ?? "—"}
-                      </td>
-
-                      {/* Coin: icon + name + symbol inline */}
-                      <td className="py-2.5 px-2 sm:px-3">
-                        <div className="flex items-center gap-2 sm:gap-2.5">
-                          <CoinIcon symbol={c.symbol} imageUrl={c.imageUrl} size={28} />
-                          <div className="min-w-0 flex items-baseline gap-1.5">
-                            <span className="font-semibold text-(--color-text-primary) text-sm truncate">
-                              {c.name}
-                            </span>
-                            <span className="text-[11px] text-(--color-text-secondary) font-mono shrink-0">
-                              {c.symbol}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Price */}
-                      <td className="py-2.5 px-3 text-right font-mono tabular-nums text-(--color-text-primary) text-xs hidden md:table-cell">
-                        {c.currentPrice != null ? formatPrice(c.currentPrice) : "—"}
-                      </td>
-
-                      {/* 24h Change */}
-                      <td className="py-2.5 px-3 text-right hidden sm:table-cell">
-                        {c.change24hPct != null ? (
-                          <div className="flex items-center justify-end gap-1">
-                            {c.change24hPct >= 0 ? (
-                              <TrendingUp className={cn("w-3 h-3", pnlColor(c.change24hPct))} />
-                            ) : (
-                              <TrendingDown className={cn("w-3 h-3", pnlColor(c.change24hPct))} />
-                            )}
-                            <span className={cn("text-xs font-mono tabular-nums font-medium", pnlColor(c.change24hPct))}>
-                              {c.change24hPct >= 0 ? "+" : ""}{c.change24hPct.toFixed(2)}%
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-(--color-text-secondary)">—</span>
-                        )}
-                      </td>
-
-                      {/* Market Cap */}
-                      <td className="py-2.5 px-3 text-right hidden lg:table-cell">
-                        <span className="text-xs font-mono tabular-nums text-(--color-text-secondary)">
-                          {c.marketCap ? fmtCompact(c.marketCap) : "—"}
-                        </span>
-                      </td>
-
-                      {/* Volume */}
-                      <td className="py-2.5 px-3 text-right hidden lg:table-cell">
-                        <span className="text-xs font-mono tabular-nums text-(--color-text-secondary)">
-                          {c.volume24h ? fmtCompact(c.volume24h) : "—"}
-                        </span>
-                      </td>
-
-                      {/* Holdings: value + qty stacked */}
-                      <td className="py-2.5 px-3 text-right">
-                        <div className="font-mono tabular-nums">
-                          <span className="text-xs font-semibold text-(--color-text-primary) block">
-                            {fmtUsd(c.totalValue)}
-                          </span>
-                          <span className="text-[10px] text-(--color-text-secondary)">
-                            {c.totalQty.toLocaleString("en-US", { maximumFractionDigits: 6 })} {c.symbol}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* PNL */}
-                      <td className="py-2.5 px-3 text-right hidden sm:table-cell">
-                        {c.pnlUsd != null ? (
-                          <div className="font-mono tabular-nums">
-                            <span className={cn("text-xs font-semibold block", pnlColor(c.pnlUsd))}>
-                              {c.pnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(c.pnlUsd))}
-                            </span>
-                            <span className={cn("text-[10px]", pnlColor(c.pnlPct ?? 0))}>
-                              {(c.pnlPct ?? 0) >= 0 ? "+" : ""}{(c.pnlPct ?? 0).toFixed(1)}%
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-(--color-text-secondary)">—</span>
-                        )}
-                      </td>
-
-                      {/* Sources */}
-                      <td className="py-2.5 px-3 hidden md:table-cell">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {c.sources.map((s, si) => {
-                            const style = SOURCE_STYLE[s.source] ?? { label: s.source, cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" };
-                            const label = s.notes && s.source === "manual" ? s.notes : style.label;
-                            return (
-                              <span
-                                key={`${s.source}-${si}`}
-                                className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}
-                              >
-                                {label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-2.5 hidden sm:table-cell" onClick={(e) => e.stopPropagation()}>
-                        {manualSources.length === 1 && c.sources.length === 1 && (
-                          <div className="flex items-center gap-1 justify-end">
-                            <button
-                              onClick={() => {
-                                const raw = allHoldings.find((h) => h.id === manualSources[0].id);
-                                if (raw) { setShowForm(false); setEditItem(raw); }
-                              }}
-                              className="p-1 rounded hover:bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => manualSources[0].id && deleteMutation.mutate(manualSources[0].id)}
-                              disabled={deleteMutation.isPending}
-                              className="p-1 rounded hover:bg-(--color-negative)/10 text-(--color-text-secondary) hover:text-(--color-negative) transition-colors"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {sorted.map((c, i) => (
+                  <HoldingRow
+                    key={c.symbol}
+                    c={c}
+                    index={i}
+                    reveal={reveal}
+                    onDetail={(symbol) => setDetailSymbol(symbol)}
+                    onEdit={(holdingId) => {
+                      const raw = allHoldings.find((h) => h.id === holdingId);
+                      if (raw) { setShowForm(false); setEditItem(raw); }
+                    }}
+                    onDelete={(holdingId) => deleteMutation.mutate(holdingId)}
+                    isDeletePending={deleteMutation.isPending}
+                  />
+                ))}
               </tbody>
 
               {/* Footer with total */}

@@ -32,7 +32,7 @@ export function PortfolioEquitySection() {
   const formatRatio = (v: number | null): string => (v != null ? v.toFixed(2) : "N/A");
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
         <Tooltip text="Historical growth of your trading account over time, showing returns and drawdowns."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Equity Curve</h3></Tooltip>
         <Link
@@ -43,36 +43,36 @@ export function PortfolioEquitySection() {
         </Link>
       </div>
 
-      <div className="h-[280px]">
+      <div className="h-[200px] sm:h-[280px]">
         <EquityCurve points={data.points} />
       </div>
 
       {/* Inline metrics row */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 space-y-0.5">
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-(--color-text-secondary)" />
-            <span className="text-[10px] text-(--color-text-secondary) uppercase tracking-wider">Return</span>
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
+        <div className="bg-(--color-bg-elevated)/50 rounded-lg p-2 sm:p-3 space-y-0.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-(--color-text-secondary)" />
+            <span className="text-[9px] sm:text-[10px] text-(--color-text-secondary) uppercase tracking-wider">Return</span>
           </div>
-          <p className={cn("text-base font-semibold font-mono", pnlColor(data.total_return_pct))}>
+          <p className={cn("text-sm sm:text-base font-semibold font-mono", pnlColor(data.total_return_pct))}>
             {data.total_return_pct >= 0 ? "+" : ""}{data.total_return_pct.toFixed(2)}%
           </p>
         </div>
-        <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 space-y-0.5">
-          <div className="flex items-center gap-1.5">
-            <ArrowDown className="w-3.5 h-3.5 text-(--color-text-secondary)" />
-            <span className="text-[10px] text-(--color-text-secondary) uppercase tracking-wider">Max DD</span>
+        <div className="bg-(--color-bg-elevated)/50 rounded-lg p-2 sm:p-3 space-y-0.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-(--color-text-secondary)" />
+            <span className="text-[9px] sm:text-[10px] text-(--color-text-secondary) uppercase tracking-wider">Max DD</span>
           </div>
-          <p className="text-base font-semibold font-mono text-(--color-negative)">
+          <p className="text-sm sm:text-base font-semibold font-mono text-(--color-negative)">
             {data.max_drawdown_pct.toFixed(2)}%
           </p>
         </div>
-        <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 space-y-0.5">
-          <div className="flex items-center gap-1.5">
-            <BarChart3 className="w-3.5 h-3.5 text-(--color-text-secondary)" />
-            <span className="text-[10px] text-(--color-text-secondary) uppercase tracking-wider">Sharpe</span>
+        <div className="bg-(--color-bg-elevated)/50 rounded-lg p-2 sm:p-3 space-y-0.5">
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <BarChart3 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-(--color-text-secondary)" />
+            <span className="text-[9px] sm:text-[10px] text-(--color-text-secondary) uppercase tracking-wider">Sharpe</span>
           </div>
-          <p className={cn("text-base font-semibold font-mono", pnlColor(data.sharpe_ratio))}>
+          <p className={cn("text-sm sm:text-base font-semibold font-mono", pnlColor(data.sharpe_ratio))}>
             {formatRatio(data.sharpe_ratio)}
           </p>
         </div>

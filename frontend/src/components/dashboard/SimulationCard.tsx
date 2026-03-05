@@ -33,7 +33,7 @@ export function SimulationCard() {
   // No active simulation — show start button
   if (!sim) {
     return (
-      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
+      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-3">
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
           <Tooltip text="Compares Buy & Hold vs SignalForge performance using your real portfolio with simulated trades.">
@@ -83,7 +83,7 @@ export function SimulationCard() {
     : `${hours}h`;
 
   return (
-    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-3">
+    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export function SimulationCard() {
 
       {/* Difference badge */}
       <div
-        className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold ${
+        className={`flex items-center justify-center gap-1.5 flex-wrap rounded-lg py-2 px-2 text-xs sm:text-sm font-semibold text-center ${
           sfAhead
             ? "bg-[var(--color-positive)]/10 text-[var(--color-positive)]"
             : "bg-[var(--color-negative)]/10 text-[var(--color-negative)]"
@@ -156,7 +156,7 @@ export function SimulationCard() {
       </div>
 
       {/* Trade stats */}
-      <div className="flex items-center gap-4 text-xs text-[var(--color-text-secondary)]">
+      <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs text-[var(--color-text-secondary)]">
         <div className="flex items-center gap-1">
           <BarChart3 className="w-3 h-3" />
           {sim.sf_trades} trades

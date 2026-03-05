@@ -16,10 +16,11 @@ import { useTrades, useTradeStats } from "@/hooks/useTrades";
 import type { Trade } from "@/hooks/useTrades";
 import { cn } from "@/lib/cn";
 import { pnlColor, fmtUsd, formatPnl, formatPnlPercent, formatTime } from "@/lib/format";
+import { TRIGGER_LABELS } from "@/lib/constants";
 
 const PAGE_SIZE = 20;
 
-const COL_COUNT = 13;
+const COL_COUNT = 14;
 
 
 /* ----- Stat Card ----- */
@@ -78,16 +79,6 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
     return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" /></span>;
   }
 
-  const triggerLabels: Record<string, string> = {
-    macd_crossover: "MACD crossover",
-    rsi_midline_cross: "RSI midline cross",
-    engulfing_candle: "Engulfing candle",
-    zone_reclaim: "Zone reclaim",
-    stochastic_exit_extreme: "Stochastic extreme exit",
-    bollinger_squeeze: "Bollinger squeeze",
-    volume_spike: "Volume spike",
-  };
-
   let tooltipStyle: React.CSSProperties = {};
   if (show && triggerRef.current) {
     const rect = triggerRef.current.getBoundingClientRect();
@@ -137,7 +128,7 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
             {trade.triggers && trade.triggers.length > 0 && (
               <p className="text-(--color-text-secondary)">
                 <span className="font-medium">Triggers:</span>{" "}
-                {trade.triggers.map((t) => triggerLabels[t] || t).join(", ")}
+                {trade.triggers.map((t) => TRIGGER_LABELS[t] || t).join(", ")}
               </p>
             )}
             {trade.confluence_score > 0 && (
@@ -202,22 +193,22 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
   );
 }
 
-/* ----- Column definitions ----- */
-const columns: { label: string; align: string }[] = [
+/* ----- Column definitions with responsive visibility ----- */
+const columns: { label: string; align: string; hide?: string }[] = [
   { label: "Time",        align: "text-left" },
   { label: "Symbol",      align: "text-left" },
   { label: "Side",        align: "text-left" },
-  { label: "Status",      align: "text-left" },
-  { label: "Entry",       align: "text-right" },
-  { label: "Exit",        align: "text-right" },
-  { label: "Size",        align: "text-right" },
-  { label: "Total",       align: "text-right" },
+  { label: "Status",      align: "text-left",  hide: "hidden sm:table-cell" },
+  { label: "Entry",       align: "text-right", hide: "hidden md:table-cell" },
+  { label: "Exit",        align: "text-right", hide: "hidden md:table-cell" },
+  { label: "Size",        align: "text-right", hide: "hidden lg:table-cell" },
+  { label: "Total",       align: "text-right", hide: "hidden md:table-cell" },
   { label: "P&L",         align: "text-right" },
-  { label: "P&L %",       align: "text-right" },
-  { label: "R:R",         align: "text-right" },
-  { label: "Score",       align: "text-right" },
-  { label: "Exit Reason", align: "text-left" },
-  { label: "",            align: "text-center" },
+  { label: "P&L %",       align: "text-right", hide: "hidden sm:table-cell" },
+  { label: "R:R",         align: "text-right", hide: "hidden lg:table-cell" },
+  { label: "Score",       align: "text-right", hide: "hidden lg:table-cell" },
+  { label: "Exit Reason", align: "text-left",  hide: "hidden md:table-cell" },
+  { label: "",            align: "text-center", hide: "hidden sm:table-cell" },
 ];
 
 /* ----- Trade Row ----- */
@@ -226,13 +217,16 @@ function TradeRow({ trade }: { trade: Trade }) {
   const isOpen = trade.exit_price == null;
   return (
     <tr className="border-b border-(--color-border)/50 hover:bg-(--color-bg-elevated)/50 transition-colors">
-      <td className="px-3 py-2.5 text-sm text-(--color-text-secondary) whitespace-nowrap">
+      {/* Time — always visible */}
+      <td className="px-2 sm:px-3 py-2.5 text-xs sm:text-sm text-(--color-text-secondary) whitespace-nowrap">
         {formatTime(trade.exit_time ?? trade.entry_time)}
       </td>
-      <td className="px-3 py-2.5 text-sm font-medium text-(--color-text-primary) whitespace-nowrap">
+      {/* Symbol — always visible */}
+      <td className="px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-medium text-(--color-text-primary) whitespace-nowrap">
         {trade.symbol}
       </td>
-      <td className="px-3 py-2.5 whitespace-nowrap">
+      {/* Side — always visible */}
+      <td className="px-2 sm:px-3 py-2.5 whitespace-nowrap">
         <span
           className={cn(
             "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase",
@@ -249,7 +243,8 @@ function TradeRow({ trade }: { trade: Trade }) {
           {isLong ? "BUY" : "SELL"}
         </span>
       </td>
-      <td className="px-3 py-2.5 whitespace-nowrap">
+      {/* Status — hidden on mobile */}
+      <td className="px-2 sm:px-3 py-2.5 whitespace-nowrap hidden sm:table-cell">
         {isOpen ? (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-(--color-positive)/10 text-(--color-positive)">
             <span className="relative flex h-2 w-2">
@@ -264,28 +259,36 @@ function TradeRow({ trade }: { trade: Trade }) {
           </span>
         )}
       </td>
-      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
+      {/* Entry — hidden below md */}
+      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
         {fmtUsd(trade.entry_price)}
       </td>
-      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
+      {/* Exit — hidden below md */}
+      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
         {isOpen ? <span className="text-(--color-text-secondary)">--</span> : fmtUsd(trade.exit_price)}
       </td>
-      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
+      {/* Size — hidden below lg */}
+      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap hidden lg:table-cell">
         {trade.position_size?.toFixed(4) ?? "--"}
       </td>
-      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
+      {/* Total — hidden below md */}
+      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
         {fmtUsd(trade.entry_price * trade.position_size)}
       </td>
-      <td className={cn("px-3 py-2.5 text-sm font-mono tabular-nums text-right font-semibold whitespace-nowrap", pnlColor(trade.pnl))}>
+      {/* P&L — always visible */}
+      <td className={cn("px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-mono tabular-nums text-right font-semibold whitespace-nowrap", pnlColor(trade.pnl))}>
         {formatPnl(trade.pnl)}
       </td>
-      <td className={cn("px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap", pnlColor(trade.pnl_pct))}>
+      {/* P&L % — hidden on mobile */}
+      <td className={cn("px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap hidden sm:table-cell", pnlColor(trade.pnl_pct))}>
         {formatPnlPercent(trade.pnl_pct)}
       </td>
-      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
+      {/* R:R — hidden below lg */}
+      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap hidden lg:table-cell">
         {trade.risk_reward != null ? trade.risk_reward.toFixed(2) : "--"}
       </td>
-      <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap">
+      {/* Score — hidden below lg */}
+      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap hidden lg:table-cell">
         {trade.confluence_score != null ? (
           <span
             className={cn(
@@ -302,10 +305,12 @@ function TradeRow({ trade }: { trade: Trade }) {
           <span className="text-(--color-text-secondary)">--</span>
         )}
       </td>
-      <td className="px-3 py-2.5 text-xs text-(--color-text-secondary) whitespace-nowrap">
+      {/* Exit Reason — hidden below md */}
+      <td className="px-2 sm:px-3 py-2.5 text-xs text-(--color-text-secondary) whitespace-nowrap hidden md:table-cell">
         {trade.exit_reason ?? (isOpen ? "" : "--")}
       </td>
-      <td className="px-3 py-2.5 text-center">
+      {/* Info — hidden on mobile */}
+      <td className="px-2 sm:px-3 py-2.5 text-center hidden sm:table-cell">
         <ReasoningTooltip trade={trade} />
       </td>
     </tr>
@@ -386,30 +391,16 @@ export function TradesPage() {
       {/* Trade table */}
       <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left table-fixed min-w-[1100px]">
-            <colgroup>
-              <col className="w-[110px]" />  {/* Time */}
-              <col className="w-[100px]" />  {/* Symbol */}
-              <col className="w-[72px]" />   {/* Side */}
-              <col className="w-[84px]" />   {/* Status */}
-              <col className="w-[100px]" />  {/* Entry */}
-              <col className="w-[100px]" />  {/* Exit */}
-              <col className="w-[80px]" />   {/* Size */}
-              <col className="w-[100px]" />  {/* P&L */}
-              <col className="w-[80px]" />   {/* P&L % */}
-              <col className="w-[56px]" />   {/* R:R */}
-              <col className="w-[56px]" />   {/* Score */}
-              <col className="w-[100px]" />  {/* Exit Reason */}
-              <col className="w-[40px]" />   {/* Info */}
-            </colgroup>
+          <table className="w-full text-left">
             <thead>
               <tr className="border-b border-(--color-border) bg-(--color-bg-elevated)/50">
                 {columns.map((col, i) => (
                   <th
                     key={i}
                     className={cn(
-                      "px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider whitespace-nowrap",
+                      "px-2 sm:px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider whitespace-nowrap",
                       col.align,
+                      col.hide,
                     )}
                   >
                     {col.label}

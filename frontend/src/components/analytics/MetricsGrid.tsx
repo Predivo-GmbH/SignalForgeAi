@@ -22,16 +22,16 @@ function MetricCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-(--color-bg-elevated)/50 rounded-lg p-4 space-y-1">
-      <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-(--color-text-secondary)" />
-        <span className="text-xs text-(--color-text-secondary) uppercase tracking-wider">
+    <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" />
+        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-wider">
           {label}
         </span>
       </div>
       <p
         className={cn(
-          "text-xl font-semibold font-mono",
+          "text-lg sm:text-xl font-semibold font-mono",
           valueColor ?? "text-(--color-text-primary)"
         )}
       >
@@ -50,11 +50,11 @@ export function MetricsGrid({ data }: MetricsGridProps) {
     v != null ? v.toFixed(2) : "N/A";
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-4">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4">
       <h2 className="text-sm font-medium text-(--color-text-secondary) uppercase tracking-wider">
         Performance Metrics
       </h2>
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         <MetricCard
           label="Total Return"
           value={`${data.total_return_pct >= 0 ? "+" : ""}${data.total_return_pct.toFixed(2)}%`}

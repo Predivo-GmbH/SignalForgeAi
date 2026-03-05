@@ -13,12 +13,12 @@ interface StatCardData {
 
 function StatCard({ label, value, icon: Icon, colorClass }: StatCardData) {
   return (
-    <div className="bg-(--color-bg-elevated)/50 rounded-lg p-4 space-y-1">
-      <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-(--color-text-secondary)" />
-        <span className="text-xs text-(--color-text-secondary) uppercase tracking-wider">{label}</span>
+    <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" />
+        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-wider">{label}</span>
       </div>
-      <p className={`text-xl font-semibold font-mono ${colorClass ?? "text-(--color-text-primary)"}`}>
+      <p className={`text-base sm:text-xl font-semibold font-mono ${colorClass ?? "text-(--color-text-primary)"}`}>
         {value}
       </p>
     </div>
@@ -30,10 +30,10 @@ export function PerformanceSummary() {
 
   if (isLoading || !stats) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
           {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="bg-(--color-bg-elevated)/50 rounded-lg p-4 space-y-2">
+            <div key={i} className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-2">
               <div className="h-3 w-16 rounded bg-(--color-bg-elevated) animate-pulse" />
               <div className="h-6 w-20 rounded bg-(--color-bg-elevated) animate-pulse" />
             </div>
@@ -62,7 +62,7 @@ export function PerformanceSummary() {
   ];
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
         <Tooltip text="Key trading metrics including win rate, profit factor, and total P&L."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Trading Performance</h3></Tooltip>
         <Link
@@ -72,7 +72,7 @@ export function PerformanceSummary() {
           View Analytics →
         </Link>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         {cards.map((c) => (
           <StatCard key={c.label} {...c} />
         ))}

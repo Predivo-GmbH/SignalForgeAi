@@ -194,7 +194,7 @@ function AssetPriceChart({ symbol }: { symbol: string }) {
         </div>
       </div>
       <div className="relative rounded-lg overflow-hidden border border-(--color-border)">
-        <div ref={containerRef} className="w-full h-[250px]" />
+        <div ref={containerRef} className="w-full h-[200px] sm:h-[250px]" />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
             <Loader2 className="w-5 h-5 animate-spin text-(--color-accent)" />
@@ -253,24 +253,24 @@ export function AssetDetailModal({
     <Modal open={open} onClose={onClose} title={`${symbol} — ${name}`} size="lg">
       <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
         {/* Header: Icon + Price + 24h change */}
-        <div className="flex items-center gap-3">
-          <CoinIcon symbol={symbol} imageUrl={imageUrl} size={32} />
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <CoinIcon symbol={symbol} imageUrl={imageUrl} size={28} />
           {currentPrice != null && (
-            <span className="text-xl font-bold font-mono text-(--color-text-primary)">
+            <span className="text-lg sm:text-xl font-bold font-mono text-(--color-text-primary)">
               {formatPrice(currentPrice)}
             </span>
           )}
           {change24h != null && (
             <span
               className={cn(
-                "flex items-center gap-1 text-sm font-medium font-mono",
+                "flex items-center gap-1 text-xs sm:text-sm font-medium font-mono",
                 pnlColor(change24h),
               )}
             >
               {change24h >= 0 ? (
-                <TrendingUp className="w-4 h-4" />
+                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               ) : (
-                <TrendingDown className="w-4 h-4" />
+                <TrendingDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               )}
               {change24h >= 0 ? "+" : ""}
               {change24h.toFixed(2)}% (24h)
@@ -319,16 +319,16 @@ export function AssetDetailModal({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-(--color-border) bg-(--color-bg-elevated)/30">
-                  <th className="text-left text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">
+                  <th className="text-left text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
                     Source
                   </th>
-                  <th className="text-left text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">
+                  <th className="text-left text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3 hidden sm:table-cell">
                     Label
                   </th>
-                  <th className="text-right text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">
+                  <th className="text-right text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
                     Quantity
                   </th>
-                  <th className="text-right text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3">
+                  <th className="text-right text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
                     Value
                   </th>
                 </tr>
@@ -344,7 +344,7 @@ export function AssetDetailModal({
                       key={`${h.source}-${i}`}
                       className="border-b border-(--color-border)/50 last:border-0"
                     >
-                      <td className="py-2 px-3">
+                      <td className="py-2 px-2 sm:px-3">
                         <span
                           className={cn(
                             "text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap",
@@ -354,13 +354,13 @@ export function AssetDetailModal({
                           {style.label}
                         </span>
                       </td>
-                      <td className="py-2 px-3 text-xs text-(--color-text-secondary)">
+                      <td className="py-2 px-2 sm:px-3 text-xs text-(--color-text-secondary) hidden sm:table-cell">
                         {h.notes ?? "—"}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-xs text-(--color-text-primary)">
+                      <td className="py-2 px-2 sm:px-3 text-right font-mono tabular-nums text-xs text-(--color-text-primary)">
                         {h.quantity.toLocaleString("en-US", { maximumFractionDigits: 8 })}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono tabular-nums text-xs font-semibold text-(--color-text-primary)">
+                      <td className="py-2 px-2 sm:px-3 text-right font-mono tabular-nums text-xs font-semibold text-(--color-text-primary)">
                         {h.value_usd != null ? fmtUsd(h.value_usd) : "—"}
                       </td>
                     </tr>
