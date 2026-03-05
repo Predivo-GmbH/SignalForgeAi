@@ -2,6 +2,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -41,6 +42,17 @@ logger = logging.getLogger(__name__)
 # Structured logging
 # ---------------------------------------------------------------------------
 configure_logging(debug=settings.debug)
+
+# ---------------------------------------------------------------------------
+# Sentry error tracking
+# ---------------------------------------------------------------------------
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        traces_sample_rate=0.1,
+        environment="development" if settings.debug else "production",
+        release=f"signalforge@0.1.0",
+    )
 
 # ---------------------------------------------------------------------------
 # Redis subscriber for broadcasting pub/sub messages to WebSocket clients

@@ -102,9 +102,15 @@ nano backend/.env.prod
 |----------|-------------|
 | `SF_DATABASE_URL` | Replace `CHANGE-ME-DB-PASSWORD` with your generated DB password |
 | `SF_DB_PASSWORD` | Same DB password (used by docker-compose for PostgreSQL) |
-| `SF_JWT_SECRET` | Your generated JWT secret |
+| `SF_JWT_SECRET` | Your generated JWT secret (**CRITICAL** — app refuses to start without this) |
 | `SF_ENCRYPTION_KEY` | Your generated Fernet key |
 | `SF_CORS_ORIGINS` | `["http://YOUR_SERVER_IP"]` |
+| `SF_SENTRY_DSN` | Your Sentry DSN URL (for error tracking) |
+
+> **WARNING — SF_JWT_SECRET:** The app will **refuse to start** in production if this is still
+> the default value. Generate a strong secret with `python3 -c "import secrets; print(secrets.token_urlsafe(64))"`
+> and set it before deploying. This key signs all login tokens — if an attacker knows it, they can
+> forge authentication tokens for any user.
 
 Optional (add later when ready):
 - `SF_ANTHROPIC_API_KEY` — for AI advisor + self-learning loop

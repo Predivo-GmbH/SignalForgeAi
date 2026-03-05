@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # Exchange
     default_exchange: str = "binance"
 
+    # Sentry
+    sentry_dsn: str = ""
+
     # App
     app_name: str = "SignalForge"
     debug: bool = True
