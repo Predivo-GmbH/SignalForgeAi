@@ -52,11 +52,11 @@ const REASON_DESCRIPTIONS: Record<string, string> = {
   no_zones:
     "No valid entry zones were identified. The zone identifier looks for Fibonacci retracements, support/resistance levels, and VWAP zones to define optimal entry areas.",
   low_confluence:
-    "The confluence score (0–100) fell below the strategy's minimum threshold. The scorer combines 9 weighted technical factors — the signal didn't meet enough criteria.",
+    "The confluence score (0–100) fell below the strategy's minimum threshold (default: 50). The scorer combines 14 weighted technical factors: Fibonacci alignment (12pts), S/R overlap (12pts), multi-TF zone strength (10pts), VWAP proximity (8pts), volume node (8pts), RSI confirmation (8pts), MACD momentum (8pts), candlestick patterns (7pts), Stochastic cross (5pts), Bollinger position (5pts), Ichimoku cloud (5pts), OBV trend (5pts), Williams %R (4pts), and CCI momentum (3pts). Each factor is either fully earned or zero — the signal didn't accumulate enough points.",
   no_trigger:
     "No entry trigger fired. The trigger detector requires at least 2 confirmations from 5 trigger types (e.g., candlestick patterns, momentum crossovers, zone bounces).",
   insufficient_candles:
-    "Not enough historical candle data is available (requires at least 100 candles). This typically happens when a new symbol is added or the timeframe has limited history.",
+    "Not enough candle data loaded yet (minimum 100, ideally 200+ for the 200-EMA trend filter). On first run, the ingestion task backfills 500 candles from Binance — this block should clear after the first successful ingestion cycle (~60s). If it persists, check that the worker and beat services are running.",
   risk_rejected:
     "The risk manager rejected this trade. Possible causes: position size exceeded max risk per trade, ATR-based stop loss was too wide, or Kelly criterion sizing was unfavorable.",
   feedback_filter:

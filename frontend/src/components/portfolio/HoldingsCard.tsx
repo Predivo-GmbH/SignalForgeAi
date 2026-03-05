@@ -180,77 +180,75 @@ function DonutChart({
   });
 
   return (
-    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5">
-      {/* Donut SVG */}
-      <div className="shrink-0 flex flex-col items-center">
-        <svg
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
-          className="shrink-0"
-        >
-          {arcs.map((arc) => (
-            <path
-              key={arc.idx}
-              d={arc.d}
-              fill={arc.color}
-              opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.4 : 1}
-              className="transition-opacity duration-150"
-              onMouseEnter={() => setHoveredIdx(arc.idx)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              onClick={() => onSliceClick?.(arc.label)}
-              style={{ cursor: "pointer" }}
-            />
-          ))}
-          {/* Center text */}
-          <text x={cx} y={cy - 6} textAnchor="middle" className="fill-(--color-text-secondary) text-[9px]" fontSize="9">
-            Total Value
-          </text>
-          <text x={cx} y={cy + 12} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="14">
-            {fmtUsd(totalValue)}
-          </text>
-        </svg>
-        {/* Hover tooltip below chart */}
-        <div className={cn("text-center h-5 mt-1 transition-opacity duration-150", hoveredIdx != null ? "opacity-100" : "opacity-0")}>
-          {hoveredIdx != null && slices[hoveredIdx] && (
-            <span className="text-[11px] text-(--color-text-secondary)">
-              {fmtUsd(slices[hoveredIdx].value)}
-            </span>
-          )}
+    <div className="flex flex-col gap-4">
+      {/* Top: donut centered */}
+      <div className="flex justify-center">
+        <div className="relative">
+          <svg
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+          >
+            {arcs.map((arc) => (
+              <path
+                key={arc.idx}
+                d={arc.d}
+                fill={arc.color}
+                opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.4 : 1}
+                className="transition-opacity duration-150"
+                onMouseEnter={() => setHoveredIdx(arc.idx)}
+                onMouseLeave={() => setHoveredIdx(null)}
+                onClick={() => onSliceClick?.(arc.label)}
+                style={{ cursor: "pointer" }}
+              />
+            ))}
+            <text x={cx} y={cy - 6} textAnchor="middle" className="fill-(--color-text-secondary)" fontSize="9">
+              Total Value
+            </text>
+            <text x={cx} y={cy + 12} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="14">
+              {fmtUsd(totalValue)}
+            </text>
+          </svg>
+          {/* Hover tooltip */}
+          <div className={cn("absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap transition-opacity duration-150", hoveredIdx != null ? "opacity-100" : "opacity-0")}>
+            {hoveredIdx != null && slices[hoveredIdx] && (
+              <span className="text-[11px] text-(--color-text-secondary)">
+                {slices[hoveredIdx].label}: {fmtUsd(slices[hoveredIdx].value)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-col gap-1 sm:pt-1 min-w-0">
-        <div className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-1">
-          {slices.map((s, i) => (
-            <div
-              key={`${s.label}-${i}`}
-              className={cn(
-                "flex items-center gap-2.5 cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-colors duration-100",
-                hoveredIdx === i && "bg-(--color-bg-elevated)/60",
-              )}
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              onClick={() => onSliceClick?.(s.label)}
-            >
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-              <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
-              <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
-                {s.pct.toFixed(2)}%
-              </span>
-            </div>
-          ))}
-        </div>
-        {slices.length >= 8 && (
-          <button
-            onClick={() => onSliceClick?.("")}
-            className="text-[11px] font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors text-left px-1.5 mt-0.5"
+      {/* Legend — 2-column grid fills width */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {slices.map((s, i) => (
+          <div
+            key={`${s.label}-${i}`}
+            className={cn(
+              "flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 transition-colors duration-100",
+              hoveredIdx === i && "bg-(--color-bg-elevated)/60",
+            )}
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            onClick={() => onSliceClick?.(s.label)}
           >
-            View All
-          </button>
-        )}
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
+            <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
+              {s.pct.toFixed(2)}%
+            </span>
+          </div>
+        ))}
       </div>
+      {slices.length >= 8 && (
+        <button
+          onClick={() => onSliceClick?.("")}
+          className="text-[11px] font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors text-left px-2"
+        >
+          View All
+        </button>
+      )}
     </div>
   );
 }
@@ -533,38 +531,99 @@ function PortfolioValueChart({
   holdings: { value: number; change24hPct: number | null }[];
 }) {
   const [period, setPeriod] = useState<PerfPeriod>("24H");
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const has24hData = holdings.some((h) => h.change24hPct != null);
   const canRender = period === "24H" && has24hData && totalValue > 0;
 
-  const { values } = useMemo(
+  const { values, labels } = useMemo(
     () => (canRender ? build24hCurve(totalValue, holdings) : { values: [], labels: [] }),
     [canRender, totalValue, holdings],
   );
 
+  // Chart dimensions with margins for axes
   const W = 400;
-  const H = 140;
-  const padTop = 8;
-  const padBottom = 4;
-  const chartH = H - padTop - padBottom;
+  const H = 180;
+  const marginLeft = 58;
+  const marginRight = 12;
+  const marginTop = 12;
+  const marginBottom = 24;
+  const chartW = W - marginLeft - marginRight;
+  const chartH = H - marginTop - marginBottom;
 
-  let line = "";
-  let area = "";
-  if (values.length >= 2) {
+  // Compute nice Y-axis ticks
+  const yTicks = useMemo(() => {
+    if (values.length < 2) return [];
     const minVal = Math.min(...values);
     const maxVal = Math.max(...values);
     const range = maxVal - minVal || 1;
-    const pts = values.map((v, i) => ({
-      x: (i / (values.length - 1)) * W,
-      y: padTop + chartH - ((v - minVal) / range) * chartH,
+    const padding = range * 0.05;
+    const lo = minVal - padding;
+    const hi = maxVal + padding;
+    const tickCount = 4;
+    const step = (hi - lo) / (tickCount - 1);
+    return Array.from({ length: tickCount }, (_, i) => lo + step * i);
+  }, [values]);
+
+  // X-axis labels — pick ~5 evenly spaced labels
+  const xTicks = useMemo(() => {
+    if (labels.length < 2) return [];
+    const count = 5;
+    const step = (labels.length - 1) / (count - 1);
+    return Array.from({ length: count }, (_, i) => {
+      const idx = Math.round(step * i);
+      return { idx, label: labels[idx] };
+    });
+  }, [labels]);
+
+  // Build SVG paths
+  let line = "";
+  let area = "";
+  let pts: { x: number; y: number }[] = [];
+  const minVal = values.length >= 2 ? Math.min(...values) : 0;
+  const maxVal = values.length >= 2 ? Math.max(...values) : 1;
+  const valRange = maxVal - minVal || 1;
+  const padding = valRange * 0.05;
+
+  if (values.length >= 2) {
+    pts = values.map((v, i) => ({
+      x: marginLeft + (i / (values.length - 1)) * chartW,
+      y: marginTop + chartH - ((v - (minVal - padding)) / (valRange + 2 * padding)) * chartH,
     }));
     line = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-    area = `${line} L ${W} ${H} L 0 ${H} Z`;
+    area = `${line} L ${marginLeft + chartW} ${marginTop + chartH} L ${marginLeft} ${marginTop + chartH} Z`;
   }
 
   const isPositive = change24hUsd >= 0;
   const strokeColor = isPositive ? "#10b981" : "#ef4444";
   const gradId = "portfolio-grad";
+
+  // Hover handler
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!chartContainerRef.current || pts.length < 2) return;
+      const rect = chartContainerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const svgX = (mouseX / rect.width) * W;
+      // Find nearest point
+      const chartLeft = marginLeft;
+      const chartRight = marginLeft + chartW;
+      const clampedX = Math.max(chartLeft, Math.min(chartRight, svgX));
+      const ratio = (clampedX - chartLeft) / chartW;
+      const idx = Math.round(ratio * (values.length - 1));
+      setHoverIdx(Math.max(0, Math.min(values.length - 1, idx)));
+    },
+    [pts.length, values.length, W, chartW, marginLeft],
+  );
+
+  const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
+
+  // Hovered point data
+  const hoverPoint = hoverIdx != null && pts[hoverIdx] ? { x: pts[hoverIdx].x, y: pts[hoverIdx].y, value: values[hoverIdx], label: labels[hoverIdx] } : null;
+
+  // Map Y value to SVG Y
+  const yToSvg = (v: number) => marginTop + chartH - ((v - (minVal - padding)) / (valRange + 2 * padding)) * chartH;
 
   return (
     <div className="flex flex-col h-full">
@@ -591,28 +650,122 @@ function PortfolioValueChart({
         </div>
       </div>
 
-      {/* Value + change */}
+      {/* Value + change — shows hovered value or current */}
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-lg font-bold font-mono text-(--color-text-primary)">
-          {fmtUsd(totalValue)}
+          {hoverPoint ? fmtUsd(hoverPoint.value) : fmtUsd(totalValue)}
         </span>
-        <span className={cn("text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
-          {isPositive ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))} ({isPositive ? "+" : ""}{change24hPct.toFixed(2)}%)
-        </span>
+        {hoverPoint ? (
+          <span className="text-xs font-mono text-(--color-text-secondary)">
+            {hoverPoint.label}
+          </span>
+        ) : (
+          <span className={cn("text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
+            {isPositive ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))} ({isPositive ? "+" : ""}{change24hPct.toFixed(2)}%)
+          </span>
+        )}
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-[160px] max-h-[260px]">
+      <div
+        ref={chartContainerRef}
+        className="flex-1 min-h-[180px] max-h-[280px] relative"
+        onMouseMove={canRender ? handleMouseMove : undefined}
+        onMouseLeave={canRender ? handleMouseLeave : undefined}
+      >
         {canRender && values.length >= 2 ? (
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full">
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={strokeColor} stopOpacity="0.2" />
+                <stop offset="0%" stopColor={strokeColor} stopOpacity="0.15" />
                 <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
               </linearGradient>
             </defs>
+
+            {/* Horizontal grid lines + Y-axis labels */}
+            {yTicks.map((tick, i) => {
+              const y = yToSvg(tick);
+              return (
+                <g key={`y-${i}`}>
+                  <line
+                    x1={marginLeft}
+                    x2={marginLeft + chartW}
+                    y1={y}
+                    y2={y}
+                    stroke="currentColor"
+                    className="text-(--color-border)"
+                    strokeOpacity="0.4"
+                    strokeDasharray="3,3"
+                  />
+                  <text
+                    x={marginLeft - 6}
+                    y={y + 3}
+                    textAnchor="end"
+                    fontSize="8"
+                    className="fill-(--color-text-secondary)"
+                  >
+                    {fmtCompact(tick)}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* X-axis labels */}
+            {xTicks.map((tick, i) => {
+              const x = marginLeft + (tick.idx / (values.length - 1)) * chartW;
+              return (
+                <text
+                  key={`x-${i}`}
+                  x={x}
+                  y={H - 4}
+                  textAnchor="middle"
+                  fontSize="8"
+                  className="fill-(--color-text-secondary)"
+                >
+                  {tick.label}
+                </text>
+              );
+            })}
+
+            {/* Area fill */}
             <path d={area} fill={`url(#${gradId})`} />
-            <path d={line} fill="none" stroke={strokeColor} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+
+            {/* Line */}
+            <path d={line} fill="none" stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+
+            {/* Hover crosshair */}
+            {hoverPoint && (
+              <>
+                <line
+                  x1={hoverPoint.x}
+                  x2={hoverPoint.x}
+                  y1={marginTop}
+                  y2={marginTop + chartH}
+                  stroke={strokeColor}
+                  strokeWidth="0.8"
+                  strokeDasharray="3,2"
+                  opacity="0.6"
+                />
+                <line
+                  x1={marginLeft}
+                  x2={marginLeft + chartW}
+                  y1={hoverPoint.y}
+                  y2={hoverPoint.y}
+                  stroke={strokeColor}
+                  strokeWidth="0.5"
+                  strokeDasharray="3,2"
+                  opacity="0.4"
+                />
+                <circle
+                  cx={hoverPoint.x}
+                  cy={hoverPoint.y}
+                  r="3"
+                  fill={strokeColor}
+                  stroke="white"
+                  strokeWidth="1.5"
+                />
+              </>
+            )}
           </svg>
         ) : (
           <div className="flex items-center justify-center h-full">
