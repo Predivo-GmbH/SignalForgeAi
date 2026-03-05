@@ -25,14 +25,7 @@ import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import type { Strategy } from "@/hooks/useStrategies";
 import type { StrategyMetrics } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/cn";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+import { formatDate } from "@/lib/format";
 
 /* ----- Strategy Card ----- */
 function StrategyCard({
@@ -114,6 +107,7 @@ function StrategyCard({
                 : "hover:bg-(--color-positive)/10 text-(--color-positive)"
             )}
             title={strategy.is_active ? "Deactivate" : "Activate"}
+            aria-label={strategy.is_active ? "Deactivate strategy" : "Activate strategy"}
           >
             <Power className="w-3.5 h-3.5" />
           </button>
@@ -147,6 +141,7 @@ function StrategyCard({
               }}
               className="p-1.5 rounded-lg hover:bg-(--color-negative)/10 transition-colors"
               title="Delete strategy"
+              aria-label="Delete strategy"
             >
               <Trash2 className="w-3.5 h-3.5 text-(--color-text-secondary)" />
             </button>

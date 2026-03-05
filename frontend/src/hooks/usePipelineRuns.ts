@@ -19,8 +19,8 @@ export interface PipelineRun {
 export interface PipelineRunsResponse {
   runs: PipelineRun[];
   total_runs: number;
-  page: number;
-  per_page: number;
+  limit: number;
+  offset: number;
 }
 
 export interface PipelineRunsParams {
@@ -31,8 +31,11 @@ export interface PipelineRunsParams {
 
 export function usePipelineRuns(params: PipelineRunsParams = {}) {
   const qs = new URLSearchParams();
-  if (params.page) qs.set("page", String(params.page));
-  if (params.per_page) qs.set("per_page", String(params.per_page));
+  // Convert page/per_page to limit/offset for backend
+  const perPage = params.per_page ?? 20;
+  const page = params.page ?? 1;
+  qs.set("limit", String(perPage));
+  qs.set("offset", String((page - 1) * perPage));
   if (params.since) qs.set("since", params.since);
   const query = qs.toString();
 

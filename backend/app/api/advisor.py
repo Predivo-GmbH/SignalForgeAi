@@ -197,7 +197,9 @@ async def generate_plan(
 
 
 @router.post("/deploy", response_model=DeployResponse)
+@limiter.limit("5/minute")
 async def deploy_plan(
+    request: Request,
     body: DeployRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

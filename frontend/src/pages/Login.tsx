@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { RiskDisclaimer } from "@/components/ui/RiskDisclaimer";
 
 interface LoginApiResponse {
   access_token?: string;
@@ -208,6 +209,10 @@ export function LoginPage() {
             </p>
           </form>
         )}
+
+        <div className="mt-6">
+          <RiskDisclaimer />
+        </div>
       </div>
     </div>
   );

@@ -55,7 +55,11 @@ _subscriber = RedisSubscriber(redis_url=settings.redis_url)
 async def lifespan(app: FastAPI):
     # --- Startup ---
     if not settings.debug and settings.jwt_secret == "dev-secret-change-in-production":
-        raise RuntimeError("JWT secret must be changed for production!")
+        raise RuntimeError(
+            "FATAL: SF_JWT_SECRET is still the default value. "
+            "Set a strong, unique secret via the SF_JWT_SECRET environment variable "
+            "before running in production (debug=False)."
+        )
 
     try:
         await _subscriber.start(manager.broadcast)
@@ -111,10 +115,43 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' wss: ws:; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' data:"
+        )
+        # HSTS only when behind TLS (direct HTTPS or reverse-proxy header)
+        if (
+            request.url.scheme == "https"
+            or request.headers.get("x-forwarded-proto") == "https"
+        ):
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         return response
 
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ---------------------------------------------------------------------------
+# Request size limit (10 MB)
+# ---------------------------------------------------------------------------
+MAX_REQUEST_BODY_BYTES = 10_485_760  # 10 MB
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > MAX_REQUEST_BODY_BYTES:
+            return Response(content="Payload Too Large", status_code=413)
+        return await call_next(request)
+
+
+app.add_middleware(RequestSizeLimitMiddleware)
 
 # ---------------------------------------------------------------------------
 # CORS — restrict methods and headers in production

@@ -5,12 +5,13 @@ import uuid
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.pipeline_log import PipelineLog
 from app.models.strategy import Strategy
 
@@ -20,11 +21,13 @@ router = APIRouter(prefix="/engine", tags=["engine"])
 
 
 @router.get("/log")
+@limiter.limit("60/minute")
 async def get_pipeline_log(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     symbol: str | None = Query(None),
     block_reason: str | None = Query(None),
     action: str | None = Query(None),
@@ -40,7 +43,7 @@ async def get_pipeline_log(
     )
     strategy_ids = [row[0] for row in strat_result.all()]
     if not strategy_ids:
-        return {"items": [], "total": 0, "page": page, "per_page": per_page}
+        return {"items": [], "total": 0, "limit": limit, "offset": offset}
 
     # Build query
     base = select(PipelineLog).where(PipelineLog.strategy_id.in_(strategy_ids))
@@ -75,12 +78,11 @@ async def get_pipeline_log(
             pass
 
     total = (await db.execute(count_q)).scalar() or 0
-    offset = (page - 1) * per_page
     rows = (
         await db.execute(
             base.order_by(PipelineLog.created_at.desc())
             .offset(offset)
-            .limit(per_page)
+            .limit(limit)
         )
     ).scalars().all()
 
@@ -99,17 +101,19 @@ async def get_pipeline_log(
             for r in rows
         ],
         "total": total,
-        "page": page,
-        "per_page": per_page,
+        "limit": limit,
+        "offset": offset,
     }
 
 
 @router.get("/log/runs")
+@limiter.limit("60/minute")
 async def get_pipeline_runs(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     since: str | None = Query(None),
 ):
     """Pipeline runs grouped into 5-minute buckets with summary stats."""
@@ -120,7 +124,7 @@ async def get_pipeline_runs(
     )
     strategy_ids = [row[0] for row in strat_result.all()]
     if not strategy_ids:
-        return {"runs": [], "total_runs": 0, "page": page, "per_page": per_page}
+        return {"runs": [], "total_runs": 0, "limit": limit, "offset": offset}
 
     # 5-minute bucket using TimescaleDB time_bucket
     bucket = func.time_bucket(
@@ -147,14 +151,14 @@ async def get_pipeline_runs(
         .where(*base_filter)
         .group_by(bucket)
         .order_by(bucket.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
+        .offset(offset)
+        .limit(limit)
     )
     bucket_rows = (await db.execute(bucket_q)).all()
     run_times = [row[0] for row in bucket_rows]
 
     if not run_times:
-        return {"runs": [], "total_runs": total_runs, "page": page, "per_page": per_page}
+        return {"runs": [], "total_runs": total_runs, "limit": limit, "offset": offset}
 
     # Fetch all raw entries for these run buckets
     raw_q = (
@@ -195,11 +199,13 @@ async def get_pipeline_runs(
             "top_block_reasons": top_reasons,
         })
 
-    return {"runs": runs, "total_runs": total_runs, "page": page, "per_page": per_page}
+    return {"runs": runs, "total_runs": total_runs, "limit": limit, "offset": offset}
 
 
 @router.get("/log/summary")
+@limiter.limit("60/minute")
 async def get_pipeline_summary(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     since: str | None = Query(None),

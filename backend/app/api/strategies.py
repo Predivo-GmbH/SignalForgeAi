@@ -2,13 +2,14 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.strategy import BrokerConnection, Strategy
 from app.models.user import User
 
@@ -209,7 +210,9 @@ async def _get_user_strategy(
 
 
 @router.post("", response_model=StrategyResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def create_strategy(
+    request: Request,
     body: CreateStrategyRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -234,7 +237,9 @@ async def create_strategy(
 
 
 @router.get("", response_model=StrategyListResponse)
+@limiter.limit("60/minute")
 async def list_strategies(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=100),
@@ -264,13 +269,16 @@ async def list_strategies(
 
 
 @router.get("/presets")
-async def list_presets():
+@limiter.limit("60/minute")
+async def list_presets(request: Request):
     """Return available strategy presets."""
     return {"presets": STRATEGY_PRESETS}
 
 
 @router.get("/{strategy_id}", response_model=StrategyResponse)
+@limiter.limit("60/minute")
 async def get_strategy(
+    request: Request,
     strategy_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -281,7 +289,9 @@ async def get_strategy(
 
 
 @router.put("/{strategy_id}", response_model=StrategyResponse)
+@limiter.limit("20/minute")
 async def update_strategy(
+    request: Request,
     strategy_id: uuid.UUID,
     body: UpdateStrategyRequest,
     user_id: str = Depends(get_current_user),
@@ -307,7 +317,9 @@ class ActivateRequest(BaseModel):
 
 
 @router.post("/{strategy_id}/activate", response_model=StrategyResponse)
+@limiter.limit("20/minute")
 async def activate_strategy(
+    request: Request,
     strategy_id: uuid.UUID,
     body: ActivateRequest | None = None,
     user_id: str = Depends(get_current_user),
@@ -375,7 +387,9 @@ async def activate_strategy(
 
 
 @router.post("/{strategy_id}/tune")
+@limiter.limit("5/minute")
 async def tune_strategy_risk(
+    request: Request,
     strategy_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -405,7 +419,9 @@ async def tune_strategy_risk(
 
 
 @router.get("/{strategy_id}/feedback-rules")
+@limiter.limit("60/minute")
 async def list_feedback_rules(
+    request: Request,
     strategy_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -440,7 +456,9 @@ async def list_feedback_rules(
 
 
 @router.post("/{strategy_id}/feedback-rules/{rule_id}/toggle")
+@limiter.limit("20/minute")
 async def toggle_feedback_rule(
+    request: Request,
     strategy_id: uuid.UUID,
     rule_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
@@ -467,7 +485,9 @@ async def toggle_feedback_rule(
 
 
 @router.post("/{strategy_id}/synthesize-feedback")
+@limiter.limit("5/minute")
 async def synthesize_feedback(
+    request: Request,
     strategy_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -486,7 +506,9 @@ async def synthesize_feedback(
 
 
 @router.delete("/{strategy_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("20/minute")
 async def delete_strategy(
+    request: Request,
     strategy_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

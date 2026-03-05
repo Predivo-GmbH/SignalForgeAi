@@ -3,6 +3,7 @@
 from fastapi import Header, HTTPException, status
 
 from app.auth.jwt import decode_token
+from app.core.token_blacklist import are_user_tokens_invalid
 
 
 async def get_current_user(authorization: str | None = Header(None)) -> str:
@@ -28,4 +29,17 @@ async def get_current_user(authorization: str | None = Header(None)) -> str:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
-    return payload["sub"]
+
+    user_id = payload["sub"]
+
+    # Check if all user tokens issued before a certain time have been invalidated
+    # (e.g. after password change or 2FA disable)
+    iat = payload.get("iat")
+    if iat is not None:
+        if await are_user_tokens_invalid(user_id, float(iat)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked",
+            )
+
+    return user_id

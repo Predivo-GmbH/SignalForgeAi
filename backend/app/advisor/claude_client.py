@@ -106,8 +106,18 @@ class ClaudeClient:
             del self._cache[key]
         return None
 
+    _MAX_CACHE_SIZE = 256  # Maximum number of entries in the response cache
+
     def _set_cached(self, key: str, result: dict) -> None:
         self._cache[key] = (time.time(), result)
+        # Prune cache if it exceeds max size — keep most recent entries
+        if len(self._cache) > self._MAX_CACHE_SIZE:
+            sorted_keys = sorted(
+                self._cache.keys(),
+                key=lambda k: self._cache[k][0],  # sort by timestamp
+            )
+            for old_key in sorted_keys[: len(sorted_keys) - 128]:
+                del self._cache[old_key]
 
     # ------------------------------------------------------------------
     # Daily call limit via Redis
@@ -144,7 +154,7 @@ class ClaudeClient:
                 )
                 return False
         except Exception:
-            logger.debug("Redis unavailable for daily limit check, allowing call")
+            logger.warning("Redis unavailable for daily limit check, allowing call", exc_info=True)
         return True
 
     async def _check_daily_limit_async(self) -> bool:
@@ -176,7 +186,7 @@ class ClaudeClient:
                 )
                 return False
         except Exception:
-            logger.debug("Redis unavailable for daily limit check, allowing call")
+            logger.warning("Redis unavailable for async daily limit check, allowing call", exc_info=True)
         return True
 
     # ------------------------------------------------------------------
@@ -214,7 +224,7 @@ class ClaudeClient:
                 session.add(row)
                 await session.commit()
         except Exception:
-            logger.debug("Failed to record AI usage (async)", exc_info=True)
+            logger.warning("Failed to record AI usage (async)", exc_info=True)
 
         # Increment cumulative cost in Redis for credit hard stop
         try:
@@ -226,7 +236,7 @@ class ClaudeClient:
             if ttl == -1:  # no expiry set
                 await aredis.expire("ai_cumulative_cost", 30 * 86400)
         except Exception:
-            logger.debug("Failed to increment cumulative cost (async)", exc_info=True)
+            logger.warning("Failed to increment cumulative cost (async)", exc_info=True)
 
     def _record_usage_sync(
         self,
@@ -260,7 +270,7 @@ class ClaudeClient:
             if r.ttl("ai_cumulative_cost") == -1:
                 r.expire("ai_cumulative_cost", 30 * 86400)
         except Exception:
-            logger.debug("Failed to queue AI usage (sync)", exc_info=True)
+            logger.warning("Failed to queue AI usage (sync)", exc_info=True)
 
     # ------------------------------------------------------------------
     # Main API methods

@@ -2,13 +2,14 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.signal import Signal
 from app.models.trade import Trade
 
@@ -105,7 +106,9 @@ def _trade_to_response(t: Trade, signal: Signal | None = None) -> TradeResponse:
 
 
 @router.get("/stats", response_model=TradeStatsResponse)
+@limiter.limit("60/minute")
 async def trade_stats(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     strategy_id: uuid.UUID | None = Query(default=None),
@@ -181,7 +184,9 @@ async def trade_stats(
 
 
 @router.get("/{trade_id}", response_model=TradeResponse)
+@limiter.limit("60/minute")
 async def get_trade(
+    request: Request,
     trade_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -201,7 +206,9 @@ async def get_trade(
 
 
 @router.get("", response_model=TradeListResponse)
+@limiter.limit("60/minute")
 async def list_trades(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=100),

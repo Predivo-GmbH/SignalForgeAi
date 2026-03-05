@@ -11,37 +11,18 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="synthesize_feedback_rules", bind=True, max_retries=1)
 def synthesize_feedback_rules(self, strategy_id: str | None = None):
     """Synthesize feedback rules from trade history."""
-    import redis
+    from app.tasks.task_utils import task_lock
 
-    from app.config import settings
-
-    r = None
-    lock = None
-    try:
-        r = redis.from_url(settings.redis_url)
-        lock = r.lock("signalforge:lock:feedback_synthesis", timeout=600, blocking=False)
-        if not lock.acquire(blocking=False):
-            logger.info("synthesize_feedback_rules already running, skipping")
-            r.close()
+    with task_lock("feedback_synthesis", timeout=1800) as acquired:
+        if not acquired:
             return
-    except redis.ConnectionError:
-        logger.warning("Redis unavailable for feedback_synthesis lock — proceeding without lock")
-
-    try:
-        asyncio.run(_synthesize_async(strategy_id))
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("feedback_synthesis transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=120)
-    finally:
-        if lock is not None:
-            try:
-                lock.release()
-            except redis.exceptions.LockNotOwnedError:
-                logger.warning("synthesize_feedback_rules lock expired before release")
-            except Exception:
-                pass
-        if r is not None:
-            r.close()
+        try:
+            asyncio.run(_synthesize_async(strategy_id))
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("feedback_synthesis transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=120)
+        except Exception:
+            logger.exception("Unexpected error in synthesize_feedback_rules")
 
 
 async def _synthesize_async(strategy_id: str | None):

@@ -15,37 +15,18 @@ def manage_positions(self):
     """Trail stops, check SL/TP, close positions as needed."""
     import asyncio
 
-    import redis
+    from app.tasks.task_utils import task_lock
 
-    from app.config import settings
-
-    r = None
-    lock = None
-    try:
-        r = redis.from_url(settings.redis_url)
-        lock = r.lock("signalforge:lock:manage_positions", timeout=600, blocking=False)
-        if not lock.acquire(blocking=False):
-            logger.info("manage_positions already running, skipping")
-            r.close()
+    with task_lock("manage_positions", timeout=1800) as acquired:
+        if not acquired:
             return
-    except redis.ConnectionError:
-        logger.warning("Redis unavailable for manage_positions lock — proceeding without lock")
-
-    try:
-        asyncio.run(_manage_async())
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("manage_positions transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=30)
-    finally:
-        if lock is not None:
-            try:
-                lock.release()
-            except redis.exceptions.LockNotOwnedError:
-                logger.warning("manage_positions lock expired before release")
-            except Exception:
-                pass
-        if r is not None:
-            r.close()
+        try:
+            asyncio.run(_manage_async())
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("manage_positions transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=30)
+        except Exception:
+            logger.exception("Unexpected error in manage_positions")
 
 
 async def _set_cooldown(pos, cfg) -> None:

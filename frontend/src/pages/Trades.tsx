@@ -15,39 +15,11 @@ import {
 import { useTrades, useTradeStats } from "@/hooks/useTrades";
 import type { Trade } from "@/hooks/useTrades";
 import { cn } from "@/lib/cn";
-import { pnlColor } from "@/lib/format";
+import { pnlColor, fmtUsd, formatPnl, formatPnlPercent, formatTime } from "@/lib/format";
 
 const PAGE_SIZE = 20;
 
 const COL_COUNT = 13;
-
-function formatPrice(value: number | null | undefined): string {
-  if (value == null) return "--";
-  return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatPct(value: number | null | undefined): string {
-  if (value == null) return "--";
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
-}
-
-function formatPnl(value: number | null | undefined): string {
-  if (value == null) return "--";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}$${Math.abs(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatTime(iso: string | null | undefined): string {
-  if (!iso) return "--";
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
 
 
 /* ----- Stat Card ----- */
@@ -216,9 +188,9 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
                 {trade.exit_reason === "sell_signal"
                   ? "Pipeline generated a SELL signal \u2014 higher timeframe trend turned bearish, closing the position."
                   : trade.exit_reason === "stop_loss"
-                    ? `Price hit the stop-loss at ${formatPrice(trade.stop_loss)}, limiting the downside risk.`
+                    ? `Price hit the stop-loss at ${fmtUsd(trade.stop_loss)}, limiting the downside risk.`
                     : trade.exit_reason === "take_profit"
-                      ? `Price reached the take-profit target at ${formatPrice(trade.take_profit)}.`
+                      ? `Price reached the take-profit target at ${fmtUsd(trade.take_profit)}.`
                       : trade.exit_reason}
               </p>
             </div>
@@ -293,22 +265,22 @@ function TradeRow({ trade }: { trade: Trade }) {
         )}
       </td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
-        {formatPrice(trade.entry_price)}
+        {fmtUsd(trade.entry_price)}
       </td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
-        {isOpen ? <span className="text-(--color-text-secondary)">--</span> : formatPrice(trade.exit_price)}
+        {isOpen ? <span className="text-(--color-text-secondary)">--</span> : fmtUsd(trade.exit_price)}
       </td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
         {trade.position_size?.toFixed(4) ?? "--"}
       </td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap">
-        {formatPrice(trade.entry_price * trade.position_size)}
+        {fmtUsd(trade.entry_price * trade.position_size)}
       </td>
       <td className={cn("px-3 py-2.5 text-sm font-mono tabular-nums text-right font-semibold whitespace-nowrap", pnlColor(trade.pnl))}>
         {formatPnl(trade.pnl)}
       </td>
       <td className={cn("px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap", pnlColor(trade.pnl_pct))}>
-        {formatPct(trade.pnl_pct)}
+        {formatPnlPercent(trade.pnl_pct)}
       </td>
       <td className="px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap">
         {trade.risk_reward != null ? trade.risk_reward.toFixed(2) : "--"}

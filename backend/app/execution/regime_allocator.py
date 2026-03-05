@@ -132,7 +132,7 @@ class RegimeAllocator:
             key = f"{REDIS_KEY_PREFIX}:{user_id}"
             await redis_client.delete(key)
         except Exception:
-            pass
+            logger.warning("Failed to reset regime allocation state for user %s", user_id, exc_info=True)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -174,7 +174,7 @@ class RegimeAllocator:
                 d = json.loads(data)
                 return RegimeAllocationState(**d)
         except Exception:
-            pass
+            logger.warning("Failed to load regime allocation state for user %s", user_id, exc_info=True)
         return None
 
     async def _save_state(self, user_id: str, state: RegimeAllocationState) -> None:

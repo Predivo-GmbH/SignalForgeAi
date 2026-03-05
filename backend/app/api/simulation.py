@@ -15,12 +15,13 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.position import Position
 from app.models.simulation import PaperSimulation, SimulationSnapshot
 from app.models.signal import Signal
@@ -35,7 +36,9 @@ _STABLECOINS = {"USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"}
 
 
 @router.post("/start")
+@limiter.limit("5/minute")
 async def start_simulation(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -196,7 +199,9 @@ async def start_simulation(
 
 
 @router.get("/active")
+@limiter.limit("60/minute")
 async def get_active_simulation(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -217,7 +222,9 @@ async def get_active_simulation(
 
 
 @router.get("/latest")
+@limiter.limit("60/minute")
 async def get_latest_simulation(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -238,7 +245,9 @@ async def get_latest_simulation(
 
 
 @router.get("/{sim_id}/comparison")
+@limiter.limit("60/minute")
 async def get_simulation_comparison(
+    request: Request,
     sim_id: str,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -321,7 +330,9 @@ async def get_simulation_comparison(
 
 
 @router.post("/{sim_id}/stop")
+@limiter.limit("5/minute")
 async def stop_simulation(
+    request: Request,
     sim_id: str,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

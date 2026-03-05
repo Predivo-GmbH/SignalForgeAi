@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
 DEFAULT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
-MIN_CANDLES_FOR_PIPELINE = 300
-BACKFILL_LIMIT = 500
-INCREMENTAL_LIMIT = 50
+MIN_CANDLES_FOR_PIPELINE = 300  # Minimum candles needed for reliable indicator calculation
+BACKFILL_LIMIT = 500  # Max candles to fetch on initial backfill
+INCREMENTAL_LIMIT = 50  # Max candles to fetch on incremental update
 
 
 @celery_app.task(name="ingest_candles", bind=True, max_retries=3)
@@ -20,37 +20,18 @@ def ingest_candles(self):
     """Fetch latest candles for all active symbols and store in DB."""
     import asyncio
 
-    import redis
+    from app.tasks.task_utils import task_lock
 
-    from app.config import settings
-
-    r = None
-    lock = None
-    try:
-        r = redis.from_url(settings.redis_url)
-        lock = r.lock("signalforge:lock:ingest_candles", timeout=120, blocking=False)
-        if not lock.acquire(blocking=False):
-            logger.info("ingest_candles already running, skipping")
-            r.close()
+    with task_lock("ingest_candles", timeout=1800) as acquired:
+        if not acquired:
             return
-    except Exception:
-        logger.warning("Redis unavailable for ingest_candles lock — proceeding without lock")
-
-    try:
-        asyncio.run(_ingest_async())
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("ingest_candles transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=30)
-    finally:
-        if lock is not None:
-            try:
-                lock.release()
-            except redis.exceptions.LockNotOwnedError:
-                logger.warning("ingest_candles lock expired before release")
-            except Exception:
-                pass
-        if r is not None:
-            r.close()
+        try:
+            asyncio.run(_ingest_async())
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("ingest_candles transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=30)
+        except Exception:
+            logger.exception("Unexpected error in ingest_candles")
 
 
 async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
@@ -215,6 +196,10 @@ async def _ingest_async():
                     except ccxt_sync.BadSymbol:
                         continue  # Not on this exchange either
                     except Exception:
+                        logger.warning(
+                            "Fallback ingestion failed for %s %s on %s",
+                            symbol, timeframe, fallback_id, exc_info=True,
+                        )
                         continue
                 else:
                     logger.warning(

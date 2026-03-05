@@ -2,13 +2,14 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 
 router = APIRouter(tags=["alerts"])
 
@@ -33,7 +34,9 @@ class AlertConfig(BaseModel):
 
 
 @router.get("/alerts/config", response_model=AlertConfig)
+@limiter.limit("60/minute")
 async def get_alert_config(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -48,7 +51,9 @@ async def get_alert_config(
 
 
 @router.put("/alerts/config", response_model=AlertConfig)
+@limiter.limit("20/minute")
 async def update_alert_config(
+    request: Request,
     body: AlertConfig,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

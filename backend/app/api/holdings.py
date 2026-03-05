@@ -6,7 +6,7 @@ import logging
 import uuid
 
 import ccxt.async_support as ccxt_async
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.core.encryption import decrypt_value
+from app.core.rate_limit import limiter
 from app.execution.adapters.ccxt_adapter import CCXTAdapter
 from app.models.holding import CostBasisOverride, ManualHolding
 from app.models.position import Position
@@ -53,7 +54,7 @@ class HoldingsResponse(BaseModel):
 
 class ManualHoldingRequest(BaseModel):
     symbol: str = Field(min_length=1, max_length=20)
-    quantity: float = Field(gt=0)
+    quantity: float = Field(gt=0, le=1_000_000_000)
     purchase_price: float | None = None
     notes: str | None = Field(default=None, max_length=255)
 
@@ -121,7 +122,7 @@ async def _fetch_prices_from_exchange(
                         "volume_24h": float(ticker.get("quoteVolume") or 0) or None,
                     }
     except Exception:
-        logger.debug("Price fetch from %s failed", exchange_id)
+        logger.warning("Price fetch from %s failed", exchange_id, exc_info=True)
     finally:
         await exchange.close()
     return result
@@ -173,7 +174,7 @@ async def _fetch_prices(
             if not uncached:
                 return result
     except Exception:
-        logger.debug("Redis price cache read failed, fetching fresh")
+        logger.warning("Redis price cache read failed, fetching fresh", exc_info=True)
 
     # Separate CoinGecko-only symbols from exchange-eligible ones
     cg_only = [s for s in non_stable if s in _COINGECKO_ONLY]
@@ -236,7 +237,7 @@ async def _fetch_prices(
     try:
         await redis_client.set(cache_key, json.dumps(result), ex=60)
     except Exception:
-        logger.debug("Redis price cache write failed")
+        logger.warning("Redis price cache write failed", exc_info=True)
 
     return result
 
@@ -292,7 +293,7 @@ async def _fetch_exchange_holdings(
         if cached:
             return [HoldingItem(**h) for h in json.loads(cached)]
     except Exception:
-        pass
+        logger.warning("Redis exchange balance cache read failed", exc_info=True)
 
     result = await db.execute(
         select(BrokerConnection).where(
@@ -336,7 +337,7 @@ async def _fetch_exchange_holdings(
             cache_key, json.dumps([h.model_dump() for h in holdings]), ex=30,
         )
     except Exception:
-        pass
+        logger.warning("Redis exchange balance cache write failed", exc_info=True)
 
     return holdings
 
@@ -392,7 +393,9 @@ async def _fetch_manual_holdings(
 
 
 @router.get("", response_model=HoldingsResponse)
+@limiter.limit("60/minute")
 async def get_aggregated_holdings(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -440,7 +443,9 @@ async def get_aggregated_holdings(
 
 
 @router.get("/exchange", response_model=list[HoldingItem])
+@limiter.limit("60/minute")
 async def get_exchange_holdings(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -449,14 +454,20 @@ async def get_exchange_holdings(
 
 
 @router.get("/manual", response_model=list[ManualHoldingResponse])
+@limiter.limit("60/minute")
 async def list_manual_holdings(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ):
     """List all manual holdings."""
     result = await db.execute(
         select(ManualHolding).where(ManualHolding.user_id == uuid.UUID(user_id))
         .order_by(ManualHolding.symbol)
+        .limit(limit)
+        .offset(offset)
     )
     rows = result.scalars().all()
     return [
@@ -473,7 +484,9 @@ async def list_manual_holdings(
 
 
 @router.post("/manual", response_model=ManualHoldingResponse, status_code=201)
+@limiter.limit("20/minute")
 async def add_manual_holding(
+    request: Request,
     body: ManualHoldingRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -501,7 +514,9 @@ async def add_manual_holding(
 
 
 @router.put("/manual/{holding_id}", response_model=ManualHoldingResponse)
+@limiter.limit("20/minute")
 async def update_manual_holding(
+    request: Request,
     holding_id: str,
     body: ManualHoldingRequest,
     user_id: str = Depends(get_current_user),
@@ -535,7 +550,9 @@ async def update_manual_holding(
 
 
 @router.delete("/manual/{holding_id}", status_code=204)
+@limiter.limit("20/minute")
 async def delete_manual_holding(
+    request: Request,
     holding_id: str,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -555,7 +572,9 @@ async def delete_manual_holding(
 
 
 @router.post("/manual/bulk", response_model=list[ManualHoldingResponse], status_code=201)
+@limiter.limit("5/minute")
 async def bulk_import_holdings(
+    request: Request,
     body: BulkImportRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -604,15 +623,21 @@ async def bulk_import_holdings(
 
 
 @router.get("/cost-basis", response_model=list[CostBasisResponse])
+@limiter.limit("60/minute")
 async def list_cost_basis_overrides(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ):
     """List all cost basis overrides for the user."""
     result = await db.execute(
         select(CostBasisOverride)
         .where(CostBasisOverride.user_id == uuid.UUID(user_id))
         .order_by(CostBasisOverride.symbol)
+        .limit(limit)
+        .offset(offset)
     )
     return [
         CostBasisResponse(
@@ -624,7 +649,9 @@ async def list_cost_basis_overrides(
 
 
 @router.put("/cost-basis/{symbol}", response_model=CostBasisResponse)
+@limiter.limit("20/minute")
 async def upsert_cost_basis(
+    request: Request,
     symbol: str,
     body: CostBasisRequest,
     user_id: str = Depends(get_current_user),
@@ -658,7 +685,9 @@ async def upsert_cost_basis(
 
 
 @router.delete("/cost-basis/{symbol}", status_code=204)
+@limiter.limit("20/minute")
 async def delete_cost_basis(
+    request: Request,
     symbol: str,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -678,7 +707,9 @@ async def delete_cost_basis(
 
 
 @router.post("/cost-basis/bulk", response_model=list[CostBasisResponse], status_code=201)
+@limiter.limit("5/minute")
 async def bulk_import_cost_basis(
+    request: Request,
     body: BulkCostBasisRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

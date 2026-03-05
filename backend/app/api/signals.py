@@ -1,16 +1,18 @@
 """Signals REST API — list, get, and on-demand generation."""
 
+import re
 import uuid
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.data.storage import CandleStorage
 from app.engine.pipeline import SignalPipeline
 from app.models.signal import Signal
@@ -22,9 +24,16 @@ router = APIRouter(prefix="/signals", tags=["signals"])
 
 
 class GenerateRequest(BaseModel):
-    symbol: str = "BTC/USDT"
-    timeframe: str = "1h"
+    symbol: str = Field(default="BTC/USDT", max_length=20)
+    timeframe: str = Field(default="1h", max_length=5)
     account_equity: float = 10000.0
+
+    @field_validator('symbol')
+    @classmethod
+    def validate_symbol(cls, v: str) -> str:
+        if not re.match(r'^[A-Z0-9]{1,10}(/[A-Z0-9]{1,10})?$', v.upper()):
+            raise ValueError('Invalid symbol format. Expected format: BTC/USDT or AAPL')
+        return v.upper()
 
 
 class SignalResponse(BaseModel):
@@ -100,7 +109,9 @@ def _generate_synthetic_candles(n: int = 200) -> pd.DataFrame:
 
 
 @router.post("/generate", response_model=GenerateSignalResponse)
+@limiter.limit("5/minute")
 async def generate_signal(
+    request: Request,
     body: GenerateRequest | None = None,
     _user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -149,7 +160,9 @@ async def generate_signal(
 
 
 @router.get("/{signal_id}", response_model=SignalResponse)
+@limiter.limit("60/minute")
 async def get_signal(
+    request: Request,
     signal_id: uuid.UUID,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -178,7 +191,9 @@ _SORT_COLUMNS = {
 
 
 @router.get("", response_model=SignalListResponse)
+@limiter.limit("60/minute")
 async def list_signals(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(default=20, ge=1, le=100),

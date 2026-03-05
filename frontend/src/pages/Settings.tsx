@@ -134,6 +134,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           className="p-1 rounded hover:bg-(--color-bg-elevated) transition-colors"
+          aria-label="Close form"
         >
           <X className="w-4 h-4 text-(--color-text-secondary)" />
         </button>
@@ -609,6 +610,9 @@ function AlertsTab() {
                 "w-10 h-6 rounded-full transition-colors relative",
                 current.email_on_signal ? "bg-(--color-accent)" : "bg-(--color-bg-elevated)",
               )}
+              role="switch"
+              aria-checked={current.email_on_signal}
+              aria-label="Toggle email on signal"
             >
               <span
                 className={cn(
@@ -637,6 +641,9 @@ function AlertsTab() {
                 "w-10 h-6 rounded-full transition-colors relative",
                 current.email_daily_summary ? "bg-(--color-accent)" : "bg-(--color-bg-elevated)",
               )}
+              role="switch"
+              aria-checked={current.email_daily_summary}
+              aria-label="Toggle daily summary email"
             >
               <span
                 className={cn(
@@ -746,6 +753,7 @@ function ChangePasswordForm() {
             type="button"
             onClick={() => setShowCurrent(!showCurrent)}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+            aria-label={showCurrent ? "Hide current password" : "Show current password"}
           >
             {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -767,6 +775,7 @@ function ChangePasswordForm() {
             type="button"
             onClick={() => setShowNew(!showNew)}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+            aria-label={showNew ? "Hide new password" : "Show new password"}
           >
             {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>

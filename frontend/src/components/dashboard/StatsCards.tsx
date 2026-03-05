@@ -1,13 +1,9 @@
 import { TrendingUp, Target, BarChart3, Activity } from "lucide-react";
 import type { TradeStats } from "@/hooks/useTrades";
+import { formatPnl } from "@/lib/format";
 
 interface StatsCardsProps {
   stats: TradeStats | null | undefined;
-}
-
-function formatPnl(value: number): string {
-  const prefix = value >= 0 ? "+$" : "-$";
-  return `${prefix}${Math.abs(value).toFixed(2)}`;
 }
 
 interface StatCardData {

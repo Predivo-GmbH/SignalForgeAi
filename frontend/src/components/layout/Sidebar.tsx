@@ -72,13 +72,14 @@ export function Sidebar() {
           <button
             onClick={() => setMobileOpen(false)}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-(--color-text-secondary) hover:bg-(--color-bg-elevated) lg:hidden"
+            aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
+        <nav className="flex-1 overflow-y-auto px-2 py-3" role="navigation" aria-label="Main navigation">
           <ul className="space-y-1">
             {navItems.map(({ to, icon: Icon, label }) => (
               <li key={to}>
@@ -117,6 +118,7 @@ export function Sidebar() {
               collapsed && "justify-center px-0"
             )}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
               <PanelLeftOpen className="h-5 w-5 shrink-0" />

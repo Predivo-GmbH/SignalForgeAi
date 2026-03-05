@@ -2,6 +2,28 @@ import { useAuth } from "./auth";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
+/* ---- Typed API Error ---- */
+
+export class ApiError extends Error {
+  status: number;
+  code: string;
+
+  constructor(status: number, message: string, code: string = "UNKNOWN") {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.name = "ApiError";
+  }
+}
+
+const STATUS_MESSAGES: Record<number, { message: string; code: string }> = {
+  403: { message: "You don't have permission for this action.", code: "FORBIDDEN" },
+  404: { message: "Resource not found.", code: "NOT_FOUND" },
+  422: { message: "Invalid input. Please check your data.", code: "VALIDATION_ERROR" },
+  429: { message: "Too many requests. Please try again shortly.", code: "RATE_LIMITED" },
+  500: { message: "Server error. Please try again later.", code: "SERVER_ERROR" },
+};
+
 let isRefreshing = false;
 let refreshQueue: Array<{
   resolve: (value: boolean) => void;
@@ -67,15 +89,18 @@ async function request<T>(path: string, options: RequestInit = {}, _retry = fals
     if (refreshed) {
       return request<T>(path, options, true);
     }
-    throw new Error("Unauthorized");
+    throw new ApiError(401, "Session expired. Please log in again.", "UNAUTHORIZED");
   }
   if (res.status === 401) {
     useAuth.getState().logout();
-    throw new Error("Unauthorized");
+    throw new ApiError(401, "Session expired. Please log in again.", "UNAUTHORIZED");
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || body.error || `Request failed: ${res.status}`);
+    const fallback = STATUS_MESSAGES[res.status];
+    const message = body.detail || body.error || fallback?.message || `Request failed: ${res.status}`;
+    const code = fallback?.code || "UNKNOWN";
+    throw new ApiError(res.status, message, code);
   }
   if (res.status === 204) return undefined as T;
   return res.json();

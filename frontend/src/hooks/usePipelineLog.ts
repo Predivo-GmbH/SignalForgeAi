@@ -15,8 +15,8 @@ export interface PipelineLogEntry {
 export interface PipelineLogResponse {
   items: PipelineLogEntry[];
   total: number;
-  page: number;
-  per_page: number;
+  limit: number;
+  offset: number;
 }
 
 export interface PipelineLogSummary {
@@ -41,8 +41,11 @@ export interface PipelineLogParams {
 
 export function usePipelineLog(params: PipelineLogParams = {}) {
   const qs = new URLSearchParams();
-  if (params.page) qs.set("page", String(params.page));
-  if (params.per_page) qs.set("per_page", String(params.per_page));
+  // Convert page/per_page to limit/offset for backend
+  const perPage = params.per_page ?? 50;
+  const page = params.page ?? 1;
+  qs.set("limit", String(perPage));
+  qs.set("offset", String((page - 1) * perPage));
   if (params.symbol) qs.set("symbol", params.symbol);
   if (params.block_reason) qs.set("block_reason", params.block_reason);
   if (params.action) qs.set("action", params.action);

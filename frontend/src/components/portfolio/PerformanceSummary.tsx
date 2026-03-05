@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { TrendingUp, Target, BarChart3, Activity, DollarSign } from "lucide-react";
 import { useTradeStats } from "@/hooks/useTrades";
-import { pnlColor } from "@/lib/format";
+import { pnlColor, formatPnl } from "@/lib/format";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 interface StatCardData {
@@ -42,11 +42,6 @@ export function PerformanceSummary() {
       </div>
     );
   }
-
-  const formatPnl = (v: number): string => {
-    const prefix = v >= 0 ? "+$" : "-$";
-    return `${prefix}${Math.abs(v).toFixed(2)}`;
-  };
 
   const cards: StatCardData[] = [
     {

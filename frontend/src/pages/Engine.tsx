@@ -659,6 +659,7 @@ function PipelineRunList() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
+              aria-label="Previous page"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -666,6 +667,7 @@ function PipelineRunList() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
+              aria-label="Next page"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

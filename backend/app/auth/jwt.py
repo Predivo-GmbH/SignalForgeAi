@@ -7,14 +7,16 @@ from app.config import settings
 
 
 def create_access_token(user_id: str) -> str:
-    expires = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiry_minutes)
-    payload = {"sub": user_id, "exp": expires, "type": "access"}
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=settings.jwt_expiry_minutes)
+    payload = {"sub": user_id, "exp": expires, "iat": now.timestamp(), "type": "access"}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def create_refresh_token(user_id: str) -> str:
-    expires = datetime.now(timezone.utc) + timedelta(days=settings.jwt_refresh_expiry_days)
-    payload = {"sub": user_id, "exp": expires, "type": "refresh"}
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(days=settings.jwt_refresh_expiry_days)
+    payload = {"sub": user_id, "exp": expires, "iat": now.timestamp(), "type": "refresh"}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

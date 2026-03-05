@@ -7,7 +7,7 @@ is configured. Falls back to local ai_insights table otherwise.
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_user
 from app.config import settings
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.models.ai_insight import AIInsight
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,9 @@ class CreditUpdate(BaseModel):
 
 
 @router.get("/ai-usage", response_model=AiUsageResponse)
+@limiter.limit("60/minute")
 async def get_ai_usage(
+    request: Request,
     days: int = Query(default=30, ge=1, le=365),
     _user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -118,7 +121,9 @@ async def get_ai_usage(
 
 
 @router.put("/ai-usage/credit")
+@limiter.limit("20/minute")
 async def update_credit(
+    request: Request,
     body: CreditUpdate,
     _user_id: str = Depends(get_current_user),
 ):
@@ -404,7 +409,7 @@ async def _get_prepaid_credit() -> float:
         if val is not None:
             return float(val)
     except Exception as e:
-        logger.debug("Redis read failed for prepaid credit: %s", e)
+        logger.warning("Redis read failed for prepaid credit: %s", e, exc_info=True)
     from app.config import settings as _settings
 
     return _settings.ai_prepaid_credit_usd
@@ -423,5 +428,5 @@ async def _get_cumulative_cost() -> float:
         if val is not None:
             return float(val)
     except Exception as e:
-        logger.debug("Redis read failed for cumulative cost: %s", e)
+        logger.warning("Redis read failed for cumulative cost: %s", e, exc_info=True)
     return 0.0

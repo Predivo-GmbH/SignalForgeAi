@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.core.encryption import decrypt_value, encrypt_value
+from app.core.rate_limit import limiter
 from app.execution.adapters.ccxt_adapter import CCXTAdapter
 from app.models.strategy import BrokerConnection
 
@@ -47,7 +48,9 @@ def _mask_key(key: str) -> str:
 
 
 @router.post("", response_model=BrokerConnectionResponse, status_code=201)
+@limiter.limit("20/minute")
 async def create_broker_connection(
+    request: Request,
     body: BrokerConnectRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -97,7 +100,9 @@ async def create_broker_connection(
 
 
 @router.get("", response_model=list[BrokerConnectionResponse])
+@limiter.limit("60/minute")
 async def list_broker_connections(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -115,6 +120,7 @@ async def list_broker_connections(
                 raw_key = decrypt_value(c.api_key_enc)
                 masked = _mask_key(raw_key)
             except Exception:
+                logger.warning("Failed to decrypt API key for connection %s", c.id, exc_info=True)
                 masked = "****error"
         out.append(
             BrokerConnectionResponse(
@@ -130,7 +136,9 @@ async def list_broker_connections(
 
 
 @router.delete("/{connection_id}", status_code=204)
+@limiter.limit("20/minute")
 async def delete_broker_connection(
+    request: Request,
     connection_id: str,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -157,7 +165,9 @@ class BrokerHealthResponse(BaseModel):
 
 
 @router.get("/{connection_id}/health", response_model=BrokerHealthResponse)
+@limiter.limit("5/minute")
 async def check_broker_health(
+    request: Request,
     connection_id: str,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -193,7 +203,8 @@ async def check_broker_health(
         finally:
             await adapter.close()
     except Exception as exc:
-        logger.debug("Health check failed for %s: %s", conn.broker, exc)
+        logger.error("Broker health check failed for connection %s: %s", connection_id, exc)
         return BrokerHealthResponse(
-            id=str(conn.id), broker=conn.broker, ok=False, error=str(exc)[:200],
+            id=str(conn.id), broker=conn.broker, ok=False,
+            error="Connection check failed. Verify API credentials and try again.",
         )

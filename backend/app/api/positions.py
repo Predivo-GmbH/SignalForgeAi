@@ -2,13 +2,14 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.execution.position_manager import PositionManagerDB
 from app.models.position import Position
 from app.models.trade import Trade
@@ -30,7 +31,9 @@ class ClosePositionRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 @router.get("")
+@limiter.limit("60/minute")
 async def list_positions(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -40,7 +43,9 @@ async def list_positions(
 
 
 @router.post("/{position_id}/close")
+@limiter.limit("20/minute")
 async def close_position(
+    request: Request,
     position_id: str,
     body: ClosePositionRequest,
     user_id: str = Depends(get_current_user),
@@ -58,7 +63,9 @@ async def close_position(
 
 
 @router.get("/correlations")
+@limiter.limit("60/minute")
 async def get_correlations(
+    request: Request,
     user_id: str = Depends(get_current_user),
 ):
     """Return current correlation matrix and alerts for open positions."""
@@ -88,7 +95,9 @@ async def get_correlations(
 
 
 @router.get("/drawdown")
+@limiter.limit("60/minute")
 async def get_drawdown_state(
+    request: Request,
     user_id: str = Depends(get_current_user),
 ):
     """Return current portfolio drawdown circuit breaker state."""
@@ -116,7 +125,9 @@ async def get_drawdown_state(
 
 
 @router.get("/cppi")
+@limiter.limit("60/minute")
 async def get_cppi_state(
+    request: Request,
     user_id: str = Depends(get_current_user),
 ):
     """Return current CPPI (portfolio insurance) state."""
@@ -143,7 +154,9 @@ async def get_cppi_state(
 
 
 @router.get("/account")
+@limiter.limit("60/minute")
 async def account_state(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):

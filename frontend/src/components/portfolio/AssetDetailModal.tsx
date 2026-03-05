@@ -10,7 +10,7 @@ import {
 } from "lightweight-charts";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { pnlColor, formatPrice } from "@/lib/format";
+import { pnlColor, formatPrice, fmtUsd } from "@/lib/format";
 import { CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
 import { api } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
@@ -49,10 +49,6 @@ function CoinIcon({ symbol, imageUrl, size = 24 }: { symbol: string; imageUrl: s
       {symbol.charAt(0)}
     </div>
   );
-}
-
-function fmtUsd(val: number): string {
-  return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /* ---- Candle chart types ---- */

@@ -17,37 +17,18 @@ def execute_pending_signals(self):
     """Query signals pending execution, run risk checks, place orders."""
     import asyncio
 
-    import redis
+    from app.tasks.task_utils import task_lock
 
-    from app.config import settings
-
-    r = None
-    lock = None
-    try:
-        r = redis.from_url(settings.redis_url)
-        lock = r.lock("signalforge:lock:execute_signals", timeout=600, blocking=False)
-        if not lock.acquire(blocking=False):
-            logger.info("execute_pending_signals already running, skipping")
-            r.close()
+    with task_lock("execute_signals", timeout=1800) as acquired:
+        if not acquired:
             return
-    except redis.ConnectionError:
-        logger.warning("Redis unavailable for execute_signals lock — proceeding without lock")
-
-    try:
-        asyncio.run(_execute_async())
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("execute_pending_signals transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=30)
-    finally:
-        if lock is not None:
-            try:
-                lock.release()
-            except redis.exceptions.LockNotOwnedError:
-                logger.warning("execute_pending_signals lock expired before release — concurrent execution may have occurred")
-            except Exception:
-                pass
-        if r is not None:
-            r.close()
+        try:
+            asyncio.run(_execute_async())
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("execute_pending_signals transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=30)
+        except Exception:
+            logger.exception("Unexpected error in execute_pending_signals")
 
 
 async def _execute_async():

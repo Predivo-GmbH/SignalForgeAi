@@ -18,7 +18,7 @@ export function AppLayout() {
         )}
       >
         <Topbar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto" role="main">
           <Outlet />
         </main>
       </div>

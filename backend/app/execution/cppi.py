@@ -124,7 +124,7 @@ class CPPIManager:
             key = f"{REDIS_KEY_PREFIX}:{user_id}"
             await redis_client.delete(key)
         except Exception:
-            pass
+            logger.warning("Failed to reset CPPI state for user %s", user_id, exc_info=True)
 
     async def _load_state(self, user_id: str) -> CPPIState | None:
         """Load state from Redis."""
@@ -137,7 +137,7 @@ class CPPIManager:
                 d = json.loads(data)
                 return CPPIState(**d)
         except Exception:
-            pass
+            logger.warning("Failed to load CPPI state for user %s", user_id, exc_info=True)
         return None
 
     async def _save_state(self, user_id: str, state: CPPIState) -> None:

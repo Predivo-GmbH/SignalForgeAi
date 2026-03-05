@@ -24,7 +24,7 @@ import {
   ColorType,
 } from "lightweight-charts";
 import { cn } from "@/lib/cn";
-import { pnlColor, formatPrice } from "@/lib/format";
+import { pnlColor, formatPrice, fmtUsd } from "@/lib/format";
 import { CRYPTO_LIST, CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
 import type { CryptoEntry } from "@/lib/cryptoSymbols";
 import {
@@ -69,10 +69,6 @@ const SMALL_BALANCE_THRESHOLD = 1; // $1
 const TOP_PERFORMER_MIN_VALUE = 50; // exclude tiny positions from top performer
 
 /* ---- Helpers ---- */
-
-function fmtUsd(val: number): string {
-  return `$${val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 function fmtCompact(val: number): string {
   if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;

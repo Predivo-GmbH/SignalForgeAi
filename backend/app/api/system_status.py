@@ -4,12 +4,13 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/system", tags=["system"])
 
 
 @router.get("/status")
+@limiter.limit("60/minute")
 async def get_system_status(
+    request: Request,
     _user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -158,7 +161,7 @@ async def get_system_status(
             result["data"]["pipeline_age_seconds"] = None
             result["data"]["pipeline_fresh"] = result["data"]["candles_fresh"]
     except Exception:
-        pass
+        logger.warning("Failed to check pipeline run freshness", exc_info=True)
 
     # --- 6. Signal freshness (actionable signals only) ---
     try:
@@ -176,13 +179,15 @@ async def get_system_status(
             result["data"]["last_signal_at"] = last_signal_time.isoformat()
             result["data"]["signal_age_seconds"] = round(sig_age)
     except Exception:
-        pass
+        logger.warning("Failed to check signal freshness", exc_info=True)
 
     return result
 
 
 @router.post("/restart")
+@limiter.limit("5/minute")
 async def restart_worker(
+    request: Request,
     _user_id: str = Depends(get_current_user),
 ):
     """Soft-restart the Celery worker pool (cycles worker processes)."""

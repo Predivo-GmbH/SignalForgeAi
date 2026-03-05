@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +42,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(body: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == body.email))
     if result.scalar_one_or_none():
+        # NOTE: Specific error message kept for frontend UX. This is a LOW-risk
+        # user enumeration vector — an attacker could probe for registered emails.
+        # To mitigate fully, return a generic "Registration failed" and handle
+        # the duplicate-email case in the frontend via a separate flow.
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user = User(email=body.email, password_hash=hash_password(body.password))
@@ -139,6 +144,12 @@ async def change_password(
 
     user.password_hash = hash_password(body.new_password)
     await db.commit()
+
+    # Invalidate all existing tokens so the user must re-authenticate
+    from app.core.token_blacklist import blacklist_all_user_tokens
+
+    await blacklist_all_user_tokens(str(user.id))
+
     return MessageResponse(message="Password updated successfully")
 
 
@@ -183,7 +194,9 @@ async def change_email(
 
 
 @router.post("/2fa/setup", response_model=TwoFactorSetupResponse)
+@limiter.limit("5/minute")
 async def setup_2fa(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -212,8 +225,10 @@ async def setup_2fa(
 
 
 @router.post("/2fa/verify", response_model=TwoFactorEnableResponse)
+@limiter.limit("5/minute")
 async def verify_and_enable_2fa(
     body: TwoFactorVerifyRequest,
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -250,8 +265,10 @@ async def verify_and_enable_2fa(
 
 
 @router.post("/2fa/disable", response_model=MessageResponse)
+@limiter.limit("5/minute")
 async def disable_2fa(
     body: TwoFactorDisableRequest,
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -280,6 +297,12 @@ async def disable_2fa(
     user.totp_secret_enc = None
     user.backup_codes_hash = None
     await db.commit()
+
+    # Invalidate all existing tokens after 2FA removal
+    from app.core.token_blacklist import blacklist_all_user_tokens
+
+    await blacklist_all_user_tokens(str(user.id))
+
     return MessageResponse(message="Two-factor authentication disabled")
 
 
@@ -356,3 +379,117 @@ async def validate_2fa(
         raise HTTPException(status_code=403, detail="Invalid 2FA code")
 
     return MessageResponse(message="Code verified")
+
+
+# ---------- GDPR Compliance ----------
+
+UTC = timezone.utc
+
+
+@router.delete("/user", status_code=204)
+@limiter.limit("1/minute")
+async def delete_account(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete user account and all associated data (GDPR right to erasure)."""
+    uid = uuid.UUID(user_id)
+    result = await db.execute(select(User).where(User.id == uid))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.delete(user)
+    await db.commit()
+    # Blacklist all tokens so any cached JWTs are rejected
+    from app.core.token_blacklist import blacklist_all_user_tokens
+
+    await blacklist_all_user_tokens(user_id, ttl_seconds=86400)
+    return Response(status_code=204)
+
+
+@router.get("/user/export")
+@limiter.limit("2/minute")
+async def export_user_data(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export all user data (GDPR right to data portability)."""
+    uid = uuid.UUID(user_id)
+    # Collect all user data
+    user_result = await db.execute(select(User).where(User.id == uid))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    from app.models.signal import Signal
+    from app.models.trade import Trade
+    from app.models.strategy import Strategy
+    from app.models.position import Position
+    from app.models.order import Order
+
+    signals = (await db.execute(select(Signal).where(Signal.user_id == uid))).scalars().all()
+    trades = (await db.execute(select(Trade).where(Trade.user_id == uid))).scalars().all()
+    strategies = (await db.execute(select(Strategy).where(Strategy.user_id == uid))).scalars().all()
+    positions = (await db.execute(select(Position).where(Position.user_id == uid))).scalars().all()
+    orders = (await db.execute(select(Order).where(Order.user_id == uid))).scalars().all()
+
+    export = {
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "created_at": str(user.created_at) if hasattr(user, "created_at") else None,
+            "has_2fa": user.totp_enabled,
+        },
+        "strategies": [
+            {
+                "id": str(s.id),
+                "name": s.name,
+                "is_active": s.is_active,
+                "config": s.config,
+            }
+            for s in strategies
+        ],
+        "signals": [
+            {
+                "id": str(s.id),
+                "symbol": s.symbol,
+                "direction": s.direction,
+                "created_at": str(s.created_at),
+            }
+            for s in signals
+        ],
+        "trades": [
+            {
+                "id": str(t.id),
+                "symbol": t.symbol,
+                "direction": t.direction,
+                "entry_price": t.entry_price,
+                "exit_price": t.exit_price,
+                "pnl": t.pnl,
+                "created_at": str(t.created_at),
+            }
+            for t in trades
+        ],
+        "positions": [
+            {
+                "id": str(p.id),
+                "symbol": p.symbol,
+                "direction": p.direction,
+                "entry_price": p.entry_price,
+            }
+            for p in positions
+        ],
+        "orders": [
+            {
+                "id": str(o.id),
+                "symbol": o.symbol,
+                "direction": o.direction,
+                "status": o.status,
+            }
+            for o in orders
+        ],
+        "exported_at": str(datetime.now(UTC)),
+    }
+    return export

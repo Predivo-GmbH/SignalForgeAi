@@ -4,12 +4,13 @@ import asyncio
 import logging
 import uuid as _uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +18,15 @@ router = APIRouter(tags=["backtests"])
 
 
 class BacktestRequest(BaseModel):
-    symbol: str
-    timeframe: str
+    symbol: str = Field(max_length=20)
+    timeframe: str = Field(max_length=5)
     days: int = Field(default=30, ge=1, le=365)
     params: dict | None = None
 
 
 class WFORequest(BaseModel):
-    symbol: str
-    timeframe: str
+    symbol: str = Field(max_length=20)
+    timeframe: str = Field(max_length=5)
     days: int = Field(default=90, ge=30, le=365)
     n_folds: int = Field(default=3, ge=2, le=10)
     train_pct: float = Field(default=0.7, ge=0.5, le=0.9)
@@ -52,7 +53,9 @@ class StrategyBacktestRequest(BaseModel):
 
 
 @router.post("/backtests")
+@limiter.limit("5/minute")
 async def run_backtest(
+    request: Request,
     body: BacktestRequest,
     user_id: str = Depends(get_current_user),
 ):
@@ -67,7 +70,9 @@ async def run_backtest(
 
 
 @router.get("/backtests")
+@limiter.limit("60/minute")
 async def list_backtests(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -104,7 +109,9 @@ async def list_backtests(
 
 
 @router.post("/backtests/optimize")
+@limiter.limit("5/minute")
 async def run_walk_forward(
+    request: Request,
     body: WFORequest,
     user_id: str = Depends(get_current_user),
 ):
@@ -158,7 +165,9 @@ async def run_walk_forward(
 
 
 @router.post("/backtests/strategy")
+@limiter.limit("5/minute")
 async def run_strategy_backtest(
+    request: Request,
     body: StrategyBacktestRequest,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
