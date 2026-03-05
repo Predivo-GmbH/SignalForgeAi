@@ -13,7 +13,7 @@ from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.core.encryption import decrypt_value
 from app.execution.adapters.ccxt_adapter import CCXTAdapter
-from app.models.holding import ManualHolding
+from app.models.holding import CostBasisOverride, ManualHolding
 from app.models.position import Position
 from app.models.strategy import BrokerConnection
 
@@ -68,6 +68,26 @@ class ManualHoldingResponse(BaseModel):
     purchase_price: float | None = None
     notes: str | None = None
     created_at: str
+
+    model_config = {"from_attributes": True}
+
+
+class CostBasisRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=20)
+    purchase_price: float = Field(gt=0)
+    notes: str | None = Field(default=None, max_length=255)
+
+
+class BulkCostBasisRequest(BaseModel):
+    overrides: list[CostBasisRequest] = Field(min_length=1, max_length=100)
+    clear_existing: bool = False
+
+
+class CostBasisResponse(BaseModel):
+    id: str
+    symbol: str
+    purchase_price: float
+    notes: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -315,6 +335,21 @@ async def get_aggregated_holdings(
     trading = await _fetch_trading_holdings(db, user_id)
     all_holdings = exchange + manual + trading
 
+    # Fetch cost basis overrides (apply to holdings without avg_price)
+    uid = uuid.UUID(user_id)
+    cb_result = await db.execute(
+        select(CostBasisOverride).where(CostBasisOverride.user_id == uid)
+    )
+    cost_overrides: dict[str, float] = {
+        row.symbol.upper(): row.purchase_price
+        for row in cb_result.scalars().all()
+    }
+
+    # Apply cost basis overrides to holdings that lack avg_price
+    for h in all_holdings:
+        if h.avg_price is None and h.symbol.upper() in cost_overrides:
+            h.avg_price = cost_overrides[h.symbol.upper()]
+
     # Enrich with live prices
     if all_holdings:
         unique_symbols = list({h.symbol.upper() for h in all_holdings})
@@ -493,4 +528,133 @@ async def bulk_import_holdings(
             created_at=h.created_at.isoformat() if h.created_at else "",
         )
         for h in created
+    ]
+
+
+# ---------- Cost Basis Override routes ----------
+
+
+@router.get("/cost-basis", response_model=list[CostBasisResponse])
+async def list_cost_basis_overrides(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all cost basis overrides for the user."""
+    result = await db.execute(
+        select(CostBasisOverride)
+        .where(CostBasisOverride.user_id == uuid.UUID(user_id))
+        .order_by(CostBasisOverride.symbol)
+    )
+    return [
+        CostBasisResponse(
+            id=str(r.id), symbol=r.symbol,
+            purchase_price=r.purchase_price, notes=r.notes,
+        )
+        for r in result.scalars().all()
+    ]
+
+
+@router.put("/cost-basis/{symbol}", response_model=CostBasisResponse)
+async def upsert_cost_basis(
+    symbol: str,
+    body: CostBasisRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create or update cost basis for a symbol."""
+    uid = uuid.UUID(user_id)
+    sym = symbol.upper()
+    result = await db.execute(
+        select(CostBasisOverride).where(
+            CostBasisOverride.user_id == uid,
+            CostBasisOverride.symbol == sym,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row:
+        row.purchase_price = body.purchase_price
+        row.notes = body.notes
+    else:
+        row = CostBasisOverride(
+            id=uuid.uuid4(), user_id=uid, symbol=sym,
+            purchase_price=body.purchase_price, notes=body.notes,
+        )
+        db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return CostBasisResponse(
+        id=str(row.id), symbol=row.symbol,
+        purchase_price=row.purchase_price, notes=row.notes,
+    )
+
+
+@router.delete("/cost-basis/{symbol}", status_code=204)
+async def delete_cost_basis(
+    symbol: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a cost basis override."""
+    result = await db.execute(
+        select(CostBasisOverride).where(
+            CostBasisOverride.user_id == uuid.UUID(user_id),
+            CostBasisOverride.symbol == symbol.upper(),
+        )
+    )
+    row = result.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cost basis not found")
+    await db.delete(row)
+    await db.commit()
+
+
+@router.post("/cost-basis/bulk", response_model=list[CostBasisResponse], status_code=201)
+async def bulk_import_cost_basis(
+    body: BulkCostBasisRequest,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bulk upsert cost basis overrides. Optionally clears existing first."""
+    uid = uuid.UUID(user_id)
+
+    if body.clear_existing:
+        result = await db.execute(
+            select(CostBasisOverride).where(CostBasisOverride.user_id == uid)
+        )
+        for r in result.scalars().all():
+            await db.delete(r)
+
+    created: list[CostBasisOverride] = []
+    for item in body.overrides:
+        sym = item.symbol.upper()
+        # Upsert: check for existing
+        result = await db.execute(
+            select(CostBasisOverride).where(
+                CostBasisOverride.user_id == uid,
+                CostBasisOverride.symbol == sym,
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            existing.purchase_price = item.purchase_price
+            existing.notes = item.notes
+            created.append(existing)
+        else:
+            row = CostBasisOverride(
+                id=uuid.uuid4(), user_id=uid, symbol=sym,
+                purchase_price=item.purchase_price, notes=item.notes,
+            )
+            db.add(row)
+            created.append(row)
+
+    await db.commit()
+    for r in created:
+        await db.refresh(r)
+
+    return [
+        CostBasisResponse(
+            id=str(r.id), symbol=r.symbol,
+            purchase_price=r.purchase_price, notes=r.notes,
+        )
+        for r in created
     ]

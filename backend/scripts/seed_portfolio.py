@@ -1,8 +1,13 @@
-"""Seed the portfolio with CoinGecko holdings data.
+"""Seed the portfolio with CoinGecko cost basis data.
 
-Adds 15 coins as manual holdings with cost basis derived from the
-CoinGecko portfolio snapshot (March 2026). Cost basis is calculated from
-the PNL% shown on CoinGecko at the time of the snapshot.
+Two distinct operations:
+1. Manual holdings — only coins NOT already on a connected exchange
+   (hardware wallets, external platforms, obscure tokens)
+2. Cost basis overrides — for ALL 15 coins from CoinGecko snapshot,
+   so exchange holdings also get P&L tracking.
+
+Cost basis derived from CoinGecko PNL% snapshot (March 2026):
+  purchase_price = current_price / (1 + pnl_pct / 100)
 
 Usage:
     python -m scripts.seed_portfolio            # dry-run (prints data)
@@ -16,76 +21,47 @@ import sys
 
 import httpx
 
-# ---------- Portfolio data (from CoinGecko snapshot) ----------
-# cost_per_unit derived from: current_price / (1 + pnl_pct / 100)
-# For USDT: cost set to $1.00 (stablecoin, CoinGecko PNL is artifact)
-# For RENDER: cost derived from dollar PNL ($3,191.68)
+# ---------- Manual holdings (coins NOT on connected exchanges) ----------
+# Original holdings: ALPH (Ledger), BTC (Ledger), BTC (Crypto.com),
+# CRO (Crypto.com wallet), ETH (Crypto.com dust)
+# Plus obscure tokens not on Binance/MEXC/Kraken/Crypto.com/KuCoin:
+# QUBIC, ABX, APAD, EX, AYIN
 
-PORTFOLIO: list[dict] = [
+MANUAL_HOLDINGS: list[dict] = [
+    {
+        "symbol": "ALPH",
+        "quantity": 18811.78,
+        "purchase_price": 0.2682,  # -70.7% PNL
+        "notes": "Ledger",
+    },
     {
         "symbol": "BTC",
         "quantity": 0.90207,
         "purchase_price": 41841.94,  # +74.7% PNL
-        "notes": "CoinGecko import",
+        "notes": "Ledger",
     },
     {
-        "symbol": "RENDER",
-        "quantity": 6632.82725,
-        "purchase_price": 0.9510,  # ~+50.4% PNL (from dollar PNL $3,191.68)
-        "notes": "CoinGecko import",
+        "symbol": "BTC",
+        "quantity": 0.00951335,
+        "purchase_price": 41841.94,
+        "notes": "Crypto.com",
     },
     {
         "symbol": "CRO",
         "quantity": 59203.31,
         "purchase_price": 0.08892,  # -12.3% PNL
-        "notes": "CoinGecko import",
+        "notes": "Crypto.com wallet",
     },
     {
-        "symbol": "TAO",
-        "quantity": 21.3533,
-        "purchase_price": 280.85,  # -32.9% PNL
-        "notes": "CoinGecko import",
-    },
-    {
-        "symbol": "ALPH",
-        "quantity": 18811.78,
-        "purchase_price": 0.2682,  # -70.7% PNL
-        "notes": "CoinGecko import",
-    },
-    {
-        "symbol": "INJ",
-        "quantity": 326.79,
-        "purchase_price": 27.79,  # -88.7% PNL
-        "notes": "CoinGecko import",
+        "symbol": "ETH",
+        "quantity": 0.0045138,
+        "purchase_price": None,
+        "notes": "Crypto.com dust",
     },
     {
         "symbol": "QUBIC",
         "quantity": 115598000,
         "purchase_price": 0.00004420,  # -87.8% PNL
-        "notes": "CoinGecko import",
-    },
-    {
-        "symbol": "RIO",
-        "quantity": 6468.7,
-        "purchase_price": 1.4990,  # -95.1% PNL
-        "notes": "CoinGecko import",
-    },
-    {
-        "symbol": "ORAI",
-        "quantity": 804.94,
-        "purchase_price": 12.567,  # -96.4% PNL
-        "notes": "CoinGecko import",
-    },
-    {
-        "symbol": "ZEPH",
-        "quantity": 512.82,
-        "purchase_price": 0.8193,  # -47.2% PNL
-        "notes": "CoinGecko import",
-    },
-    {
-        "symbol": "USDT",
-        "quantity": 137.575,
-        "purchase_price": 1.00,  # stablecoin — CoinGecko PNL is tracking artifact
         "notes": "CoinGecko import",
     },
     {
@@ -97,7 +73,7 @@ PORTFOLIO: list[dict] = [
     {
         "symbol": "APAD",
         "quantity": 15000,
-        "purchase_price": 0.0003871,  # 0.0% PNL (airdrop / free)
+        "purchase_price": 0.0003871,  # 0.0% PNL (airdrop)
         "notes": "CoinGecko import",
     },
     {
@@ -114,45 +90,100 @@ PORTFOLIO: list[dict] = [
     },
 ]
 
+# ---------- Cost basis overrides (ALL coins, including exchange ones) ----------
+# Applied to any holding (manual or exchange) that lacks its own avg_price.
+# This lets exchange-sourced coins (RENDER on Binance, RIO on MEXC, etc.)
+# show correct P&L without duplicating quantities.
+
+COST_BASIS_OVERRIDES: list[dict] = [
+    {"symbol": "BTC", "purchase_price": 41841.94, "notes": "CoinGecko +74.7%"},
+    {"symbol": "RENDER", "purchase_price": 0.9510, "notes": "CoinGecko ~+50.4%"},
+    {"symbol": "CRO", "purchase_price": 0.08892, "notes": "CoinGecko -12.3%"},
+    {"symbol": "TAO", "purchase_price": 280.85, "notes": "CoinGecko -32.9%"},
+    {"symbol": "ALPH", "purchase_price": 0.2682, "notes": "CoinGecko -70.7%"},
+    {"symbol": "INJ", "purchase_price": 27.79, "notes": "CoinGecko -88.7%"},
+    {"symbol": "QUBIC", "purchase_price": 0.00004420, "notes": "CoinGecko -87.8%"},
+    {"symbol": "RIO", "purchase_price": 1.4990, "notes": "CoinGecko -95.1%"},
+    {"symbol": "ORAI", "purchase_price": 12.567, "notes": "CoinGecko -96.4%"},
+    {"symbol": "ZEPH", "purchase_price": 0.8193, "notes": "CoinGecko -47.2%"},
+    {"symbol": "USDT", "purchase_price": 1.00, "notes": "Stablecoin"},
+    {"symbol": "ABX", "purchase_price": 0.1602, "notes": "CoinGecko -90.3%"},
+    {"symbol": "APAD", "purchase_price": 0.0003871, "notes": "CoinGecko 0.0%"},
+    {"symbol": "EX", "purchase_price": 0.01127, "notes": "CoinGecko +4.3%"},
+    {"symbol": "AYIN", "purchase_price": 19.36, "notes": "CoinGecko -99.9%"},
+]
+
 
 def print_summary() -> None:
     """Print the portfolio in a human-readable table."""
-    print(f"\n{'Symbol':<8} {'Qty':>16} {'Cost/Unit':>14} {'Total Cost':>14}")
-    print("-" * 56)
-    total_cost = 0.0
-    for h in PORTFOLIO:
-        cost = h["quantity"] * h["purchase_price"]
-        total_cost += cost
-        print(f"{h['symbol']:<8} {h['quantity']:>16,.4f} ${h['purchase_price']:>12,.6f} ${cost:>12,.2f}")
-    print("-" * 56)
-    print(f"{'TOTAL':<8} {'':>16} {'':>14} ${total_cost:>12,.2f}")
-    print(f"\n{len(PORTFOLIO)} coins, total cost basis: ${total_cost:,.2f}\n")
+    print(f"\n{'='*60}")
+    print("MANUAL HOLDINGS (coins not on connected exchanges)")
+    print(f"{'='*60}")
+    print(f"{'Symbol':<8} {'Qty':>16} {'Cost/Unit':>14} {'Notes':<20}")
+    print("-" * 62)
+    for h in MANUAL_HOLDINGS:
+        pp = h["purchase_price"]
+        pp_str = f"${pp:,.6f}" if pp else "n/a"
+        print(f"{h['symbol']:<8} {h['quantity']:>16,.4f} {pp_str:>14} {h.get('notes', ''):<20}")
+
+    print(f"\n{'='*60}")
+    print("COST BASIS OVERRIDES (all coins, for P&L tracking)")
+    print(f"{'='*60}")
+    print(f"{'Symbol':<8} {'Cost/Unit':>14} {'Notes':<30}")
+    print("-" * 55)
+    for cb in COST_BASIS_OVERRIDES:
+        print(f"{cb['symbol']:<8} ${cb['purchase_price']:>12,.6f} {cb.get('notes', ''):<30}")
+    print()
 
 
 def apply(api_url: str, token: str, clear: bool = False) -> None:
-    """Send portfolio to the bulk import endpoint."""
-    url = f"{api_url}/api/holdings/manual/bulk"
-    payload = {
-        "holdings": PORTFOLIO,
-        "clear_existing": clear,
-    }
+    """Send portfolio data via API."""
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    resp = httpx.post(url, json=payload, headers=headers, timeout=30)
+
+    # Step 1: Import manual holdings
+    holdings_url = f"{api_url}/api/holdings/manual/bulk"
+    # Filter out entries with None purchase_price for the API (Field(gt=0) validation)
+    api_holdings = []
+    for h in MANUAL_HOLDINGS:
+        entry = {
+            "symbol": h["symbol"],
+            "quantity": h["quantity"],
+            "notes": h.get("notes"),
+        }
+        if h.get("purchase_price") is not None:
+            entry["purchase_price"] = h["purchase_price"]
+        api_holdings.append(entry)
+
+    payload = {"holdings": api_holdings, "clear_existing": clear}
+    resp = httpx.post(holdings_url, json=payload, headers=headers, timeout=30)
     if resp.status_code == 201:
         data = resp.json()
-        print(f"Successfully imported {len(data)} holdings.")
+        print(f"Imported {len(data)} manual holdings.")
     else:
-        print(f"Error {resp.status_code}: {resp.text}", file=sys.stderr)
+        print(f"Error importing holdings {resp.status_code}: {resp.text}", file=sys.stderr)
         sys.exit(1)
+
+    # Step 2: Import cost basis overrides
+    cb_url = f"{api_url}/api/holdings/cost-basis/bulk"
+    cb_payload = {"overrides": COST_BASIS_OVERRIDES, "clear_existing": clear}
+    resp = httpx.post(cb_url, json=cb_payload, headers=headers, timeout=30)
+    if resp.status_code == 201:
+        data = resp.json()
+        print(f"Imported {len(data)} cost basis overrides.")
+    else:
+        print(f"Error importing cost basis {resp.status_code}: {resp.text}", file=sys.stderr)
+        sys.exit(1)
+
+    print("\nDone! Portfolio seeded successfully.")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed portfolio with CoinGecko data")
     parser.add_argument("--apply", action="store_true", help="Actually insert via API")
-    parser.add_argument("--clear", action="store_true", help="Clear existing holdings first")
+    parser.add_argument("--clear", action="store_true", help="Clear existing holdings/overrides first")
     parser.add_argument("--api-url", default="http://localhost:8000", help="API base URL")
     parser.add_argument("--token", default="", help="JWT auth token")
     args = parser.parse_args()
@@ -169,7 +200,6 @@ def main() -> None:
         apply(args.api_url, args.token, args.clear)
     else:
         print("Dry run. Use --apply --token <JWT> to insert holdings.")
-        print(f"\nJSON payload:\n{json.dumps(PORTFOLIO, indent=2)}")
 
 
 if __name__ == "__main__":
