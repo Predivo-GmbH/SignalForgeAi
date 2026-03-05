@@ -336,7 +336,7 @@ export function StrategyDetailPage() {
 
   if (strategyLoading) {
     return (
-      <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
         <div className="h-8 w-48 bg-(--color-bg-elevated) rounded animate-pulse" />
         <div className="h-32 bg-(--color-bg-surface) border border-(--color-border) rounded-xl animate-pulse" />
       </div>
@@ -345,7 +345,7 @@ export function StrategyDetailPage() {
 
   if (!strategy) {
     return (
-      <div className="p-6 space-y-4 max-w-[1600px] mx-auto">
+      <div className="p-4 sm:p-6 space-y-4 max-w-[1600px] mx-auto">
         <button
           onClick={() => navigate("/strategies")}
           className="flex items-center gap-1.5 text-sm text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
@@ -372,7 +372,7 @@ export function StrategyDetailPage() {
   const signalTotal = signalData?.total ?? 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto">
       {/* Back link */}
       <button
         onClick={() => navigate("/strategies")}

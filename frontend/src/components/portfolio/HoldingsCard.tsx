@@ -471,7 +471,7 @@ function SourceBreakdown({
       <button
         onClick={() => { if (!isAllActive && activeSource) onSourceClick(activeSource); }}
         className={cn(
-          "flex-1 min-w-0 rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
+          "flex-1 min-w-[90px] rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
           "hover:-translate-y-0.5",
           isAllActive
             ? "bg-(--color-accent)/10 ring-2 ring-(--color-accent)/40 ring-offset-1 ring-offset-(--color-bg-surface)"
@@ -499,7 +499,7 @@ function SourceBreakdown({
             key={s.source}
             onClick={() => onSourceClick(s.source)}
             className={cn(
-              "flex-1 min-w-0 rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
+              "flex-1 min-w-[90px] rounded-lg px-3 py-2.5 text-left transition-all duration-150 space-y-0.5",
               "hover:-translate-y-0.5",
               isActive
                 ? "ring-2 ring-offset-1 ring-offset-(--color-bg-surface)"

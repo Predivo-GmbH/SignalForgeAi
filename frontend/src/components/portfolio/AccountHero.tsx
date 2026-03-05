@@ -35,7 +35,7 @@ export function AccountHero() {
   const drawdownPct = drawdown?.drawdown_pct ?? 0;
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Left: Equity + Daily PnL + Positions */}
         <div className="space-y-1.5">
@@ -44,10 +44,10 @@ export function AccountHero() {
               Account Equity
             </p>
           </Tooltip>
-          <p className="text-3xl font-bold font-mono text-(--color-text-primary)">
+          <p className="text-2xl sm:text-3xl font-bold font-mono text-(--color-text-primary)">
             ${equity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <div className="flex items-center gap-1.5">
               {dailyPnl >= 0 ? (
                 <TrendingUp className={cn("w-3.5 h-3.5", pnlColor(dailyPnl))} />
@@ -73,7 +73,7 @@ export function AccountHero() {
         {/* Right: Drawdown Status */}
         <Link
           to="/risk"
-          className="flex flex-col items-end gap-2 shrink-0 hover:opacity-80 transition-opacity"
+          className="flex flex-col items-start sm:items-end gap-2 shrink-0 hover:opacity-80 transition-opacity"
         >
           <div className={cn("flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full", cfg.bg, cfg.color)}>
             {level === 0 ? (

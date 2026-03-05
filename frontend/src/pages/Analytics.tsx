@@ -173,7 +173,7 @@ export function AnalyticsPage() {
   const { data, isLoading, error } = useEquityHistory();
 
   return (
-    <div className="max-w-[1200px] mx-auto p-6 space-y-6">
+    <div className="max-w-[1200px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <Tooltip text="Performance metrics and comparison across all your trading strategies.">

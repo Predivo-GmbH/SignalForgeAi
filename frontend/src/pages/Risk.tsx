@@ -418,7 +418,7 @@ function SkeletonCard() {
 
 export function RiskPage() {
   return (
-    <div className="max-w-[1200px] mx-auto p-6 space-y-6">
+    <div className="max-w-[1200px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <Tooltip text="Monitor and control portfolio risk with drawdown breakers, CPPI, and correlation limits.">

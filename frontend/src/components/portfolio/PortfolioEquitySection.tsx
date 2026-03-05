@@ -48,7 +48,7 @@ export function PortfolioEquitySection() {
       </div>
 
       {/* Inline metrics row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 space-y-0.5">
           <div className="flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-(--color-text-secondary)" />

@@ -131,7 +131,7 @@ function formatRunTime(iso: string): string {
 
 export function EnginePage() {
   return (
-    <div className="max-w-[1200px] mx-auto p-6 space-y-6">
+    <div className="max-w-[1200px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div>
         <Tooltip text="Real-time status of the trading engine, signal pipeline, and background workers.">
           <h1 className="text-xl font-bold text-[var(--color-text-primary)] cursor-help">Engine Monitor</h1>

@@ -672,7 +672,7 @@ export function AdvisorPage() {
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-5">
+    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4 sm:space-y-5">
       {/* Header */}
       <div>
         <Tooltip text="AI-powered market scanner that analyzes coins and recommends optimal strategy parameters.">
