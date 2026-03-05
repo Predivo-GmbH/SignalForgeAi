@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { RiskDisclaimer } from "@/components/ui/RiskDisclaimer";
@@ -198,15 +198,6 @@ export function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
 
-            <p className="mt-6 text-center text-sm text-(--color-text-secondary)">
-              Don't have an account?{" "}
-              <Link
-                to="/register"
-                className="font-medium text-(--color-accent) hover:underline"
-              >
-                Create account
-              </Link>
-            </p>
           </form>
         )}
 

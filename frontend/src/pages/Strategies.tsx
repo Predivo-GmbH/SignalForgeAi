@@ -19,6 +19,7 @@ import {
   useDeleteStrategy,
 } from "@/hooks/useStrategies";
 import { useStrategyComparison } from "@/hooks/useAnalytics";
+import { ActiveStrategyCard } from "@/components/portfolio/ActiveStrategyCard";
 import { useBrokerConnections } from "@/hooks/useBrokerConnections";
 import { useProfile } from "@/hooks/useProfile";
 import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
@@ -342,6 +343,9 @@ export function StrategiesPage() {
           Monitor and manage your active trading strategies
         </p>
       </div>
+
+      {/* Active strategy summary */}
+      <ActiveStrategyCard />
 
       {/* Strategy list */}
       {isLoading ? (

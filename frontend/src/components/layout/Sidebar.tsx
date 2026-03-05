@@ -9,6 +9,7 @@ import {
   Sparkles,
   Target,
   Settings,
+  FlaskConical,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -17,9 +18,10 @@ import { useSidebar } from "@/lib/sidebar";
 import { cn } from "@/lib/cn";
 
 const navItems = [
-  { to: "/", icon: Briefcase, label: "Portfolio" },
+  { to: "/", icon: Briefcase, label: "Dashboard" },
   { to: "/advisor", icon: Sparkles, label: "AI Advisor" },
   { to: "/strategies", icon: Target, label: "Strategies" },
+  { to: "/backtest", icon: FlaskConical, label: "Backtest" },
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },
   { to: "/analytics", icon: BarChart2, label: "Analytics" },
   { to: "/risk", icon: Shield, label: "Risk" },

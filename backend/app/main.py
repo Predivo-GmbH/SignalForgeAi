@@ -12,7 +12,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.advisor import router as advisor_router
 from app.api.ai_usage import router as ai_usage_router
-from app.api.alerts import router as alerts_router
 from app.api.analytics import router as analytics_router
 from app.api.backtests import router as backtests_router
 from app.api.broker import router as broker_router
@@ -191,7 +190,6 @@ app.include_router(strategies_router, prefix="/api")
 app.include_router(market_router, prefix="/api")
 app.include_router(backtests_router, prefix="/api")
 app.include_router(positions_router, prefix="/api")
-app.include_router(alerts_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
 app.include_router(advisor_router, prefix="/api")

@@ -1,0 +1,38 @@
+4261-9572
+9179-6699
+4108-2121
+2705-0067
+0473-1174
+6260-1924
+6127-2073
+2970-8228
+
+
+
+SignalForge - Read Only
+Binance
+API Key: 8LJnNzMntg6IJixoR9RU14jB3Eytc0bbcdAQUu1vJQslM7Xtx56Hmv5KaR2gwFn3
+Secret: Nj4kLmcRJKgMwlF1kYzwM3eUBg5QGD9cXbov1Npauk6emSeVCALBH2ry3Z9suvfr
+
+Kucoin
+Passphrase: SignalForge
+Api Key: 69a8309c802426000157b2d7
+Secret: 0e981bed-6393-4dc4-a236-7ad9238c4fc2
+
+Kraken
+Api Key: JCFKvhmDECW7r6Ey215wOjiIexieVUHa5FT3WtD7073PtPfa9pSrNS+s
+Secret: PFnRjGmDMVPgHekWBwzwKcWOqv/DoDlr23FRFIYdHeK8cPbj+NDxWpBKFRvDKsODLNL4B95xZjD8iBNclSP8Qw==
+
+MEXC
+Api Key: mx0vgl3OcsDYmmDvjx
+Secret: 6fb68b2cc58140e9bd7e22b04f1ca4a6
+
+bitstamp
+Api Key: EVBUNB8fwoOrIGGBavNMCImpOtf8Tmr2
+Secret: BLTHrzjB1gjDxh6s3Oe2cyr5vnWY9icT
+
+Crypto.com
+Api Key: UFyPLZvT6YF1Qtdqw2aJgn
+Secret: cxakp_Hsks4G4Hbv3BN2a3NfawJ7
+
+

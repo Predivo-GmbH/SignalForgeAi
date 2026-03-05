@@ -36,10 +36,8 @@ celery_app.conf.include = [
     "app.tasks.poll_orders",
     "app.tasks.manage_positions",
     "app.tasks.reconcile",
-    "app.tasks.send_alerts",
     "app.tasks.hmm_train",
     "app.tasks.backtest_task",
-    "app.tasks.check_correlations",
     "app.tasks.risk_tuning",
     "app.tasks.feedback_synthesis",
     "app.tasks.pattern_analysis",
@@ -72,17 +70,9 @@ celery_app.conf.beat_schedule = {
         "schedule": 60.0,
     },
     # reconcile-broker-state: disabled (no-op until live broker sync is implemented)
-    "send-daily-summary": {
-        "task": "send_daily_summary",
-        "schedule": crontab(hour=17, minute=0),
-    },
     "retrain-hmm-weekly": {
         "task": "train_hmm_regime",
         "schedule": crontab(hour=2, minute=0, day_of_week="sunday"),
-    },
-    "check-correlations-5m": {
-        "task": "check_correlations",
-        "schedule": 300.0,
     },
     "pattern-analysis-daily": {
         "task": "periodic_pattern_analysis",

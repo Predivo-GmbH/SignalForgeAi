@@ -9,8 +9,6 @@ import {
   Trash2,
   Wifi,
   WifiOff,
-  Bell,
-  Save,
   DollarSign,
   User,
   Mail,
@@ -31,15 +29,13 @@ import {
   useDisconnectBroker,
   useBrokerHealth,
 } from "@/hooks/useBrokerConnections";
-import { useAlertConfig, useUpdateAlertConfig } from "@/hooks/useAlertConfig";
 import type { ConnectBrokerRequest } from "@/hooks/useBrokerConnections";
-import type { AlertConfig } from "@/hooks/useAlertConfig";
 import { AiUsageTab } from "@/components/settings/AiUsageTab";
 import { TwoFactorSetup } from "@/components/settings/TwoFactorSetup";
 import { useProfile, useChangePassword, useChangeEmail } from "@/hooks/useProfile";
 import { useAuth } from "@/lib/auth";
 
-type Tab = "profile" | "connections" | "alerts" | "ai-usage";
+type Tab = "profile" | "connections" | "ai-usage";
 
 /* ---- Broker metadata ---- */
 
@@ -535,183 +531,6 @@ function ConnectionsTab() {
   );
 }
 
-/* ---- Alerts Tab ---- */
-
-function AlertsTab() {
-  const { data: config, isLoading } = useAlertConfig();
-  const updateMutation = useUpdateAlertConfig();
-
-  const [form, setForm] = useState<AlertConfig | null>(null);
-
-  // Initialize form when config loads
-  const current = form ?? config ?? {
-    email_on_signal: false,
-    email_daily_summary: false,
-    min_confluence_alert: 60,
-    alert_email: "",
-  };
-
-  function handleSave() {
-    updateMutation.mutate(current, {
-      onSuccess: () => setForm(null),
-    });
-  }
-
-  const isDirty = form !== null;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <Tooltip text="Configure when and how you receive notifications about signals, trade executions, and daily performance summaries.">
-          <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
-            Alert Preferences
-          </h2>
-        </Tooltip>
-        <p className="text-sm text-(--color-text-secondary) mt-0.5">
-          Configure email notifications for signals and daily summaries
-        </p>
-      </div>
-
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
-        {/* Alert email */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Alert Email
-          </label>
-          <input
-            type="email"
-            value={current.alert_email}
-            onChange={(e) =>
-              setForm({ ...current, alert_email: e.target.value })
-            }
-            placeholder="your@email.com"
-            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-        </div>
-
-        {/* Toggles */}
-        <div className="space-y-3">
-          <label className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-(--color-text-primary)">Email on Signal</p>
-              <p className="text-xs text-(--color-text-secondary)">
-                Receive an email when a new trading signal is generated
-              </p>
-            </div>
-            <button
-              onClick={() =>
-                setForm({ ...current, email_on_signal: !current.email_on_signal })
-              }
-              className={cn(
-                "w-10 h-6 rounded-full transition-colors relative",
-                current.email_on_signal ? "bg-(--color-accent)" : "bg-(--color-bg-elevated)",
-              )}
-              role="switch"
-              aria-checked={current.email_on_signal}
-              aria-label="Toggle email on signal"
-            >
-              <span
-                className={cn(
-                  "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  current.email_on_signal ? "translate-x-5" : "translate-x-1",
-                )}
-              />
-            </button>
-          </label>
-
-          <label className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-(--color-text-primary)">Daily Summary</p>
-              <p className="text-xs text-(--color-text-secondary)">
-                Receive a daily email summary of trades and performance
-              </p>
-            </div>
-            <button
-              onClick={() =>
-                setForm({
-                  ...current,
-                  email_daily_summary: !current.email_daily_summary,
-                })
-              }
-              className={cn(
-                "w-10 h-6 rounded-full transition-colors relative",
-                current.email_daily_summary ? "bg-(--color-accent)" : "bg-(--color-bg-elevated)",
-              )}
-              role="switch"
-              aria-checked={current.email_daily_summary}
-              aria-label="Toggle daily summary email"
-            >
-              <span
-                className={cn(
-                  "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  current.email_daily_summary ? "translate-x-5" : "translate-x-1",
-                )}
-              />
-            </button>
-          </label>
-        </div>
-
-        {/* Min confluence */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-            Minimum Confluence for Alerts
-          </label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={current.min_confluence_alert}
-            onChange={(e) =>
-              setForm({
-                ...current,
-                min_confluence_alert: Math.max(0, Math.min(100, Number(e.target.value))),
-              })
-            }
-            className="w-32 bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-          <p className="text-xs text-(--color-text-secondary)">
-            Only send alerts for signals with confluence score above this threshold
-          </p>
-        </div>
-
-        {/* Save button */}
-        <button
-          onClick={handleSave}
-          disabled={!isDirty || updateMutation.isPending}
-          className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {updateMutation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          {updateMutation.isPending ? "Saving..." : "Save Changes"}
-        </button>
-
-        {updateMutation.isSuccess && !isDirty && (
-          <p className="text-xs text-(--color-positive)">Settings saved successfully.</p>
-        )}
-
-        {updateMutation.isError && (
-          <p className="text-xs text-(--color-negative)">
-            {updateMutation.error instanceof Error
-              ? updateMutation.error.message
-              : "Failed to save settings"}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ---- Profile Tab ---- */
 
 function ChangePasswordForm() {
@@ -1105,18 +924,6 @@ export function SettingsPage() {
             Connections
           </button>
           <button
-            onClick={() => setActiveTab("alerts")}
-            className={cn(
-              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
-              activeTab === "alerts"
-                ? "border-(--color-accent) text-(--color-accent)"
-                : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
-            )}
-          >
-            <Bell className="w-3.5 h-3.5" />
-            Alerts
-          </button>
-          <button
             onClick={() => setActiveTab("ai-usage")}
             className={cn(
               "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
@@ -1134,7 +941,6 @@ export function SettingsPage() {
       {/* Tab content */}
       {activeTab === "profile" && <ProfileTab />}
       {activeTab === "connections" && <ConnectionsTab />}
-      {activeTab === "alerts" && <AlertsTab />}
       {activeTab === "ai-usage" && <AiUsageTab />}
     </div>
   );

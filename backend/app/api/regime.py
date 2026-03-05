@@ -75,20 +75,4 @@ async def get_regime_status(
     except Exception:
         logger.exception("Failed to read regime from Redis for user %s", user_id)
 
-    # Read allocation state from Redis
-    try:
-        from app.execution.regime_allocator import RegimeAllocator
-
-        allocator = RegimeAllocator(
-            allocation_table=allocation_table,
-            smoothing_bars=smoothing_bars,
-        )
-        state = await allocator.get_state(user_id)
-        if state:
-            result["target_allocation_pct"] = round(state.target_pct * 100, 1)
-            result["current_allocation_pct"] = round(state.current_pct * 100, 1)
-            result["current_regime"] = state.regime
-    except Exception:
-        logger.exception("Failed to read regime allocation state for user %s", user_id)
-
     return result

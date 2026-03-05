@@ -7,7 +7,6 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { queryClient } from "./lib/query";
 
 const LoginPage = lazy(() => import("./pages/Login").then(m => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import("./pages/Register").then(m => ({ default: m.RegisterPage })));
 const PortfolioPage = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.PortfolioPage })));
 const TradesPage = lazy(() => import("./pages/Trades").then(m => ({ default: m.TradesPage })));
 const AnalyticsPage = lazy(() => import("./pages/Analytics").then(m => ({ default: m.AnalyticsPage })));
@@ -104,7 +103,6 @@ function App() {
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route index element={<PortfolioPage />} />

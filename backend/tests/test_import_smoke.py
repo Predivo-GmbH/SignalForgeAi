@@ -75,9 +75,7 @@ DEFERRED_IMPORTS = [
     ("app.models.pipeline_log", "PipelineLog"),
     ("app.models.signal", "Signal"),
     # --- app/api/positions.py ---
-    ("app.execution.correlation_monitor", "CorrelationMonitor"),
     ("app.execution.drawdown_breaker", "DrawdownBreaker"),
-    ("app.execution.cppi", "CPPIManager"),
     ("app.models.strategy", "Strategy"),
     # --- app/api/strategies.py ---
     ("app.auth.totp", "decrypt_totp_secret"),
@@ -96,16 +94,12 @@ DEFERRED_IMPORTS = [
     # --- app/api/backtests.py ---
     ("app.tasks.backtest_task", "run_backtest_task"),
     ("app.models.backtest_result", "BacktestResult"),
-    ("app.backtest.optimizer", "WalkForwardOptimizer"),
     ("app.backtest.portfolio_runner", "run_portfolio_backtest"),
     # --- app/api/market.py ---
     ("app.data.ingestion", "CCXTIngestion"),
     ("app.data.coingecko", "fetch_ohlc"),
     # --- app/api/regime.py ---
     ("app.engine.layers.hmm_regime", "HMMRegimeModel"),
-    ("app.execution.regime_allocator", "RegimeAllocator"),
-    # --- app/api/alerts.py ---
-    ("app.models.user", "User"),
     # --- app/api/analytics.py ---
     ("app.data.storage", "CandleStorage"),
     # --- app/auth/router.py ---
@@ -120,10 +114,8 @@ DEFERRED_IMPORTS = [
     ("app.engine.layers.feedback_filter", "FeedbackFilter"),
     ("app.engine.layers.risk", "RiskConfig"),
     ("app.engine.layers.trend", "TrendFilter"),
-    ("app.execution.kelly", "KellyCalculator"),
     ("app.advisor.multi_tf_analyzer", "MultiTimeframeAnalyzer"),
     ("app.advisor.signal_quality", "SignalQualityEvaluator"),
-    ("app.core.email", "send_email"),
 ]
 
 

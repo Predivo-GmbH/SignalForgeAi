@@ -62,38 +62,6 @@ async def close_position(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/correlations")
-@limiter.limit("60/minute")
-async def get_correlations(
-    request: Request,
-    user_id: str = Depends(get_current_user),
-):
-    """Return current correlation matrix and alerts for open positions."""
-    try:
-        from app.execution.correlation_monitor import CorrelationMonitor
-
-        monitor = CorrelationMonitor()
-        result = await monitor.get_cached_result(user_id)
-        if result:
-            return {
-                "matrix": result.matrix,
-                "alerts": [
-                    {
-                        "symbol_a": a.symbol_a,
-                        "symbol_b": a.symbol_b,
-                        "correlation": a.correlation,
-                        "risk_level": a.risk_level,
-                    }
-                    for a in result.alerts
-                ],
-                "max_correlation": result.max_correlation,
-                "exposure_penalty": result.exposure_penalty,
-            }
-    except Exception:
-        logger.exception("Failed to compute correlations for user %s", user_id)
-    return {"matrix": {}, "alerts": [], "max_correlation": 0, "exposure_penalty": 1.0}
-
-
 @router.get("/drawdown")
 @limiter.limit("60/minute")
 async def get_drawdown_state(
@@ -121,35 +89,6 @@ async def get_drawdown_state(
     return {
         "peak_equity": 0, "current_equity": 0,
         "drawdown_pct": 0, "level": 0, "level_name": "Normal",
-    }
-
-
-@router.get("/cppi")
-@limiter.limit("60/minute")
-async def get_cppi_state(
-    request: Request,
-    user_id: str = Depends(get_current_user),
-):
-    """Return current CPPI (portfolio insurance) state."""
-    try:
-        from app.execution.cppi import CPPIManager
-
-        cppi = CPPIManager()
-        state = await cppi.get_state(user_id)
-        if state:
-            return {
-                "floor": state.floor,
-                "peak_equity": state.peak_equity,
-                "exposure_pct": round(state.current_exposure_pct * 100, 2),
-                "cushion": state.cushion,
-                "multiplier": state.multiplier,
-                "max_drawdown_pct": round(state.max_drawdown_pct * 100, 2),
-            }
-    except Exception:
-        logger.exception("Failed to compute CPPI state for user %s", user_id)
-    return {
-        "floor": 0, "peak_equity": 0, "exposure_pct": 100,
-        "cushion": 0, "multiplier": 3.0, "max_drawdown_pct": 15,
     }
 
 

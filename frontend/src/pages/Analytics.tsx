@@ -3,7 +3,8 @@ import { useEquityHistory, useStrategyComparison } from "@/hooks/useAnalytics";
 import type { StrategyMetrics } from "@/hooks/useAnalytics";
 import { MetricsGrid } from "@/components/analytics/MetricsGrid";
 import { EquityCurve } from "@/components/analytics/EquityCurve";
-import { CorrelationMatrix } from "@/components/analytics/CorrelationMatrix";
+import { SimulationCard } from "@/components/dashboard/SimulationCard";
+import { PerformanceSummary } from "@/components/portfolio/PerformanceSummary";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/cn";
 import { pnlColor } from "@/lib/format";
@@ -234,8 +235,11 @@ export function AnalyticsPage() {
         </div>
       )}
 
-      {/* Correlation section */}
-      <CorrelationMatrix />
+      {/* B&H vs SignalForge Simulation */}
+      <SimulationCard />
+
+      {/* Performance Summary */}
+      <PerformanceSummary />
     </div>
   );
 }

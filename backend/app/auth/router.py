@@ -37,27 +37,6 @@ from app.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
-async def register(body: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == body.email))
-    if result.scalar_one_or_none():
-        # NOTE: Specific error message kept for frontend UX. This is a LOW-risk
-        # user enumeration vector — an attacker could probe for registered emails.
-        # To mitigate fully, return a generic "Registration failed" and handle
-        # the duplicate-email case in the frontend via a separate flow.
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    user = User(email=body.email, password_hash=hash_password(body.password))
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-
-    return TokenResponse(
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
-    )
-
 
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit("10/minute")

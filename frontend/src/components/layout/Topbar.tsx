@@ -14,6 +14,7 @@ const pageTitles: Record<string, string> = {
   "/trades": "Trades",
   "/analytics": "Analytics",
   "/risk": "Risk Management",
+  "/engine": "Signal Engine",
   "/settings": "Settings",
 };
 

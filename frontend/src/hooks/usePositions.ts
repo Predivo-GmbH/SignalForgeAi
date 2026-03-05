@@ -53,50 +53,11 @@ export interface DrawdownState {
   level_name: string;
 }
 
-export interface CPPIState {
-  floor: number;
-  peak_equity: number;
-  exposure_pct: number;
-  cushion: number;
-  multiplier: number;
-  max_drawdown_pct: number;
-}
-
-export interface CorrelationAlert {
-  symbol_a: string;
-  symbol_b: string;
-  correlation: number;
-  risk_level: string;
-}
-
-export interface CorrelationState {
-  matrix: Record<string, Record<string, number>>;
-  alerts: CorrelationAlert[];
-  max_correlation: number;
-  exposure_penalty: number;
-}
-
 export function useDrawdownState() {
   return useQuery({
     queryKey: ["positions", "drawdown"],
     queryFn: () => api.get<DrawdownState>("/positions/drawdown"),
     refetchInterval: 30_000,
-  });
-}
-
-export function useCPPIState() {
-  return useQuery({
-    queryKey: ["positions", "cppi"],
-    queryFn: () => api.get<CPPIState>("/positions/cppi"),
-    refetchInterval: 30_000,
-  });
-}
-
-export function useCorrelationState() {
-  return useQuery({
-    queryKey: ["positions", "correlations"],
-    queryFn: () => api.get<CorrelationState>("/positions/correlations"),
-    refetchInterval: 60_000,
   });
 }
 

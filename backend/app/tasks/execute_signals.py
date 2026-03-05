@@ -1,8 +1,7 @@
 """Execute pending signals — place orders via BrokerRouter.
 
 Applies risk management checks before execution:
-  - Drawdown circuit breaker (Feature 2): skip/reduce at high drawdown
-  - Correlation penalty (Feature 8): reduce sizing for correlated positions
+  - Drawdown circuit breaker: skip/reduce at high drawdown
 """
 
 import logging
@@ -113,24 +112,6 @@ async def _execute_async():
                             )
                     except Exception as e:
                         logger.warning("Drawdown breaker check failed: %s", e)
-
-                # --- Correlation penalty check (Feature 8) ---
-                if cfg.get("correlation_auto_reduce", False):
-                    try:
-                        from app.execution.correlation_monitor import CorrelationMonitor
-
-                        monitor = CorrelationMonitor()
-                        penalty = await monitor.get_cached_penalty(user_id)
-                        if penalty < 1.0:
-                            old_qty = quantity
-                            quantity *= penalty
-                            logger.info(
-                                "Correlation penalty: reduced quantity %.6f -> %.6f "
-                                "for signal %s (penalty=%.2f)",
-                                old_qty, quantity, sig.id, penalty,
-                            )
-                    except Exception as e:
-                        logger.warning("Correlation penalty check failed: %s", e)
 
                 # Skip if quantity reduced to effectively zero
                 if quantity <= 0:

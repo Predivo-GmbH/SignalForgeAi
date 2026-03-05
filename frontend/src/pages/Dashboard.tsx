@@ -5,12 +5,7 @@ import { usePositions } from "@/hooks/usePositions";
 import { AccountHero } from "@/components/portfolio/AccountHero";
 import { HoldingsCard } from "@/components/portfolio/HoldingsCard";
 import { PortfolioEquitySection } from "@/components/portfolio/PortfolioEquitySection";
-import { ActiveStrategyCard } from "@/components/portfolio/ActiveStrategyCard";
-import { RecentTradesCard } from "@/components/portfolio/RecentTradesCard";
-import { PerformanceSummary } from "@/components/portfolio/PerformanceSummary";
 import { PositionsTable } from "@/components/dashboard/PositionsTable";
-import { RegimeWidget } from "@/components/dashboard/RegimeWidget";
-import { SimulationCard } from "@/components/dashboard/SimulationCard";
 import { SystemHealthBanner } from "@/components/dashboard/SystemHealthBanner";
 
 export function PortfolioPage() {
@@ -55,19 +50,8 @@ export function PortfolioPage() {
       {/* Crypto Holdings — exchange + manual + trading */}
       <HoldingsCard />
 
-      {/* Middle grid: Equity curve + sidebar cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 sm:gap-6">
-        <PortfolioEquitySection />
-        <div className="flex flex-col gap-4">
-          <RegimeWidget />
-          <SimulationCard />
-          <ActiveStrategyCard />
-          <RecentTradesCard />
-        </div>
-      </div>
-
-      {/* Performance Summary — 5-metric row */}
-      <PerformanceSummary />
+      {/* Equity curve */}
+      <PortfolioEquitySection />
 
       {/* Open Positions */}
       <PositionsTable positions={positions} loading={positionsLoading} />

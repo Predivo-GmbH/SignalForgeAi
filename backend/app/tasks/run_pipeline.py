@@ -90,25 +90,8 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
     account_equity = cfg.get("account_equity", 10000)
     min_confluence = cfg.get("min_confluence", 50)
 
-    # --- Kelly Criterion sizing (Feature 3) ---
-    kelly_risk_pct = None
-    if cfg.get("kelly_enabled", False):
-        try:
-            from app.execution.kelly import KellyCalculator
-
-            kelly_risk_pct = await KellyCalculator.compute(
-                db,
-                str(active_strategy.id),
-                min_trades=cfg.get("kelly_min_trades", 20),
-                fraction=cfg.get("kelly_fraction", 0.5),
-                lookback=cfg.get("kelly_lookback", 50),
-                max_risk_per_trade=cfg.get("max_risk_per_trade", 0.02),
-            )
-        except Exception as e:
-            logger.warning("Kelly calculation failed for strategy %s: %s", active_strategy.id, e)
-
     risk_config = RiskConfig(
-        max_risk_per_trade=kelly_risk_pct or cfg.get("max_risk_per_trade", 0.02),
+        max_risk_per_trade=cfg.get("max_risk_per_trade", 0.02),
         max_daily_loss=cfg.get("max_daily_loss", 0.06),
         atr_sl_multiplier=cfg.get("atr_sl_multiplier", 2.0),
         min_risk_reward=cfg.get("min_risk_reward", 1.5),
@@ -122,48 +105,11 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
         ema_slope_threshold=cfg.get("ema_slope_threshold", 0.001),
     )
 
-    # --- CPPI exposure scaling (Feature 6) ---
-    cppi_exposure = 1.0
-    if cfg.get("cppi_enabled", False):
-        try:
-            from app.execution.cppi import CPPIManager
-
-            cppi = CPPIManager(
-                multiplier=cfg.get("cppi_multiplier", 3.0),
-                max_drawdown_pct=cfg.get("cppi_max_drawdown_pct", 0.15),
-            )
-            cppi_exposure = await cppi.calculate_exposure(
-                str(active_strategy.user_id), account_equity,
-            )
-        except Exception as e:
-            logger.warning("CPPI calculation failed for strategy %s: %s", active_strategy.id, e)
-
-    # --- Regime allocator exposure scaling ---
-    regime_exposure = 1.0
-    if cfg.get("regime_allocator_enabled", False):
-        try:
-            from app.execution.regime_allocator import RegimeAllocator
-
-            allocator = RegimeAllocator(
-                allocation_table=cfg.get("regime_allocation_table", "moderate"),
-                smoothing_bars=cfg.get("regime_smoothing_bars", 3),
-            )
-            # Use first symbol for regime lookup (regime is market-wide)
-            regime_symbol = symbols[0] if symbols else "BTC/USDT"
-            regime_exposure = await allocator.get_target_allocation(
-                str(active_strategy.user_id), regime_symbol,
-            )
-        except Exception as e:
-            logger.warning("Regime allocator failed for strategy %s: %s", active_strategy.id, e)
-
     feedback_filter = FeedbackFilter()
 
     logger.info(
-        "Strategy '%s' (id=%s): processing %d symbols × %d timeframes "
-        "(kelly=%s, cppi_exp=%.2f, regime_exp=%.2f)",
+        "Strategy '%s' (id=%s): processing %d symbols × %d timeframes",
         active_strategy.name, active_strategy.id, len(symbols), len(timeframes),
-        f"{kelly_risk_pct:.4f}" if kelly_risk_pct else "off",
-        cppi_exposure, regime_exposure,
     )
 
     # Resolve default exchange once for symbols not in exchange_map
@@ -375,25 +321,7 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                                 continue
 
                     entry_price = float(df["close"].iloc[-1])
-
-                    # Apply CPPI scaling to position size
                     position_size = signal.position_size or 0
-                    if cppi_exposure < 1.0 and position_size > 0:
-                        original_size = position_size
-                        position_size *= cppi_exposure
-                        logger.info(
-                            "CPPI: scaled position_size %.6f -> %.6f (exposure=%.2f)",
-                            original_size, position_size, cppi_exposure,
-                        )
-
-                    # Apply regime allocator scaling to position size
-                    if regime_exposure < 1.0 and position_size > 0:
-                        original_size = position_size
-                        position_size *= regime_exposure
-                        logger.info(
-                            "Regime: scaled position_size %.6f -> %.6f (exposure=%.2f)",
-                            original_size, position_size, regime_exposure,
-                        )
 
                     # Dedup: skip if identical pending signal already exists
                     from sqlalchemy import select as sa_select
