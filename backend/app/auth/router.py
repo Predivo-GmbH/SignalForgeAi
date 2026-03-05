@@ -5,13 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import get_current_user
 from app.auth.jwt import (
     create_2fa_pending_token,
     create_access_token,
     create_refresh_token,
     decode_token,
 )
-from app.auth.dependencies import get_current_user
 from app.auth.schemas import (
     ChangeEmailRequest,
     ChangePasswordRequest,
@@ -87,7 +87,21 @@ async def refresh(body: RefreshRequest, request: Request, db: AsyncSession = Dep
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
+    # Check if this specific refresh token has been blacklisted
+    old_jti = payload.get("jti")
+    if old_jti:
+        from app.core.token_blacklist import is_token_blacklisted
+        if await is_token_blacklisted(old_jti):
+            raise HTTPException(status_code=401, detail="Refresh token has been revoked")
+
     user_id = payload["sub"]
+
+    # Check if all user tokens issued before a certain time are invalid
+    iat = payload.get("iat")
+    if iat is not None:
+        from app.core.token_blacklist import are_user_tokens_invalid
+        if await are_user_tokens_invalid(user_id, float(iat)):
+            raise HTTPException(status_code=401, detail="Token has been revoked")
 
     # Verify user still exists and is active
     result = await db.execute(
@@ -97,14 +111,31 @@ async def refresh(body: RefreshRequest, request: Request, db: AsyncSession = Dep
     if not user:
         raise HTTPException(status_code=401, detail="User not found or inactive")
 
+    # Blacklist the old refresh token to prevent reuse (rotate)
+    if old_jti:
+        from app.config import settings
+        from app.core.token_blacklist import blacklist_token
+        await blacklist_token(old_jti, ttl_seconds=settings.jwt_refresh_expiry_days * 86400)
+
     return TokenResponse(
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id),
     )
 
 
+@router.post("/logout", status_code=204)
+@limiter.limit("10/minute")
+async def logout(request: Request, user_id: str = Depends(get_current_user)):
+    """Invalidate all tokens for the current user (logout everywhere)."""
+    from app.core.token_blacklist import blacklist_all_user_tokens
+    await blacklist_all_user_tokens(user_id)
+    return Response(status_code=204)
+
+
 @router.get("/me", response_model=ProfileResponse)
+@limiter.limit("60/minute")
 async def get_profile(
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -126,8 +157,10 @@ async def get_profile(
 
 
 @router.put("/password", response_model=MessageResponse)
+@limiter.limit("5/minute")
 async def change_password(
     body: ChangePasswordRequest,
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -154,8 +187,10 @@ async def change_password(
 
 
 @router.put("/email", response_model=ProfileResponse)
+@limiter.limit("5/minute")
 async def change_email(
     body: ChangeEmailRequest,
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -350,8 +385,10 @@ async def login_2fa(
 
 
 @router.post("/2fa/validate", response_model=MessageResponse)
+@limiter.limit("10/minute")
 async def validate_2fa(
     body: TwoFactorValidateRequest,
+    request: Request,
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -423,17 +460,65 @@ async def export_user_data(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    from app.models.signal import Signal
-    from app.models.trade import Trade
-    from app.models.strategy import Strategy
-    from app.models.position import Position
+    from app.models.ai_insight import AIInsight, FeedbackRule
+    from app.models.backtest_result import BacktestResult
+    from app.models.holding import CostBasisOverride, ManualHolding
     from app.models.order import Order
+    from app.models.position import Position
+    from app.models.signal import Signal
+    from app.models.simulation import PaperSimulation
+    from app.models.strategy import BrokerConnection, Strategy
+    from app.models.trade import Trade
 
-    signals = (await db.execute(select(Signal).where(Signal.user_id == uid))).scalars().all()
-    trades = (await db.execute(select(Trade).where(Trade.user_id == uid))).scalars().all()
-    strategies = (await db.execute(select(Strategy).where(Strategy.user_id == uid))).scalars().all()
-    positions = (await db.execute(select(Position).where(Position.user_id == uid))).scalars().all()
-    orders = (await db.execute(select(Order).where(Order.user_id == uid))).scalars().all()
+    q_limit = 10000
+    signals = (await db.execute(
+        select(Signal).where(Signal.user_id == uid).limit(q_limit)
+    )).scalars().all()
+    trades = (await db.execute(
+        select(Trade).where(Trade.user_id == uid).limit(q_limit)
+    )).scalars().all()
+    strategies = (await db.execute(
+        select(Strategy).where(Strategy.user_id == uid).limit(q_limit)
+    )).scalars().all()
+    positions = (await db.execute(
+        select(Position).where(Position.user_id == uid).limit(q_limit)
+    )).scalars().all()
+    orders = (await db.execute(
+        select(Order).where(Order.user_id == uid).limit(q_limit)
+    )).scalars().all()
+    broker_conns = (await db.execute(
+        select(BrokerConnection).where(
+            BrokerConnection.user_id == uid
+        ).limit(q_limit)
+    )).scalars().all()
+    manual_holdings = (await db.execute(
+        select(ManualHolding).where(
+            ManualHolding.user_id == uid
+        ).limit(q_limit)
+    )).scalars().all()
+    cost_overrides = (await db.execute(
+        select(CostBasisOverride).where(
+            CostBasisOverride.user_id == uid
+        ).limit(q_limit)
+    )).scalars().all()
+    ai_insights = (await db.execute(
+        select(AIInsight).where(AIInsight.user_id == uid).limit(q_limit)
+    )).scalars().all()
+    feedback_rules = (await db.execute(
+        select(FeedbackRule).where(
+            FeedbackRule.user_id == uid
+        ).limit(q_limit)
+    )).scalars().all()
+    simulations = (await db.execute(
+        select(PaperSimulation).where(
+            PaperSimulation.user_id == uid
+        ).limit(q_limit)
+    )).scalars().all()
+    backtests = (await db.execute(
+        select(BacktestResult).where(
+            BacktestResult.user_id == uid
+        ).limit(q_limit)
+    )).scalars().all()
 
     export = {
         "user": {
@@ -489,6 +574,82 @@ async def export_user_data(
                 "status": o.status,
             }
             for o in orders
+        ],
+        "broker_connections": [
+            {
+                "id": str(bc.id),
+                "broker": bc.broker,
+                "is_paper": bc.is_paper,
+                "purpose": bc.purpose,
+            }
+            for bc in broker_conns
+        ],
+        "manual_holdings": [
+            {
+                "id": str(h.id),
+                "symbol": h.symbol,
+                "quantity": h.quantity,
+                "purchase_price": h.purchase_price,
+                "notes": h.notes,
+            }
+            for h in manual_holdings
+        ],
+        "cost_basis_overrides": [
+            {
+                "id": str(c.id),
+                "symbol": c.symbol,
+                "purchase_price": c.purchase_price,
+                "notes": c.notes,
+            }
+            for c in cost_overrides
+        ],
+        "ai_insights": [
+            {
+                "id": str(ai.id),
+                "insight_type": ai.insight_type,
+                "symbol": ai.symbol,
+                "model_used": ai.model_used,
+                "reasoning": ai.reasoning,
+                "confidence": ai.confidence,
+                "created_at": str(ai.created_at) if hasattr(ai, "created_at") else None,
+            }
+            for ai in ai_insights
+        ],
+        "feedback_rules": [
+            {
+                "id": str(fr.id),
+                "rule_type": fr.rule_type,
+                "description": fr.description,
+                "confidence": fr.confidence,
+                "is_active": fr.is_active,
+                "created_at": str(fr.created_at) if hasattr(fr, "created_at") else None,
+            }
+            for fr in feedback_rules
+        ],
+        "paper_simulations": [
+            {
+                "id": str(sim.id),
+                "status": sim.status,
+                "initial_value_usd": sim.initial_value_usd,
+                "started_at": str(sim.started_at) if sim.started_at else None,
+                "stopped_at": str(sim.stopped_at) if sim.stopped_at else None,
+            }
+            for sim in simulations
+        ],
+        "backtest_results": [
+            {
+                "id": str(bt.id),
+                "symbol": bt.symbol,
+                "timeframe": bt.timeframe,
+                "days": bt.days,
+                "trade_count": bt.trade_count,
+                "win_rate": bt.win_rate,
+                "sharpe_ratio": bt.sharpe_ratio,
+                "max_drawdown": bt.max_drawdown,
+                "total_pnl": bt.total_pnl,
+                "created_at": str(bt.created_at) if bt.created_at else None,
+            }
+            for bt in backtests
         ],
         "exported_at": str(datetime.now(UTC)),
     }

@@ -81,6 +81,9 @@ class RedisSubscriber:
             except Exception as e:
                 if not self._running:
                     break
-                logger.warning("Redis subscriber disconnected: %s — reconnecting in %ds", e, backoff)
+                logger.warning(
+                    "Redis subscriber disconnected: %s — reconnecting in %ds",
+                    e, backoff,
+                )
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 60)

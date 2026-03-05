@@ -12,11 +12,16 @@ def send_daily_summary(self):
     """Send daily trade summary email to users with daily_summary enabled."""
     import asyncio
 
-    try:
-        asyncio.run(_send_summary_async())
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("send_daily_summary transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=60)
+    from app.tasks.task_utils import task_lock
+
+    with task_lock("send_daily_summary", timeout=300) as acquired:
+        if not acquired:
+            return
+        try:
+            asyncio.run(_send_summary_async())
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("send_daily_summary transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=60)
 
 
 async def _send_summary_async():
@@ -82,10 +87,10 @@ async def _send_summary_async():
                     html=email_html,
                 )
                 logger.info(
-                    "Sent daily summary to %s: %d trades, PnL=%.2f",
-                    alert_email,
+                    "Sent daily summary to user %s: %d trades, PnL=%.2f",
+                    user.id,
                     len(trades),
                     total_pnl,
                 )
             except Exception as e:
-                logger.exception("Failed to send summary to %s: %s", alert_email, e)
+                logger.exception("Failed to send summary to user %s: %s", user.id, e)

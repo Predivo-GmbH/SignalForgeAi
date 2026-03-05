@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 MAX_MEMORY_ENTRIES = 100
 
 

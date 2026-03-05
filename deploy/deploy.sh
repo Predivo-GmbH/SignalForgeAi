@@ -183,18 +183,18 @@ update() {
   # Tag current images as :previous before rebuilding
   tag_current_images_as_previous
 
-  # Rebuild and restart Docker services
+  # Rebuild Docker images
   info "Rebuilding Docker images..."
   docker compose -f docker-compose.prod.yml build
 
-  info "Restarting services (zero-downtime rolling restart)..."
-  docker compose -f docker-compose.prod.yml up -d
-
-  # Run any new migrations
+  # Run migrations BEFORE restarting so new schema is ready for new code
   info "Running database migrations..."
-  sleep 5
   docker compose -f docker-compose.prod.yml exec api \
     python -m alembic upgrade head
+
+  # Restart services with updated code
+  info "Restarting services with updated code..."
+  docker compose -f docker-compose.prod.yml up -d
 
   # Update Caddy config if changed
   sudo cp "$APP_DIR/deploy/Caddyfile" /etc/caddy/Caddyfile

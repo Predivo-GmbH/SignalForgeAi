@@ -58,11 +58,17 @@ class ConnectionManager:
                 return (ws, uid, True)  # Mark for removal
             return (ws, uid, False)
 
-        targets = [(ws, uid) for ws, uid in conns if target_user is None or not uid or uid == target_user]
+        targets = [
+            (ws, uid) for ws, uid in conns
+            if target_user is None or not uid or uid == target_user
+        ]
         if not targets:
             return
 
-        results = await asyncio.gather(*[_safe_send(ws, uid) for ws, uid in targets], return_exceptions=True)
+        results = await asyncio.gather(
+            *[_safe_send(ws, uid) for ws, uid in targets],
+            return_exceptions=True,
+        )
 
         # Clean up dead connections
         dead = {r[0] for r in results if isinstance(r, tuple) and r[2]}
@@ -73,10 +79,11 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-def _authenticate_ws(websocket: WebSocket) -> str | None:
+async def _authenticate_ws(websocket: WebSocket) -> str | None:
     """Extract and validate JWT from WebSocket query params.
 
     Returns user_id on success, None on failure.
+    Checks the token blacklist to reject revoked tokens.
     """
     token = websocket.query_params.get("token")
     if not token:
@@ -84,7 +91,13 @@ def _authenticate_ws(websocket: WebSocket) -> str | None:
     payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         return None
-    return payload.get("sub")
+    user_id = payload.get("sub")
+    iat = payload.get("iat")
+    if user_id and iat is not None:
+        from app.core.token_blacklist import are_user_tokens_invalid
+        if await are_user_tokens_invalid(user_id, float(iat)):
+            return None
+    return user_id
 
 
 async def ws_signals(websocket: WebSocket):
@@ -93,7 +106,7 @@ async def ws_signals(websocket: WebSocket):
     Requires a valid ?token= query parameter for JWT authentication.
     Unauthenticated connections are rejected with close code 1008.
     """
-    user_id = _authenticate_ws(websocket)
+    user_id = await _authenticate_ws(websocket)
     if not user_id:
         await websocket.close(code=1008)
         return
@@ -130,7 +143,7 @@ async def ws_trades(websocket: WebSocket):
     Requires a valid ?token= query parameter for JWT authentication.
     Unauthenticated connections are rejected with close code 1008.
     """
-    user_id = _authenticate_ws(websocket)
+    user_id = await _authenticate_ws(websocket)
     if not user_id:
         await websocket.close(code=1008)
         return

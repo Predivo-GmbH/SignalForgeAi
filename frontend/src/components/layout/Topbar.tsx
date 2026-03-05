@@ -37,6 +37,7 @@ export function Topbar() {
             onClick={() => setMobileOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary) lg:hidden"
             title="Open menu"
+            aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -52,6 +53,7 @@ export function Topbar() {
             onClick={() => setHelpOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
             title="User Guide"
+            aria-label="Open help"
           >
             <HelpCircle className="h-4.5 w-4.5" />
           </button>
@@ -61,6 +63,7 @@ export function Topbar() {
             onClick={toggleTheme}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={theme === "dark" ? "Toggle theme to light mode" : "Toggle theme to dark mode"}
           >
             {theme === "dark" ? (
               <Sun className="h-4.5 w-4.5" />
@@ -74,6 +77,7 @@ export function Topbar() {
             onClick={logout}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-negative)"
             title="Sign out"
+            aria-label="Sign out"
           >
             <LogOut className="h-4.5 w-4.5" />
           </button>

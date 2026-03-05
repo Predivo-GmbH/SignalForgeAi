@@ -3,7 +3,17 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, UUIDMixin
@@ -13,6 +23,7 @@ class Position(Base, UUIDMixin):
     __tablename__ = "positions"
     __table_args__ = (
         Index("ix_positions_open_user", "is_open", "user_id"),
+        UniqueConstraint("order_id", name="uq_position_order_id"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -22,7 +33,7 @@ class Position(Base, UUIDMixin):
         Uuid, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True
     )
     strategy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("strategies.id", ondelete="SET NULL"), nullable=True, index=True
     )
     symbol: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     direction: Mapped[str] = mapped_column(String(10), nullable=False)  # BUY / SELL

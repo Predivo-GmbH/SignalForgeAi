@@ -3,7 +3,7 @@
 import logging
 import uuid
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, literal_column, select
@@ -229,9 +229,13 @@ async def get_pipeline_summary(
         try:
             period_start = datetime.fromisoformat(since)
         except ValueError:
-            period_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            period_start = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0,
+            )
     else:
-        period_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        period_start = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
 
     base_filter = [
         PipelineLog.strategy_id.in_(strategy_ids),

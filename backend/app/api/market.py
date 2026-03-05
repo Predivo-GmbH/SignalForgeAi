@@ -1,8 +1,9 @@
 """Market data and engine status endpoints."""
 
 import logging
+import re
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -28,6 +29,8 @@ SUPPORTED_SYMBOLS = [
 
 SUPPORTED_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"]
 
+VALID_SYMBOL_RE = re.compile(r'^[A-Z0-9]{1,10}(/[A-Z0-9]{1,10})?$')
+
 
 @router.get("/market/symbols")
 @limiter.limit("60/minute")
@@ -50,7 +53,17 @@ async def get_candles(
 
     Symbol uses dash in URL path (BTC-USDT) and is normalised to slash (BTC/USDT).
     """
+    # Normalise dash to slash before validation
     symbol = symbol.replace("-", "/")
+
+    if not VALID_SYMBOL_RE.match(symbol.upper()):
+        raise HTTPException(status_code=400, detail="Invalid symbol format")
+    if timeframe not in SUPPORTED_TIMEFRAMES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported timeframe. Must be one of: "
+            f"{', '.join(sorted(SUPPORTED_TIMEFRAMES))}",
+        )
     candles = await CandleStorage.load_candles_db(db, symbol, timeframe, limit=limit)
 
     # If DB has no data, try fetching live via CCXT (Binance → KuCoin → Kraken)
@@ -75,7 +88,10 @@ async def get_candles(
                     ]
                     break
             except Exception:
-                logger.warning("Live candle fetch from %s failed for %s", exchange_id, symbol, exc_info=True)
+                logger.warning(
+                    "Live candle fetch from %s failed for %s",
+                    exchange_id, symbol, exc_info=True,
+                )
 
     # Final fallback: CoinGecko OHLC (covers virtually every listed coin)
     if not candles and "/" in symbol:

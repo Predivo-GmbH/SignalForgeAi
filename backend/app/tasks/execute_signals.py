@@ -207,7 +207,10 @@ async def _execute_async():
                     ).limit(1)
                 )
                 if existing_order.scalar_one_or_none():
-                    logger.info("Signal %s already has an active order, skipping (idempotency)", sig.id)
+                    logger.info(
+                        "Signal %s already has an active order, skipping (idempotency)",
+                        sig.id,
+                    )
                     continue
 
                 signal_dict = {
@@ -235,7 +238,8 @@ async def _execute_async():
                     sig.status = "active"
 
                     # --- Position management for filled orders ---
-                    if order.status == "filled" and order.filled_quantity and order.filled_quantity > 0:
+                    filled = order.filled_quantity
+                    if order.status == "filled" and filled and filled > 0:
                         fill_price = order.average_fill_price or sig.entry_price
 
                         if sig.direction == "SELL":

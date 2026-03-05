@@ -92,7 +92,9 @@ def compute_stochastic(
         )
     lowest_low = candles["low"].rolling(window=k_period).min()
     highest_high = candles["high"].rolling(window=k_period).max()
-    fastk = 100 * (candles["close"] - lowest_low) / (highest_high - lowest_low)
+    denom = highest_high - lowest_low
+    denom = denom.replace(0, np.nan)
+    fastk = 100 * (candles["close"] - lowest_low) / denom
     slowk = fastk.rolling(window=slowing).mean()
     slowd = slowk.rolling(window=d_period).mean()
     return slowk, slowd
@@ -103,6 +105,7 @@ def compute_vwap(candles: pd.DataFrame) -> pd.Series:
     typical_price = (candles["high"] + candles["low"] + candles["close"]) / 3
     cum_vol = candles["volume"].cumsum()
     cum_tp_vol = (typical_price * candles["volume"]).cumsum()
+    cum_vol = cum_vol.replace(0, np.nan)
     return cum_tp_vol / cum_vol
 
 
@@ -200,7 +203,9 @@ def compute_williams_r(candles: pd.DataFrame, period: int = 14) -> pd.Series:
         )
     highest_high = candles["high"].rolling(window=period).max()
     lowest_low = candles["low"].rolling(window=period).min()
-    wr = -100 * (highest_high - candles["close"]) / (highest_high - lowest_low)
+    denom = highest_high - lowest_low
+    denom = denom.replace(0, np.nan)
+    wr = -100 * (highest_high - candles["close"]) / denom
     return wr
 
 
@@ -221,6 +226,7 @@ def compute_cci(candles: pd.DataFrame, period: int = 20) -> pd.Series:
     mean_dev = typical_price.rolling(window=period).apply(
         lambda x: np.abs(x - x.mean()).mean(), raw=True
     )
+    mean_dev = mean_dev.replace(0, np.nan)
     cci = (typical_price - sma) / (0.015 * mean_dev)
     return cci
 
@@ -255,6 +261,8 @@ def compute_adx(candles: pd.DataFrame, period: int = 14) -> pd.Series:
     minus_di = (
         100 * pd.Series(minus_dm, index=candles.index).rolling(period).mean() / atr
     )
-    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    di_sum = plus_di + minus_di
+    di_sum = di_sum.replace(0, np.nan)
+    dx = 100 * (plus_di - minus_di).abs() / di_sum
     adx = dx.rolling(period).mean()
     return adx

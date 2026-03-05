@@ -30,7 +30,6 @@ async def _train_async(symbol: str, timeframe: str) -> dict:
     import numpy as np
     import pandas as pd
 
-    from app.config import settings
     from app.core.database import task_session
     from app.core.redis_client import redis_client
     from app.data.storage import CandleStorage

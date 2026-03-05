@@ -129,30 +129,32 @@ class ClaudeClient:
             import redis
 
             r = redis.from_url(settings.redis_url)
+            try:
+                # Credit hard stop — check Redis value first, then config fallback
+                prepaid = float(r.get("ai_prepaid_credit") or 0)
+                if prepaid <= 0:
+                    prepaid = settings.ai_prepaid_credit_usd
+                if prepaid > 0:
+                    cumulative = float(r.get("ai_cumulative_cost") or 0)
+                    if cumulative >= prepaid:
+                        logger.warning(
+                            "AI prepaid credit exhausted ($%.4f / $%.2f)",
+                            cumulative, prepaid,
+                        )
+                        return False
 
-            # Credit hard stop — check Redis value first, then config fallback
-            prepaid = float(r.get("ai_prepaid_credit") or 0)
-            if prepaid <= 0:
-                prepaid = settings.ai_prepaid_credit_usd
-            if prepaid > 0:
-                cumulative = float(r.get("ai_cumulative_cost") or 0)
-                if cumulative >= prepaid:
+                key = f"ai_calls:{datetime.now(UTC).strftime('%Y-%m-%d')}"
+                count = r.incr(key)
+                if count == 1:
+                    r.expire(key, 86400)
+                if count > settings.ai_max_daily_api_calls:
                     logger.warning(
-                        "AI prepaid credit exhausted ($%.4f / $%.2f)",
-                        cumulative, prepaid,
+                        "Daily AI API call limit reached (%d/%d)",
+                        count, settings.ai_max_daily_api_calls,
                     )
                     return False
-
-            key = f"ai_calls:{datetime.now(UTC).strftime('%Y-%m-%d')}"
-            count = r.incr(key)
-            if count == 1:
-                r.expire(key, 86400)
-            if count > settings.ai_max_daily_api_calls:
-                logger.warning(
-                    "Daily AI API call limit reached (%d/%d)",
-                    count, settings.ai_max_daily_api_calls,
-                )
-                return False
+            finally:
+                r.close()
         except Exception:
             logger.warning("Redis unavailable for daily limit check, allowing call", exc_info=True)
         return True
@@ -186,7 +188,10 @@ class ClaudeClient:
                 )
                 return False
         except Exception:
-            logger.warning("Redis unavailable for async daily limit check, allowing call", exc_info=True)
+            logger.warning(
+                "Redis unavailable for async daily limit check, allowing call",
+                exc_info=True,
+            )
         return True
 
     # ------------------------------------------------------------------
@@ -253,22 +258,25 @@ class ClaudeClient:
             import redis as sync_redis
 
             r = sync_redis.from_url(settings.redis_url)
-            payload = json.dumps({
-                "insight_type": insight_type,
-                "model_used": model,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "latency_ms": latency_ms,
-                "cost_usd": cost_usd,
-                "created_at": datetime.now(UTC).isoformat(),
-            })
-            r.rpush("ai_usage_queue", payload)
+            try:
+                payload = json.dumps({
+                    "insight_type": insight_type,
+                    "model_used": model,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "latency_ms": latency_ms,
+                    "cost_usd": cost_usd,
+                    "created_at": datetime.now(UTC).isoformat(),
+                })
+                r.rpush("ai_usage_queue", payload)
 
-            # Increment cumulative cost for credit hard stop
-            r.incrbyfloat("ai_cumulative_cost", cost_usd)
-            # Ensure key expires after 30 days so it resets naturally
-            if r.ttl("ai_cumulative_cost") == -1:
-                r.expire("ai_cumulative_cost", 30 * 86400)
+                # Increment cumulative cost for credit hard stop
+                r.incrbyfloat("ai_cumulative_cost", cost_usd)
+                # Ensure key expires after 30 days so it resets naturally
+                if r.ttl("ai_cumulative_cost") == -1:
+                    r.expire("ai_cumulative_cost", 30 * 86400)
+            finally:
+                r.close()
         except Exception:
             logger.warning("Failed to queue AI usage (sync)", exc_info=True)
 

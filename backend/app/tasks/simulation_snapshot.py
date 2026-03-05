@@ -28,15 +28,19 @@ def snapshot_simulation(self):
     """Record B&H and SF equity snapshots for all running paper simulations."""
     import asyncio
 
-    try:
-        asyncio.run(_snapshot_async())
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("snapshot_simulation transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=60)
+    from app.tasks.task_utils import task_lock
+
+    with task_lock("snapshot_simulation", timeout=300) as acquired:
+        if not acquired:
+            return
+        try:
+            asyncio.run(_snapshot_async())
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("snapshot_simulation transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=60)
 
 
 async def _snapshot_async():
-    import ccxt.async_support as ccxt_async
     from sqlalchemy import func, select
 
     from app.core.database import task_session
@@ -174,7 +178,10 @@ async def _fetch_current_prices(symbols: list[str]) -> dict[str, float]:
                 if ticker and ticker.get("last"):
                     result[sym] = float(ticker["last"])
     except Exception:
-        logger.warning("Price fetch from %s failed for simulation snapshot", settings.default_exchange)
+        logger.warning(
+            "Price fetch from %s failed for simulation snapshot",
+            settings.default_exchange,
+        )
     finally:
         await exchange.close()
 

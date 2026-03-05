@@ -16,7 +16,7 @@ class Order(Base, UUIDMixin):
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     signal_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True, index=True
     )
     symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     direction: Mapped[str] = mapped_column(String(10), nullable=False)  # BUY / SELL

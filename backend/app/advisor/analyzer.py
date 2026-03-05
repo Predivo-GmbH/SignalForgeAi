@@ -122,7 +122,7 @@ class TechnicalAnalyzer:
                         elif 0.2 < bb_pct < 0.8:
                             bb_score = 3  # Within bands
             except Exception:
-                pass
+                logger.debug("Indicator computation failed for %s", symbol, exc_info=True)
 
             # Ichimoku Cloud
             ichi_score = 0
@@ -146,7 +146,7 @@ class TechnicalAnalyzer:
                         cloud_pos = "outside"
                         ichi_score = 2
             except Exception:
-                pass
+                logger.debug("Indicator computation failed for %s", symbol, exc_info=True)
 
             # OBV trend
             obv_score = 0
@@ -162,7 +162,7 @@ class TechnicalAnalyzer:
                            (trend.direction == Trend.BEARISH and obv_slope < 0):
                             obv_score = 6
             except Exception:
-                pass
+                logger.debug("Indicator computation failed for %s", symbol, exc_info=True)
 
             # Williams %R
             wr_score = 0
@@ -177,7 +177,7 @@ class TechnicalAnalyzer:
                     elif trend.direction == Trend.BEARISH and wr_val > -20:
                         wr_score = 5  # Overbought
             except Exception:
-                pass
+                logger.debug("Indicator computation failed for %s", symbol, exc_info=True)
 
             # CCI
             cci_score = 0
@@ -191,7 +191,7 @@ class TechnicalAnalyzer:
                        (trend.direction == Trend.BEARISH and cci_val < -100):
                         cci_score = 5
             except Exception:
-                pass
+                logger.debug("Indicator computation failed for %s", symbol, exc_info=True)
 
             # ATR (informational)
             atr = compute_atr(candles)
@@ -234,7 +234,7 @@ class TechnicalAnalyzer:
                 "recommendation": recommendation,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to score %s", symbol)
             return {
                 "symbol": symbol,

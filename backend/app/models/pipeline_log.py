@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Float, ForeignKey, Index, Integer, String, Uuid
+from sqlalchemy import ForeignKey, Index, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin

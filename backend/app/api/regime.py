@@ -69,7 +69,7 @@ async def get_regime_status(
         if model_data:
             from app.engine.layers.hmm_regime import HMMRegimeModel
 
-            model = HMMRegimeModel.deserialize(model_data)
+            HMMRegimeModel.deserialize(model_data)
             # Probabilities need candle data — skip for now, just show label
             result["regime_probabilities"] = {}
     except Exception:

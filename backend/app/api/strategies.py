@@ -270,7 +270,7 @@ async def list_strategies(
 
 @router.get("/presets")
 @limiter.limit("60/minute")
-async def list_presets(request: Request):
+async def list_presets(request: Request, _user_id: str = Depends(get_current_user)):
     """Return available strategy presets."""
     return {"presets": STRATEGY_PRESETS}
 

@@ -176,13 +176,20 @@ class BacktestEngine:
                 # --- MTF alignment check ---
                 if higher_tf_candles is not None and len(higher_tf_candles) >= 200:
                     # Map current bar timestamp to higher TF window
-                    current_time = current.get("time") or current.name
-                    htf_window = higher_tf_candles[
-                        higher_tf_candles.index <= i
-                    ] if not hasattr(higher_tf_candles, "time") else higher_tf_candles.iloc[:max(200, i // 4)]
+                    current.get("time") or current.name
+                    htf_end = max(200, i // 4)
+                    if not hasattr(higher_tf_candles, "time"):
+                        higher_tf_candles[
+                            higher_tf_candles.index <= i
+                        ]
+                    else:
+                        higher_tf_candles.iloc[:htf_end]
 
                     # Use the last 200+ higher TF bars available up to this point
-                    htf_slice = higher_tf_candles.iloc[:max(200, min(i // 4 + 1, len(higher_tf_candles)))]
+                    htf_limit = max(
+                        200, min(i // 4 + 1, len(higher_tf_candles)),
+                    )
+                    htf_slice = higher_tf_candles.iloc[:htf_limit]
                     if len(htf_slice) >= 200:
                         htf_trend = htf_trend_filter.evaluate(htf_slice)
                         if signal.action == "BUY" and htf_trend.direction == Trend.BEARISH:

@@ -61,8 +61,8 @@ def run_portfolio_backtest(
     all_equity_curves = []
 
     # Map primary TF to higher TF for MTF alignment
-    HIGHER_TF = {"1h": "4h", "4h": "1d"}
-    higher_tf = HIGHER_TF.get(primary_tf)
+    higher_tf_map = {"1h": "4h", "4h": "1d"}
+    higher_tf = higher_tf_map.get(primary_tf)
 
     for symbol in symbols:
         candles = _load_candles_for_symbol(symbol, primary_tf, n_bars)

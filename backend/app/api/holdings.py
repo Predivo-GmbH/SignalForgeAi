@@ -181,7 +181,8 @@ async def _fetch_prices(
     exchange_eligible = [s for s in non_stable if s not in _COINGECKO_ONLY]
 
     # Fire ALL exchange price lookups + CoinGecko in parallel
-    from app.data.coingecko import fetch_coin_metadata, fetch_prices as cg_fetch_prices
+    from app.data.coingecko import fetch_coin_metadata
+    from app.data.coingecko import fetch_prices as cg_fetch_prices
 
     exchange_ids = ["binance"] + _FALLBACK_EXCHANGES
     tasks = []
@@ -724,17 +725,22 @@ async def bulk_import_cost_basis(
         for r in result.scalars().all():
             await db.delete(r)
 
+    # Bulk-fetch all existing overrides for the requested symbols in one query
+    all_symbols = list({item.symbol.upper() for item in body.overrides})
+    existing_result = await db.execute(
+        select(CostBasisOverride).where(
+            CostBasisOverride.user_id == uid,
+            CostBasisOverride.symbol.in_(all_symbols),
+        )
+    )
+    existing_map: dict[str, CostBasisOverride] = {
+        row.symbol: row for row in existing_result.scalars().all()
+    }
+
     created: list[CostBasisOverride] = []
     for item in body.overrides:
         sym = item.symbol.upper()
-        # Upsert: check for existing
-        result = await db.execute(
-            select(CostBasisOverride).where(
-                CostBasisOverride.user_id == uid,
-                CostBasisOverride.symbol == sym,
-            )
-        )
-        existing = result.scalar_one_or_none()
+        existing = existing_map.get(sym)
         if existing:
             existing.purchase_price = item.purchase_price
             existing.notes = item.notes

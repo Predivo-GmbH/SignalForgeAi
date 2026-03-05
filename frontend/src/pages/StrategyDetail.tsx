@@ -29,6 +29,7 @@ import type { Signal } from "@/hooks/useSignals";
 import type { StrategyBacktestResult } from "@/hooks/useStrategyBacktest";
 import { cn } from "@/lib/cn";
 import { formatPrice, formatTime } from "@/lib/format";
+import { TRIGGER_LABELS } from "@/lib/constants";
 
 const PAGE_SIZE = 20;
 
@@ -54,16 +55,6 @@ function ConfluenceBar({ score }: { score: number }) {
     </div>
   );
 }
-
-const TRIGGER_LABELS: Record<string, string> = {
-  macd_crossover: "MACD crossover",
-  rsi_midline_cross: "RSI midline cross",
-  engulfing_candle: "Engulfing candle",
-  zone_reclaim: "Zone reclaim",
-  stochastic_exit_extreme: "Stochastic extreme exit",
-  bollinger_squeeze: "Bollinger squeeze",
-  volume_spike: "Volume spike",
-};
 
 /* ----- Signal Reasoning Tooltip (hover) ----- */
 

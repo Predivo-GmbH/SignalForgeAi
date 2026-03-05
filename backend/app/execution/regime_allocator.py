@@ -132,7 +132,10 @@ class RegimeAllocator:
             key = f"{REDIS_KEY_PREFIX}:{user_id}"
             await redis_client.delete(key)
         except Exception:
-            logger.warning("Failed to reset regime allocation state for user %s", user_id, exc_info=True)
+            logger.warning(
+                "Failed to reset regime allocation state for user %s",
+                user_id, exc_info=True,
+            )
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -147,7 +150,7 @@ class RegimeAllocator:
             if data:
                 from app.engine.layers.hmm_regime import HMMRegimeModel
 
-                model = HMMRegimeModel.deserialize(data)
+                HMMRegimeModel.deserialize(data)
                 # The model stores the last predicted state in its state_map.
                 # We need candle data to predict, but the serialized model
                 # doesn't include that.  The hmm_train task stores the raw
@@ -174,7 +177,10 @@ class RegimeAllocator:
                 d = json.loads(data)
                 return RegimeAllocationState(**d)
         except Exception:
-            logger.warning("Failed to load regime allocation state for user %s", user_id, exc_info=True)
+            logger.warning(
+                "Failed to load regime allocation state for user %s",
+                user_id, exc_info=True,
+            )
         return None
 
     async def _save_state(self, user_id: str, state: RegimeAllocationState) -> None:

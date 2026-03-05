@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -16,7 +17,13 @@ def create_access_token(user_id: str) -> str:
 def create_refresh_token(user_id: str) -> str:
     now = datetime.now(timezone.utc)
     expires = now + timedelta(days=settings.jwt_refresh_expiry_days)
-    payload = {"sub": user_id, "exp": expires, "iat": now.timestamp(), "type": "refresh"}
+    payload = {
+        "sub": user_id,
+        "exp": expires,
+        "iat": now.timestamp(),
+        "type": "refresh",
+        "jti": str(uuid.uuid4()),
+    }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

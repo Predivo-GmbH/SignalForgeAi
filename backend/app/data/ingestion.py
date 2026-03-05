@@ -27,7 +27,7 @@ class CCXTIngestion:
     ) -> pd.DataFrame:
         try:
             ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, since=since, limit=limit)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to fetch candles for %s %s", symbol, timeframe)
             raise
 

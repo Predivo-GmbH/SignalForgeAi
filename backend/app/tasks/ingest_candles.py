@@ -106,12 +106,12 @@ async def _resolve_exchange_symbols(db) -> dict[str, set[tuple[str, str]]]:
 async def _ingest_async():
     import ccxt as ccxt_sync
 
-    from app.data.ingestion import CCXTIngestion
     from app.core.database import task_session
+    from app.data.ingestion import CCXTIngestion
     from app.data.storage import CandleStorage
 
     # Fallback exchanges to try when a symbol isn't found on its primary exchange
-    FALLBACK_EXCHANGES = ["binance", "kucoin", "mexc", "kraken", "gateio"]
+    fallback_exchanges = ["binance", "kucoin", "mexc", "kraken", "gateio"]
 
     async with task_session() as db:
         exchange_pairs = await _resolve_exchange_symbols(db)
@@ -173,7 +173,7 @@ async def _ingest_async():
                 len(bad_symbol_failures),
             )
             for (symbol, timeframe), failed_exchange in bad_symbol_failures.items():
-                for fallback_id in FALLBACK_EXCHANGES:
+                for fallback_id in fallback_exchanges:
                     if fallback_id == failed_exchange:
                         continue  # Already tried this one
                     try:

@@ -19,7 +19,7 @@ class Trade(Base, UUIDMixin, TimestampMixin):
     )
 
     signal_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True
+        Uuid, ForeignKey("signals.id", ondelete="SET NULL"), nullable=True, index=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE")

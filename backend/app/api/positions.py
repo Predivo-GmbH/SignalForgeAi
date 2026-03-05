@@ -3,7 +3,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,8 +23,8 @@ router = APIRouter(prefix="/positions", tags=["positions"])
 # Request / Response schemas
 # ---------------------------------------------------------------------------
 class ClosePositionRequest(BaseModel):
-    exit_price: float
-    reason: str = "manual"
+    exit_price: float = Field(..., gt=0, description="Exit price must be positive")
+    reason: str = Field(default="manual_close", max_length=200)
 
 
 # ---------------------------------------------------------------------------

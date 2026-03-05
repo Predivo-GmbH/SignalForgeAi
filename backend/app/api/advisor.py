@@ -9,7 +9,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -36,6 +36,19 @@ class PlanRequest(BaseModel):
 
 class DeployRequest(BaseModel):
     plan: dict
+
+    @field_validator('plan')
+    @classmethod
+    def validate_plan_structure(cls, v):
+        required_keys = {'selected_cryptos', 'strategy_config'}
+        missing = required_keys - set(v.keys())
+        if missing:
+            raise ValueError(f"Plan missing required keys: {missing}")
+        if not isinstance(v.get('selected_cryptos'), list):
+            raise ValueError("selected_cryptos must be a list")
+        if not isinstance(v.get('strategy_config'), dict):
+            raise ValueError("strategy_config must be a dict")
+        return v
 
 
 class DeployResponse(BaseModel):
@@ -237,7 +250,7 @@ async def deploy_plan(
         validated = StrategyConfig(**config)
         config = validated.model_dump()
     except Exception as e:
-        logger.warning("Strategy config validation: %s — using raw config", e)
+        raise HTTPException(status_code=422, detail=f"Invalid strategy configuration: {e}")
 
     uid = uuid.UUID(user_id)
 

@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, String, Uuid, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -31,6 +31,9 @@ class PaperSimulation(Base, UUIDMixin, TimestampMixin):
 
 class SimulationSnapshot(Base, UUIDMixin):
     __tablename__ = "simulation_snapshots"
+    __table_args__ = (
+        Index("ix_simulation_snapshots_sim_time", "simulation_id", "timestamp"),
+    )
 
     simulation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("paper_simulations.id", ondelete="CASCADE"), nullable=False, index=True

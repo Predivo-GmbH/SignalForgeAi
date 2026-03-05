@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -17,6 +18,16 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
     enabled: open,
   });
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
@@ -27,7 +38,12 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
         onClick={onClose}
       />
       {/* Drawer */}
-      <div className="fixed top-0 right-0 z-50 h-full w-full max-w-lg bg-(--color-bg-surface) border-l border-(--color-border) shadow-xl flex flex-col">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Help"
+        className="fixed top-0 right-0 z-50 h-full w-full max-w-lg bg-(--color-bg-surface) border-l border-(--color-border) shadow-xl flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-(--color-border) shrink-0">
           <h2 className="text-sm font-semibold text-(--color-text-primary)">

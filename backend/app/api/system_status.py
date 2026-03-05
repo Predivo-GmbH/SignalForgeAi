@@ -4,11 +4,12 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.config import settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 
@@ -51,8 +52,9 @@ async def get_system_status(
     try:
         await db.execute(text("SELECT 1"))
         result["services"]["database"] = {"status": "ok"}
-    except Exception as e:
-        result["services"]["database"] = {"status": "error", "detail": str(e)[:100]}
+    except Exception:
+        logger.warning("DB health check failed", exc_info=True)
+        result["services"]["database"] = {"status": "error", "detail": "Connection failed"}
         result["issues"].append("Database is unreachable")
         result["overall"] = "critical"
 
@@ -62,8 +64,9 @@ async def get_system_status(
 
         await redis_client.ping()
         result["services"]["redis"] = {"status": "ok"}
-    except Exception as e:
-        result["services"]["redis"] = {"status": "error", "detail": str(e)[:100]}
+    except Exception:
+        logger.warning("Redis health check failed", exc_info=True)
+        result["services"]["redis"] = {"status": "error", "detail": "Connection failed"}
         result["issues"].append("Redis is unreachable")
         result["overall"] = "critical"
 
@@ -83,8 +86,9 @@ async def get_system_status(
             result["issues"].append("Celery worker is not responding")
             if result["overall"] != "critical":
                 result["overall"] = "degraded"
-    except Exception as e:
-        result["services"]["worker"] = {"status": "error", "detail": str(e)[:100]}
+    except Exception:
+        logger.warning("Celery worker health check failed", exc_info=True)
+        result["services"]["worker"] = {"status": "error", "detail": "Connection failed"}
         result["issues"].append("Cannot reach Celery worker")
         if result["overall"] != "critical":
             result["overall"] = "degraded"
@@ -130,11 +134,14 @@ async def get_system_status(
                 "status": "stale",
                 "detail": "No candles in database at all",
             }
-            result["issues"].append("No candles in database — beat scheduler or ingestion is not running")
+            result["issues"].append(
+                "No candles in database — beat scheduler or ingestion is not running"
+            )
             if result["overall"] == "healthy":
                 result["overall"] = "degraded"
-    except Exception as e:
-        result["services"]["beat"] = {"status": "unknown", "detail": str(e)[:100]}
+    except Exception:
+        logger.warning("Beat scheduler health check failed", exc_info=True)
+        result["services"]["beat"] = {"status": "unknown", "detail": "Check failed"}
 
     # --- 5. Pipeline run freshness (from PipelineLog) ---
     # PipelineLog tracks ALL evaluations, including blocked ones.
@@ -191,6 +198,9 @@ async def restart_worker(
     _user_id: str = Depends(get_current_user),
 ):
     """Soft-restart the Celery worker pool (cycles worker processes)."""
+    if settings.admin_user_id and str(_user_id) != settings.admin_user_id:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
     from app.worker import celery_app
 
     def _restart():
@@ -199,6 +209,6 @@ async def restart_worker(
     try:
         await asyncio.to_thread(_restart)
         return {"status": "ok", "detail": "Worker pool restart initiated"}
-    except Exception as e:
+    except Exception:
         logger.exception("Worker restart failed")
-        return {"status": "error", "detail": str(e)[:200]}
+        return {"status": "error", "detail": "Restart failed"}

@@ -15,11 +15,16 @@ def run_signal_pipeline(self):
     """Run the signal pipeline for all active symbols."""
     import asyncio
 
-    try:
-        asyncio.run(_run_pipeline_async())
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        logger.warning("run_signal_pipeline transient error: %s — retrying", exc)
-        self.retry(exc=exc, countdown=60)
+    from app.tasks.task_utils import task_lock
+
+    with task_lock("run_signal_pipeline", timeout=3600) as acquired:
+        if not acquired:
+            return
+        try:
+            asyncio.run(_run_pipeline_async())
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("run_signal_pipeline transient error: %s — retrying", exc)
+            raise self.retry(exc=exc, countdown=60)
 
 
 async def _run_pipeline_async():
@@ -319,8 +324,8 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                     # --- Multi-timeframe alignment gate ---
                     # Before spending AI credits, verify higher TFs don't contradict.
                     # Hierarchy: 1h → 4h → 1d.  Only block on explicit conflict.
-                    HIGHER_TF = {"1h": "4h", "4h": "1d"}
-                    higher_tf = HIGHER_TF.get(timeframe)
+                    higher_tf_map = {"1h": "4h", "4h": "1d"}
+                    higher_tf = higher_tf_map.get(timeframe)
                     if higher_tf:
                         htf_candles = await CandleStorage.load_candles_db(
                             db, symbol, higher_tf, limit=300,

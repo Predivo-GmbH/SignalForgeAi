@@ -235,7 +235,7 @@ async def run_strategy_backtest(
             strategy_name=strategy_name,
             ai_enhanced=body.ai_enhanced,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Strategy backtest failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

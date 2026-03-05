@@ -1,9 +1,16 @@
 # Production deployment for SignalForge
 version: "3.8"
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   timescaledb:
     image: timescale/timescaledb:2.17.2-pg16
+    logging: *default-logging
     environment:
       POSTGRES_DB: signalforge
       POSTGRES_USER: signalforge
@@ -25,12 +32,15 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    logging: *default-logging
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${SF_REDIS_PASSWORD:-changeme}
+    environment:
+      SF_REDIS_PASSWORD: ${SF_REDIS_PASSWORD:-changeme}
     volumes:
       - redisdata:/data
     # No ports exposed to host — only accessible within Docker network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $SF_REDIS_PASSWORD ping || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,6 +55,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
+    logging: *default-logging
     env_file:
       - backend/.env.prod
     ports:
@@ -65,6 +76,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
+    logging: *default-logging
     command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
     env_file:
       - backend/.env.prod
@@ -90,6 +102,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
+    logging: *default-logging
     command: celery -A app.worker.celery_app beat --loglevel=info -s /tmp/celerybeat-schedule
     env_file:
       - backend/.env.prod

@@ -125,7 +125,10 @@ async def get_equity_curve(
         ).limit(1)
     )
     strat_cfg = strat_res.scalar_one_or_none() or {}
-    initial_equity = float(strat_cfg.get("account_equity", 10_000.0)) if isinstance(strat_cfg, dict) else 10_000.0
+    initial_equity = (
+        float(strat_cfg.get("account_equity", 10_000.0))
+        if isinstance(strat_cfg, dict) else 10_000.0
+    )
     equity = initial_equity
     peak = equity
     points: list[EquityPoint] = []
@@ -190,25 +193,37 @@ async def compare_strategies(
 
     metrics_list: list[StrategyMetrics] = []
 
-    for strat in strategies:
-        # Get closed trades for this strategy (Trade -> Signal -> Strategy)
-        trade_result = await db.execute(
-            select(Trade)
-            .join(Signal, Trade.signal_id == Signal.id)
-            .where(Signal.strategy_id == strat.id, Trade.pnl.is_not(None))
-            .order_by(Trade.exit_time.asc())
-            .limit(500)
-        )
-        trades = list(trade_result.scalars().all())
+    # Bulk query: fetch all closed trades for all user strategies in one go
+    strategy_ids = [strat.id for strat in strategies]
 
-        # Get active signals count (SQL aggregate instead of loading all rows)
-        active_count_result = await db.execute(
-            select(func.count(Signal.id)).where(
-                Signal.strategy_id == strat.id,
-                Signal.status.in_(["pending", "active"]),
-            )
+    trade_result = await db.execute(
+        select(Trade, Signal.strategy_id)
+        .join(Signal, Trade.signal_id == Signal.id)
+        .where(Signal.strategy_id.in_(strategy_ids), Trade.pnl.is_not(None))
+        .order_by(Trade.exit_time.asc())
+    )
+    all_trade_rows = trade_result.all()
+
+    # Group trades by strategy_id
+    trades_by_strategy: dict[uuid.UUID, list[Trade]] = {sid: [] for sid in strategy_ids}
+    for trade, strat_id in all_trade_rows:
+        if strat_id in trades_by_strategy:
+            trades_by_strategy[strat_id].append(trade)
+
+    # Bulk query: count active signals for all strategies in one go
+    signal_count_result = await db.execute(
+        select(Signal.strategy_id, func.count(Signal.id))
+        .where(
+            Signal.strategy_id.in_(strategy_ids),
+            Signal.status.in_(["pending", "active"]),
         )
-        active_signals = active_count_result.scalar() or 0
+        .group_by(Signal.strategy_id)
+    )
+    active_signals_map: dict[uuid.UUID, int] = dict(signal_count_result.all())
+
+    for strat in strategies:
+        trades = trades_by_strategy.get(strat.id, [])
+        active_signals = active_signals_map.get(strat.id, 0)
 
         total_trades = len(trades)
         winning = [t for t in trades if (t.pnl or 0) > 0]

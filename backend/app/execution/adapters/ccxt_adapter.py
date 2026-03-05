@@ -57,7 +57,7 @@ class CCXTAdapter(BrokerAdapter):
         try:
             await self._exchange.load_markets()
             return True
-        except Exception as e:
+        except Exception:
             logger.exception("CCXT connect failed")
             return False
 
@@ -95,7 +95,7 @@ class CCXTAdapter(BrokerAdapter):
         try:
             await self._exchange.cancel_order(broker_order_id, symbol=symbol or None)
             return True
-        except Exception as e:
+        except Exception:
             logger.exception("CCXT cancel failed")
             return False
 

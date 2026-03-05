@@ -1,9 +1,25 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def _validate_password_strength(v: str) -> str:
+    """Shared password complexity check for all password-setting schemas."""
+    if not any(c.isupper() for c in v):
+        raise ValueError('Password must contain at least one uppercase letter')
+    if not any(c.islower() for c in v):
+        raise ValueError('Password must contain at least one lowercase letter')
+    if not any(c.isdigit() for c in v):
+        raise ValueError('Password must contain at least one digit')
+    return v
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v):
+        return _validate_password_strength(v)
 
 
 class LoginRequest(BaseModel):
@@ -42,6 +58,11 @@ class ProfileResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_strength(cls, v):
+        return _validate_password_strength(v)
 
 
 class ChangeEmailRequest(BaseModel):

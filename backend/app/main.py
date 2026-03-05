@@ -10,8 +10,6 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.auth.dependencies import get_current_user
-
 from app.api.advisor import router as advisor_router
 from app.api.ai_usage import router as ai_usage_router
 from app.api.alerts import router as alerts_router
@@ -23,11 +21,12 @@ from app.api.holdings import router as holdings_router
 from app.api.market import router as market_router
 from app.api.positions import router as positions_router
 from app.api.regime import router as regime_router
-from app.api.simulation import router as simulation_router
-from app.api.system_status import router as system_status_router
 from app.api.signals import router as signals_router
+from app.api.simulation import router as simulation_router
 from app.api.strategies import router as strategies_router
+from app.api.system_status import router as system_status_router
 from app.api.trades import router as trades_router
+from app.auth.dependencies import get_current_user
 from app.auth.router import router as auth_router
 from app.config import settings
 from app.core.database import async_session
@@ -51,7 +50,7 @@ if settings.sentry_dsn:
         dsn=settings.sentry_dsn,
         traces_sample_rate=0.1,
         environment="development" if settings.debug else "production",
-        release=f"signalforge@0.1.0",
+        release="signalforge@0.1.0",
     )
 
 # ---------------------------------------------------------------------------
@@ -127,14 +126,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["X-XSS-Protection"] = "1; mode=block"
+        unsafe_eval = " 'unsafe-eval'" if settings.debug else ""
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            f"script-src 'self' 'unsafe-inline'{unsafe_eval}; "
             "style-src 'self' 'unsafe-inline'; "
             "connect-src 'self' wss: ws:; "
             "img-src 'self' data: https:; "
             "font-src 'self' data:"
         )
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         # HSTS only when behind TLS (direct HTTPS or reverse-proxy header)
         if (
             request.url.scheme == "https"
