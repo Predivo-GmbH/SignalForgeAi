@@ -16,6 +16,7 @@ const StrategiesPage = lazy(() => import("./pages/Strategies").then(m => ({ defa
 const StrategyDetailPage = lazy(() => import("./pages/StrategyDetail").then(m => ({ default: m.StrategyDetailPage })));
 const BacktestPage = lazy(() => import("./pages/Backtest").then(m => ({ default: m.BacktestPage })));
 const RiskPage = lazy(() => import("./pages/Risk").then(m => ({ default: m.RiskPage })));
+const EnginePage = lazy(() => import("./pages/Engine").then(m => ({ default: m.EnginePage })));
 const SettingsPage = lazy(() => import("./pages/Settings").then(m => ({ default: m.SettingsPage })));
 
 /* ---------- Error Boundary ---------- */
@@ -114,6 +115,7 @@ function App() {
                   <Route path="trades" element={<TradesPage />} />
                   <Route path="analytics" element={<AnalyticsPage />} />
                   <Route path="risk" element={<RiskPage />} />
+                  <Route path="engine" element={<EnginePage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   {/* Redirects for old routes */}
                   <Route path="config" element={<Navigate to="/strategies" replace />} />

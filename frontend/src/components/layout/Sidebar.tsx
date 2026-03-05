@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
+  Activity,
   Briefcase,
   ArrowUpDown,
   BarChart2,
@@ -20,6 +21,7 @@ const navItems = [
   { to: "/trades", icon: ArrowUpDown, label: "Trades" },
   { to: "/analytics", icon: BarChart2, label: "Analytics" },
   { to: "/risk", icon: Shield, label: "Risk" },
+  { to: "/engine", icon: Activity, label: "Engine" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ] as const;
 

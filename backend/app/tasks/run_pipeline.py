@@ -72,11 +72,15 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
     from app.engine.layers.trend import Trend, TrendFilter
     from app.engine.pipeline import SignalPipeline
     from app.execution.position_manager import PositionManagerDB
+    from app.models.pipeline_log import PipelineLog
     from app.models.signal import Signal as SignalModel
 
     cfg = active_strategy.config or {}
     symbols = cfg.get("symbols", DEFAULT_SYMBOLS)
     timeframes = cfg.get("timeframes", ["1h"])
+
+    # Collect pipeline decision logs for bulk insert
+    log_entries: list[PipelineLog] = []
     account_equity = cfg.get("account_equity", 10000)
     min_confluence = cfg.get("min_confluence", 50)
 
@@ -167,6 +171,11 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                         "Insufficient candles for %s %s: %d",
                         symbol, timeframe, len(candles_data),
                     )
+                    log_entries.append(PipelineLog(
+                        strategy_id=active_strategy.id, symbol=symbol,
+                        timeframe=timeframe, action="NO_TRADE",
+                        block_reason="insufficient_candles",
+                    ))
                     continue
 
                 df = pd.DataFrame(candles_data)
@@ -178,6 +187,16 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                     active_strategy.name, symbol, timeframe,
                     signal.action, signal.confluence_score, signal.block_reason,
                 )
+
+                # Log NO_TRADE decisions from the technical pipeline
+                if signal.action == "NO_TRADE":
+                    log_entries.append(PipelineLog(
+                        strategy_id=active_strategy.id, symbol=symbol,
+                        timeframe=timeframe, action="NO_TRADE",
+                        block_reason=signal.block_reason or "unknown",
+                        confluence_score=signal.confluence_score,
+                        regime=signal.regime,
+                    ))
 
                 # Persist actionable signals (BUY/SELL) to DB
                 if signal.action in ("BUY", "SELL"):
@@ -194,6 +213,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             signal.action, symbol, timeframe,
                             skip_reason, active_strategy.name,
                         )
+                        log_entries.append(PipelineLog(
+                            strategy_id=active_strategy.id, symbol=symbol,
+                            timeframe=timeframe, action=signal.action,
+                            block_reason="feedback_filter",
+                            confluence_score=signal.confluence_score,
+                            regime=signal.regime,
+                        ))
                         continue
 
                     confluence_override = await feedback_filter.get_confluence_override(
@@ -210,6 +236,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             symbol, timeframe, signal.confluence_score,
                             confluence_override, active_strategy.name,
                         )
+                        log_entries.append(PipelineLog(
+                            strategy_id=active_strategy.id, symbol=symbol,
+                            timeframe=timeframe, action=signal.action,
+                            block_reason="confluence_override",
+                            confluence_score=signal.confluence_score,
+                            regime=signal.regime,
+                        ))
                         continue
 
                     # --- Cooldown check: prevent re-entry too soon after close ---
@@ -224,6 +257,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                                 "(strategy=%s)",
                                 symbol, timeframe, active_strategy.name,
                             )
+                            log_entries.append(PipelineLog(
+                                strategy_id=active_strategy.id, symbol=symbol,
+                                timeframe=timeframe, action="BUY",
+                                block_reason="cooldown",
+                                confluence_score=signal.confluence_score,
+                                regime=signal.regime,
+                            ))
                             continue
 
                     # --- Position-aware filter: prevent invalid signals ---
@@ -238,6 +278,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             "already exists (strategy=%s)",
                             symbol, timeframe, active_strategy.name,
                         )
+                        log_entries.append(PipelineLog(
+                            strategy_id=active_strategy.id, symbol=symbol,
+                            timeframe=timeframe, action="BUY",
+                            block_reason="position_filter",
+                            confluence_score=signal.confluence_score,
+                            regime=signal.regime,
+                        ))
                         continue
                     if signal.action == "SELL" and not buy_position:
                         logger.info(
@@ -245,6 +292,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             "position to close (strategy=%s)",
                             symbol, timeframe, active_strategy.name,
                         )
+                        log_entries.append(PipelineLog(
+                            strategy_id=active_strategy.id, symbol=symbol,
+                            timeframe=timeframe, action="SELL",
+                            block_reason="position_filter",
+                            confluence_score=signal.confluence_score,
+                            regime=signal.regime,
+                        ))
                         continue
 
                     # --- Multi-timeframe alignment gate ---
@@ -272,6 +326,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                                     symbol, timeframe, higher_tf,
                                     active_strategy.name,
                                 )
+                                log_entries.append(PipelineLog(
+                                    strategy_id=active_strategy.id, symbol=symbol,
+                                    timeframe=timeframe, action="BUY",
+                                    block_reason="mtf_filter",
+                                    confluence_score=signal.confluence_score,
+                                    regime=signal.regime,
+                                ))
                                 continue
                             if (
                                 signal.action == "SELL"
@@ -283,6 +344,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                                     symbol, timeframe, higher_tf,
                                     active_strategy.name,
                                 )
+                                log_entries.append(PipelineLog(
+                                    strategy_id=active_strategy.id, symbol=symbol,
+                                    timeframe=timeframe, action="SELL",
+                                    block_reason="mtf_filter",
+                                    confluence_score=signal.confluence_score,
+                                    regime=signal.regime,
+                                ))
                                 continue
 
                     entry_price = float(df["close"].iloc[-1])
@@ -322,6 +390,13 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             "Skipping duplicate pending signal: %s %s %s (strategy=%s)",
                             signal.action, symbol, timeframe, active_strategy.name,
                         )
+                        log_entries.append(PipelineLog(
+                            strategy_id=active_strategy.id, symbol=symbol,
+                            timeframe=timeframe, action=signal.action,
+                            block_reason="dedup",
+                            confluence_score=signal.confluence_score,
+                            regime=signal.regime,
+                        ))
                         continue
 
                     signal_row = SignalModel(
@@ -364,7 +439,23 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             signal_row.ai_quality_score,
                             (signal_row.ai_reasoning or "")[:100],
                         )
+                        log_entries.append(PipelineLog(
+                            strategy_id=active_strategy.id, symbol=symbol,
+                            timeframe=timeframe, action=signal.action,
+                            block_reason="ai_reject",
+                            confluence_score=signal.confluence_score,
+                            regime=signal.regime,
+                        ))
                         continue
+
+                    # Signal passed all gates — log as passed
+                    log_entries.append(PipelineLog(
+                        strategy_id=active_strategy.id, symbol=symbol,
+                        timeframe=timeframe, action=signal.action,
+                        block_reason=None,
+                        confluence_score=signal.confluence_score,
+                        regime=signal.regime,
+                    ))
 
                     # Collect for post-commit Redis publish
                     if pending_publishes is not None:
@@ -385,6 +476,15 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                     "Pipeline failed for %s %s (strategy=%s): %s",
                     symbol, timeframe, active_strategy.name, e,
                 )
+                log_entries.append(PipelineLog(
+                    strategy_id=active_strategy.id, symbol=symbol,
+                    timeframe=timeframe, action="NO_TRADE",
+                    block_reason="error",
+                ))
+
+    # Bulk-insert pipeline decision logs
+    if log_entries:
+        db.add_all(log_entries)
 
 
 async def _ai_enrich_signal(signal, signal_row, db, df):
