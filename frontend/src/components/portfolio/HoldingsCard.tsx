@@ -258,77 +258,51 @@ function DonutChart({
     return { d, color: s.color, label: s.label, pct: s.pct, value: s.value, idx: i };
   });
 
+  const hovered = hoveredIdx != null ? slices[hoveredIdx] : null;
+
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-      {/* Donut — responsive, left on desktop, centered on mobile */}
-      <div className="flex justify-center lg:justify-start lg:w-[45%] shrink-0">
-        <div className="relative w-full max-w-[200px]">
-          <svg
-            viewBox={`0 0 ${size} ${size}`}
-            className="w-full h-auto"
-          >
-            {arcs.map((arc) => (
-              <path
-                key={arc.idx}
-                d={arc.d}
-                fill={arc.color}
-                opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.4 : 1}
-                className="transition-opacity duration-150"
-                onMouseEnter={() => setHoveredIdx(arc.idx)}
-                onMouseLeave={() => setHoveredIdx(null)}
-                onClick={() => onSliceClick?.(arc.label)}
-                style={{ cursor: "pointer" }}
-              />
-            ))}
-            <text x={cx} y={cy - 6} textAnchor="middle" className="fill-(--color-text-secondary)" fontSize="9">
+    <div className="flex justify-center">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="w-full h-auto max-w-[240px]"
+      >
+        {arcs.map((arc) => (
+          <path
+            key={arc.idx}
+            d={arc.d}
+            fill={arc.color}
+            opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.35 : 1}
+            className="transition-opacity duration-150"
+            onMouseEnter={() => setHoveredIdx(arc.idx)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            onClick={() => onSliceClick?.(arc.label)}
+            style={{ cursor: "pointer" }}
+          />
+        ))}
+        {/* Center text — switches between total and hovered slice */}
+        {hovered ? (
+          <>
+            <text x={cx} y={cy - 14} textAnchor="middle" className="fill-(--color-text-secondary)" fontSize="8">
+              {hovered.label}
+            </text>
+            <text x={cx} y={cy + 2} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="12">
+              {fmtUsd(hovered.value)}
+            </text>
+            <text x={cx} y={cy + 16} textAnchor="middle" className="fill-(--color-text-secondary) font-medium" fontSize="9">
+              {hovered.pct.toFixed(1)}%
+            </text>
+          </>
+        ) : (
+          <>
+            <text x={cx} y={cy - 8} textAnchor="middle" className="fill-(--color-text-secondary)" fontSize="8">
               Total Value
             </text>
-            <text x={cx} y={cy + 12} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="14">
-              {fmtUsd(totalValue)}
+            <text x={cx} y={cy + 10} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="13">
+              {fmtCompact(totalValue)}
             </text>
-          </svg>
-          {/* Hover tooltip */}
-          <div className={cn("absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap transition-opacity duration-150", hoveredIdx != null ? "opacity-100" : "opacity-0")}>
-            {hoveredIdx != null && slices[hoveredIdx] && (
-              <span className="text-[11px] text-(--color-text-secondary)">
-                {slices[hoveredIdx].label}: {fmtUsd(slices[hoveredIdx].value)}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Legend — single column on desktop (beside donut), 2-col on mobile */}
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-x-3 gap-y-0.5">
-          {slices.map((s, i) => (
-            <div
-              key={`${s.label}-${i}`}
-              className={cn(
-                "flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 transition-colors duration-100",
-                hoveredIdx === i && "bg-(--color-bg-elevated)/60",
-              )}
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              onClick={() => onSliceClick?.(s.label)}
-            >
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-              <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
-              <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
-                {s.pct.toFixed(2)}%
-              </span>
-            </div>
-          ))}
-        </div>
-        {slices.length >= 8 && (
-          <button
-            onClick={() => onSliceClick?.("")}
-            className="text-[11px] font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors text-left px-2"
-          >
-            View All
-          </button>
+          </>
         )}
-      </div>
+      </svg>
     </div>
   );
 }
@@ -379,18 +353,18 @@ function PortfolioOverviewHeader({
     : 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {/* Current Balance */}
-      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1">
+      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
         <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Current Balance</p>
-        <p className="text-lg font-bold font-mono text-(--color-text-primary)">{fmtUsd(totalValue)}</p>
+        <p className="text-base sm:text-lg font-bold font-mono text-(--color-text-primary)">{fmtUsd(totalValue)}</p>
         <p className="text-xs text-(--color-text-secondary)">{combined.length} asset{combined.length !== 1 ? "s" : ""}</p>
       </div>
 
       {/* 24h Change */}
-      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1">
+      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
         <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">24h Portfolio Change</p>
-        <p className={cn("text-lg font-bold font-mono", pnlColor(change24hUsd))}>
+        <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(change24hUsd))}>
           {change24hUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))}
         </p>
         <div className="flex items-center gap-1">
@@ -406,11 +380,11 @@ function PortfolioOverviewHeader({
       </div>
 
       {/* Total P/L */}
-      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1">
+      <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
         <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">Total Profit / Loss</p>
         {hasCostBasis ? (
           <>
-            <p className={cn("text-lg font-bold font-mono", pnlColor(totalPnlUsd))}>
+            <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(totalPnlUsd))}>
               {totalPnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(totalPnlUsd))}
             </p>
             <div className="flex items-center gap-1">
@@ -436,7 +410,7 @@ function PortfolioOverviewHeader({
       <div
         onClick={topPerformer ? () => onTopClick(topPerformer.symbol) : undefined}
         className={cn(
-          "bg-(--color-bg-elevated)/50 rounded-lg px-4 py-3 space-y-1 transition-all duration-150",
+          "bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1 transition-all duration-150",
           topPerformer && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
         )}
       >
@@ -491,7 +465,7 @@ function SourceBreakdown({
   const isAllActive = activeSource === null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto">
+    <div className="flex gap-2 overflow-x-auto p-1 -m-1">
       {/* "All" card — always first, selected by default */}
       <button
         onClick={() => { if (!isAllActive && activeSource) onSourceClick(activeSource); }}
@@ -604,7 +578,7 @@ function PortfolioValueChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
-  const [hoverValue, setHoverValue] = useState<{ value: number; time: string } | null>(null);
+  const [hoverValue, setHoverValue] = useState<{ value: number; date: string; time: string } | null>(null);
 
   const has24hData = holdings.some((h) => h.change24hPct != null);
   const canRender = period === "24H" && has24hData && totalValue > 0;
@@ -676,6 +650,7 @@ function PortfolioValueChart({
         const d = new Date((param.time as number) * 1000);
         setHoverValue({
           value: data.value,
+          date: d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }),
           time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         });
       }
@@ -727,17 +702,17 @@ function PortfolioValueChart({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
         <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
           Portfolio Value
         </p>
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 shrink-0">
           {PERF_PERIODS.map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={cn(
-                "text-[10px] font-medium px-2 py-0.5 rounded transition-colors",
+                "text-[10px] font-medium px-1.5 sm:px-2 py-0.5 rounded transition-colors",
                 period === p
                   ? "bg-(--color-text-primary) text-(--color-bg-surface)"
                   : "text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated)/60",
@@ -749,19 +724,20 @@ function PortfolioValueChart({
         </div>
       </div>
 
-      {/* Value + change — shows hovered value or current */}
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-lg font-bold font-mono text-(--color-text-primary)">
-          {hoverValue ? fmtUsd(hoverValue.value) : fmtUsd(totalValue)}
-        </span>
-        {hoverValue ? (
-          <span className="text-xs font-mono text-(--color-text-secondary)">
-            {hoverValue.time}
+      {/* Value + change */}
+      <div className="mb-2 space-y-0.5">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="text-base sm:text-lg font-bold font-mono text-(--color-text-primary)">
+            {hoverValue ? fmtUsd(hoverValue.value) : fmtUsd(totalValue)}
           </span>
-        ) : (
-          <span className={cn("text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
+          <span className={cn("text-[11px] sm:text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
             {isPositive ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))} ({isPositive ? "+" : ""}{change24hPct.toFixed(2)}%)
           </span>
+        </div>
+        {hoverValue && (
+          <p className="text-[11px] font-mono text-(--color-text-secondary)">
+            {hoverValue.date}, {hoverValue.time}
+          </p>
         )}
       </div>
 
@@ -1590,7 +1566,7 @@ export function HoldingsCard() {
           {/* Left: Holdings donut */}
           <div
             className={cn(
-              "bg-(--color-bg-elevated)/30 rounded-lg p-4 transition-all duration-700 ease-out space-y-3",
+              "bg-(--color-bg-elevated)/30 rounded-lg p-3 sm:p-4 transition-all duration-700 ease-out space-y-3",
               reveal ? "opacity-100 scale-100" : "opacity-0 scale-90",
             )}
             style={{ transitionDelay: "150ms" }}
@@ -1621,7 +1597,7 @@ export function HoldingsCard() {
           {/* Right: Portfolio value chart */}
           <div
             className={cn(
-              "bg-(--color-bg-elevated)/30 rounded-lg p-4 transition-all duration-600 ease-out min-w-0",
+              "bg-(--color-bg-elevated)/30 rounded-lg p-3 sm:p-4 transition-all duration-600 ease-out min-w-0 min-h-[280px]",
               reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3",
             )}
             style={{ transitionDelay: "250ms" }}
