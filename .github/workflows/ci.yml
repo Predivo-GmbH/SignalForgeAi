@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: "backend/pyproject.toml"
       - run: pip install -e ".[dev]"
       - run: ruff check app/
+      - name: Import smoke test (fast-fail)
+        run: pytest tests/test_import_smoke.py -v
       - run: pytest -v --tb=short
       - name: Security scan
         run: pip install bandit && bandit -r app/ -ll -q
@@ -56,5 +58,6 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run build
+      - run: npm test
       - name: Dependency audit
         run: npm audit --audit-level=critical
