@@ -463,7 +463,13 @@ def test_credit_hard_stop_allows_when_under_budget():
     expected = {"result": "under_budget"}
     mock_msg = _mock_message(expected)
     mock_redis = MagicMock()
-    mock_redis.get.return_value = b"2.50"  # Under the $5.00 limit
+
+    def _get_side_effect(key):
+        if key == "ai_cumulative_cost":
+            return b"2.50"  # Under the $5.00 limit
+        return None  # ai_prepaid_credit → falls back to settings
+
+    mock_redis.get.side_effect = _get_side_effect
     mock_redis.incr.return_value = 10
 
     mock_sync_client = MagicMock()
@@ -496,6 +502,7 @@ def test_credit_hard_stop_skipped_when_prepaid_zero():
     expected = {"result": "no_credit_check"}
     mock_msg = _mock_message(expected)
     mock_redis = MagicMock()
+    mock_redis.get.return_value = None  # No Redis credit → falls back to settings (0.0)
     mock_redis.incr.return_value = 1
 
     mock_sync_client = MagicMock()
@@ -514,8 +521,6 @@ def test_credit_hard_stop_skipped_when_prepaid_zero():
         result = c.ask_json_sync(ModelTier.FAST, "system", "user", cache_ttl=0)
 
     assert result == expected
-    # Verify Redis.get was NOT called (no credit check when prepaid is 0)
-    mock_redis.get.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -535,6 +540,7 @@ def test_ask_json_sync_records_usage():
     expected = {"analysis": "good"}
     mock_msg = _mock_message(expected)
     mock_redis = MagicMock()
+    mock_redis.get.return_value = None  # No Redis credit → skip credit check
     mock_redis.incr.return_value = 1
 
     mock_sync_client = MagicMock()
@@ -704,6 +710,7 @@ def test_insight_type_propagated_sync():
     expected = {"ok": True}
     mock_msg = _mock_message(expected)
     mock_redis = MagicMock()
+    mock_redis.get.return_value = None  # No Redis credit → skip credit check
     mock_redis.incr.return_value = 1
 
     mock_sync_client = MagicMock()

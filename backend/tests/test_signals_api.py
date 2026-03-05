@@ -9,10 +9,15 @@ from app.models.signal import Signal
 
 
 @pytest.fixture
-def auth_headers():
+def test_user_id():
+    """Return a stable test user UUID."""
+    return str(uuid.uuid4())
+
+
+@pytest.fixture
+def auth_headers(test_user_id):
     """Return valid auth headers for a test user."""
-    user_id = str(uuid.uuid4())
-    token = create_access_token(user_id)
+    token = create_access_token(test_user_id)
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -103,7 +108,9 @@ class TestGetSignal:
 
 class TestListSignalsByStrategy:
     @pytest.mark.asyncio
-    async def test_filter_by_strategy_id(self, client, auth_headers):
+    async def test_filter_by_strategy_id(
+        self, client, auth_headers, test_user_id,
+    ):
         """Signals should be filterable by strategy_id."""
         from app.core.database import get_db
         from app.main import app as test_app
@@ -111,9 +118,11 @@ class TestListSignalsByStrategy:
         db_gen = test_app.dependency_overrides[get_db]()
         db = await db_gen.__anext__()
 
+        uid = uuid.UUID(test_user_id)
         strategy_id = uuid.uuid4()
         # Insert a signal WITH strategy_id
         sig1 = Signal(
+            user_id=uid,
             strategy_id=strategy_id,
             symbol="BTC/USDT",
             timeframe="1h",
@@ -127,6 +136,7 @@ class TestListSignalsByStrategy:
         )
         # Insert a signal WITHOUT strategy_id
         sig2 = Signal(
+            user_id=uid,
             symbol="ETH/USDT",
             timeframe="1h",
             direction="SELL",
