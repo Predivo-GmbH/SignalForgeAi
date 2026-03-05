@@ -2,7 +2,7 @@
 
 import json
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -10,7 +10,6 @@ from sqlalchemy import select
 
 from app.models.ai_insight import AIInsight
 from tests.conftest import test_session
-
 
 # ---------------------------------------------------------------------------
 # Helpers

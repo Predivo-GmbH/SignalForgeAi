@@ -1,7 +1,5 @@
 """Tests for portfolio backtest runner and strategy backtest API endpoint."""
 
-import numpy as np
-import pandas as pd
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -235,10 +233,10 @@ class TestStrategyBacktestAPI:
 
     @pytest.mark.asyncio
     async def test_strategy_backtest_conservative_preset(self, auth_headers):
-        plan = _make_sample_plan(["BTC/USDT"], preset="conservative_swing")
-        plan["risk_config"]["min_confluence"] = 70
-        plan["risk_config"]["max_risk_per_trade"] = 0.01
-        plan["risk_config"]["atr_sl_multiplier"] = 2.5
+        plan = _make_sample_plan(["BTC/USDT"])
+        plan["strategy_config"]["min_confluence"] = 70
+        plan["strategy_config"]["max_risk_per_trade"] = 0.01
+        plan["strategy_config"]["atr_sl_multiplier"] = 2.5
 
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"

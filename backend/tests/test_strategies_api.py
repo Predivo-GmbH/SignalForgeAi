@@ -12,7 +12,7 @@ async def test_user(client):
     """Create a test user via registration and return (user_id, headers)."""
     reg = await client.post("/api/auth/register", json={
         "email": f"strat-{uuid.uuid4().hex[:8]}@test.com",
-        "password": "testpass123",
+        "password": "Testpass123",
     })
     data = reg.json()
     from app.auth.jwt import decode_token

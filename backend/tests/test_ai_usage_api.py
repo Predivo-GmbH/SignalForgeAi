@@ -10,7 +10,6 @@ from app.auth.jwt import create_access_token
 from app.models.ai_insight import AIInsight
 from tests.conftest import test_session
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -71,7 +70,10 @@ class TestGetAiUsage:
     @pytest.mark.asyncio
     @patch("app.advisor.anthropic_admin.available", return_value=False)
     async def test_empty_usage(self, _mock_admin, client):
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=5.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=5.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         assert response.status_code == 200
@@ -93,7 +95,10 @@ class TestGetAiUsage:
             _make_insight(cost_usd=0.03, latency_ms=3000),
         ])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=5.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=5.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         assert response.status_code == 200
@@ -112,7 +117,10 @@ class TestGetAiUsage:
             _make_insight(model_used="claude-haiku-4-5-20251001", cost_usd=0.001, latency_ms=300),
         ])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         by_model = {m["model"]: m for m in response.json()["by_model"]}
@@ -131,7 +139,10 @@ class TestGetAiUsage:
             _make_insight(insight_type="risk_tuning", cost_usd=0.003),
         ])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         by_type = {t["insight_type"]: t for t in response.json()["by_type"]}
@@ -151,7 +162,10 @@ class TestGetAiUsage:
             _make_insight(cost_usd=0.05, created_at=yesterday),
         ])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         daily = {d["date"]: d for d in response.json()["daily_costs"]}
@@ -167,7 +181,10 @@ class TestGetAiUsage:
             for i in range(25)
         ])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         recent = response.json()["recent_calls"]
@@ -183,7 +200,10 @@ class TestGetAiUsage:
             cost_usd=0.002, input_tokens=100, output_tokens=50, latency_ms=450,
         )])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         call = response.json()["recent_calls"][0]
@@ -198,7 +218,10 @@ class TestGetAiUsage:
     async def test_credit_info_calculation(self, _mock_admin, client):
         await _seed([_make_insight(cost_usd=1.00), _make_insight(cost_usd=0.50)])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=5.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=5.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         credit = response.json()["credit"]
@@ -211,7 +234,10 @@ class TestGetAiUsage:
     async def test_credit_remaining_floors_at_zero(self, _mock_admin, client):
         await _seed([_make_insight(cost_usd=10.0)])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=5.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=5.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         assert response.json()["credit"]["remaining_usd"] == 0.0
@@ -225,8 +251,14 @@ class TestGetAiUsage:
             _make_insight(cost_usd=0.99, created_at=now - timedelta(days=60)),
         ])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=5.0):
-            response = await client.get("/api/ai-usage", params={"days": 7}, headers=_auth_headers())
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=5.0,
+            ):
+            response = await client.get(
+                    "/api/ai-usage", params={"days": 7},
+                    headers=_auth_headers(),
+                )
 
         data = response.json()
         assert data["summary"]["total_calls"] == 1
@@ -240,7 +272,10 @@ class TestGetAiUsage:
         now = datetime.now(UTC)
         await _seed([_make_insight(cost_usd=0.05, created_at=now - timedelta(days=15))])
 
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         assert response.json()["summary"]["total_calls"] == 1
@@ -248,7 +283,10 @@ class TestGetAiUsage:
     @pytest.mark.asyncio
     @patch("app.advisor.anthropic_admin.available", return_value=False)
     async def test_source_is_local_without_admin_key(self, _mock_admin, client):
-        with patch("app.api.ai_usage._get_prepaid_credit", new_callable=AsyncMock, return_value=0.0):
+        with patch(
+                "app.api.ai_usage._get_prepaid_credit",
+                new_callable=AsyncMock, return_value=0.0,
+            ):
             response = await client.get("/api/ai-usage", headers=_auth_headers())
 
         assert response.json()["source"] == "local"

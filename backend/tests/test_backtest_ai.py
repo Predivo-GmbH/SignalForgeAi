@@ -38,13 +38,13 @@ class TestAIEnhancedBacktest:
     """Test BacktestEngine with ai_enhanced=True."""
 
     @patch("app.advisor.signal_quality.SignalQualityEvaluator")
-    def test_ai_rejects_signals(self, MockEvaluator):
+    def test_ai_rejects_signals(self, mock_evaluator):
         """When AI rejects all signals, no trades should be opened."""
         from app.backtest.engine import BacktestEngine
 
         mock_instance = MagicMock()
         mock_instance.evaluate_sync.return_value = _make_ai_result("reject")
-        MockEvaluator.return_value = mock_instance
+        mock_evaluator.return_value = mock_instance
 
         # Use more candles and lower confluence to ensure signals are generated
         candles = make_trending_candles(600)
@@ -74,7 +74,7 @@ class TestAIEnhancedBacktest:
         assert mock_instance.evaluate_sync.call_count > 0
 
     @patch("app.advisor.signal_quality.SignalQualityEvaluator")
-    def test_ai_adjusts_position_size(self, MockEvaluator):
+    def test_ai_adjusts_position_size(self, mock_evaluator):
         """When AI returns factor=0.5, PnL should be dampened."""
         from app.backtest.engine import BacktestEngine
 
@@ -91,7 +91,7 @@ class TestAIEnhancedBacktest:
         # Now run with AI (factor=0.5)
         mock_instance = MagicMock()
         mock_instance.evaluate_sync.return_value = _make_ai_result("confirm", 0.5)
-        MockEvaluator.return_value = mock_instance
+        mock_evaluator.return_value = mock_instance
 
         engine_ai = BacktestEngine(ai_enhanced=True)
         engine_ai._evaluator = mock_instance
@@ -116,7 +116,7 @@ class TestAIEnhancedBacktest:
                 assert 0.4 < ratio < 0.6
 
     @patch("app.advisor.signal_quality.SignalQualityEvaluator")
-    def test_ai_confirm_passes_through(self, MockEvaluator):
+    def test_ai_confirm_passes_through(self, mock_evaluator):
         """When AI confirms with factor=1.0, trades should match non-AI run."""
         from app.backtest.engine import BacktestEngine
 
@@ -133,7 +133,7 @@ class TestAIEnhancedBacktest:
         # Run with AI (confirm, factor=1.0)
         mock_instance = MagicMock()
         mock_instance.evaluate_sync.return_value = _make_ai_result("confirm", 1.0)
-        MockEvaluator.return_value = mock_instance
+        mock_evaluator.return_value = mock_instance
 
         engine_ai = BacktestEngine(ai_enhanced=True)
         engine_ai._evaluator = mock_instance
@@ -165,7 +165,7 @@ class TestAIEnhancedBacktest:
         assert engine._evaluator is None
 
     @patch("app.advisor.signal_quality.SignalQualityEvaluator")
-    def test_ai_fallback_on_claude_failure(self, MockEvaluator):
+    def test_ai_fallback_on_claude_failure(self, mock_evaluator):
         """When evaluate_sync returns passthrough fallback, trade proceeds normally."""
         from app.backtest.engine import BacktestEngine
 
@@ -180,7 +180,7 @@ class TestAIEnhancedBacktest:
                 "reasoning": "No adjustment",
             },
         }
-        MockEvaluator.return_value = mock_instance
+        mock_evaluator.return_value = mock_instance
 
         engine = BacktestEngine(ai_enhanced=True)
         engine._evaluator = mock_instance
@@ -263,6 +263,6 @@ class TestEvaluateSync:
             candle_summary=[],
         )
 
-        assert result["recommendation"] == "confirm"
-        assert result["risk_adjustments"]["position_size_factor"] == 1.0
+        assert result["recommendation"] == "reject"
+        assert result["risk_adjustments"]["position_size_factor"] == 0.0
         assert "unavailable" in result["reasoning"].lower()

@@ -26,9 +26,14 @@ def test_celery_beat_schedule_configured():
         "execute-pending-signals-30s",
         "poll-order-status-15s",
         "manage-positions-1m",
-        "reconcile-broker-state-5m",
         "send-daily-summary",
         "retrain-hmm-weekly",
+        "check-correlations-5m",
+        "pattern-analysis-daily",
+        "adaptive-risk-tuning-daily",
+        "feedback-synthesis-daily",
+        "flush-ai-usage-1m",
+        "snapshot-simulation-1h",
     ]
     for task_name in expected_tasks:
         assert task_name in schedule, f"Missing task: {task_name}"

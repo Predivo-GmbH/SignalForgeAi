@@ -86,6 +86,16 @@ def mock_task_session():
     return _mock
 
 
+@pytest.fixture(autouse=True)
+def _mock_holdings_fetch():
+    """Bypass holdings cap check in execute_signals — no exchange holdings in tests."""
+    async def _raise(*args, **kwargs):
+        raise RuntimeError("No exchange holdings in test")
+
+    with patch("app.api.holdings._fetch_exchange_holdings", _raise):
+        yield
+
+
 # ===================================================================
 # Task registration smoke tests
 # ===================================================================
@@ -533,7 +543,6 @@ class TestPollOrders:
             )
             db.add(order)
             await db.commit()
-            order_id = order.id
 
         with (
             patch("app.core.database.task_session", mock_task_session),

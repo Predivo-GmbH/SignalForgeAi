@@ -64,11 +64,11 @@ class TestMarketAPI:
         assert data["timeframe"] == "5m"
 
     @pytest.mark.asyncio
-    async def test_engine_status(self):
+    async def test_engine_status(self, auth_headers):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
-            resp = await ac.get("/api/engine/status")
+            resp = await ac.get("/api/engine/status", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "layers" in data
@@ -78,11 +78,11 @@ class TestMarketAPI:
         assert len(data["layers"]) == 6
 
     @pytest.mark.asyncio
-    async def test_engine_status_has_supported_symbols(self):
+    async def test_engine_status_has_supported_symbols(self, auth_headers):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
-            resp = await ac.get("/api/engine/status")
+            resp = await ac.get("/api/engine/status", headers=auth_headers)
         data = resp.json()
         assert "supported_symbols" in data
         assert "supported_timeframes" in data

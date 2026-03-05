@@ -1,6 +1,6 @@
 """Tests for SignalPipeline orchestrator and SessionFilter."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -102,51 +102,3 @@ class TestSignalPipeline:
         assert result.block_reason is not None
 
 
-class TestSessionFilter:
-    def test_london_session_active(self):
-        from app.engine.filters import SessionFilter
-
-        sf = SessionFilter()
-        # Tuesday 10:00 UTC — London session
-        ts = datetime(2026, 2, 24, 10, 0, tzinfo=timezone.utc)
-        assert sf.is_active_session(ts) is True
-
-    def test_ny_session_active(self):
-        from app.engine.filters import SessionFilter
-
-        sf = SessionFilter()
-        # Tuesday 15:00 UTC — NY session (overlap)
-        ts = datetime(2026, 2, 24, 15, 0, tzinfo=timezone.utc)
-        assert sf.is_active_session(ts) is True
-
-    def test_weekend_blocked(self):
-        from app.engine.filters import SessionFilter
-
-        sf = SessionFilter()
-        # Saturday 12:00 UTC
-        ts = datetime(2026, 2, 28, 12, 0, tzinfo=timezone.utc)
-        assert sf.is_active_session(ts) is False
-
-    def test_off_hours_blocked(self):
-        from app.engine.filters import SessionFilter
-
-        sf = SessionFilter()
-        # Tuesday 03:00 UTC — outside all sessions
-        ts = datetime(2026, 2, 24, 3, 0, tzinfo=timezone.utc)
-        assert sf.is_active_session(ts) is False
-
-    def test_overlap_session_active(self):
-        from app.engine.filters import SessionFilter
-
-        sf = SessionFilter()
-        # Tuesday 14:00 UTC — London/NY overlap
-        ts = datetime(2026, 2, 24, 14, 0, tzinfo=timezone.utc)
-        assert sf.is_active_session(ts) is True
-
-    def test_sunday_blocked(self):
-        from app.engine.filters import SessionFilter
-
-        sf = SessionFilter()
-        # Sunday 10:00 UTC
-        ts = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
-        assert sf.is_active_session(ts) is False

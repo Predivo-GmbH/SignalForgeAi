@@ -103,7 +103,7 @@ async def registered_user(client):
     email = f"advisor-{uuid.uuid4().hex[:8]}@test.com"
     reg = await client.post("/api/auth/register", json={
         "email": email,
-        "password": "testpass123",
+        "password": "Testpass123",
     })
     data = reg.json()
     headers = {"Authorization": f"Bearer {data['access_token']}"}
@@ -216,7 +216,7 @@ class TestScanMarket:
             )
 
         assert response.status_code == 502
-        assert "Cannot connect to Binance" in response.json()["detail"]
+        assert "Cannot connect to exchange" in response.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_scan_market_fetch_failure(self, client, auth_headers):
@@ -497,7 +497,7 @@ class TestDeployPlan:
 
     @pytest.mark.asyncio
     async def test_deploy_creates_active_strategy(self, client, registered_user):
-        with patch("app.worker.celery_app") as mock_celery:
+        with patch("app.worker.celery_app"):
             response = await client.post(
                 "/api/advisor/deploy",
                 json={"plan": MOCK_PLAN},
