@@ -128,6 +128,10 @@ async def _fetch_prices_from_exchange(
 # Fallback exchanges for symbols not found on Binance
 _FALLBACK_EXCHANGES = ["kucoin", "kraken", "mexc", "gateio"]
 
+# Symbols with known exchange ticker collisions — skip exchange lookups,
+# go straight to CoinGecko which has explicit ID overrides for these.
+_COINGECKO_ONLY = {"APAD", "ABX", "EX", "AYIN", "QUBIC"}
+
 
 async def _fetch_prices(
     symbols: list[str],
@@ -151,12 +155,17 @@ async def _fetch_prices(
     if not non_stable:
         return result
 
-    # Primary: Binance
-    binance_result = await _fetch_prices_from_exchange("binance", non_stable)
-    result.update(binance_result)
+    # Separate CoinGecko-only symbols from exchange-eligible ones
+    cg_only = [s for s in non_stable if s in _COINGECKO_ONLY]
+    exchange_eligible = [s for s in non_stable if s not in _COINGECKO_ONLY]
+
+    # Primary: Binance (only for exchange-eligible symbols)
+    if exchange_eligible:
+        binance_result = await _fetch_prices_from_exchange("binance", exchange_eligible)
+        result.update(binance_result)
 
     # Find symbols still missing a price
-    missing = [s for s in non_stable if s not in result]
+    missing = [s for s in exchange_eligible if s not in result]
 
     # Fallback exchanges for remaining symbols
     for exchange_id in _FALLBACK_EXCHANGES:
@@ -166,7 +175,8 @@ async def _fetch_prices(
         result.update(fallback_result)
         missing = [s for s in missing if s not in result]
 
-    # Final fallback: CoinGecko (covers virtually every listed coin)
+    # CoinGecko: covers CG-only symbols + any still-missing exchange symbols
+    missing = missing + cg_only
     if missing:
         from app.data.coingecko import fetch_prices as cg_fetch_prices
 

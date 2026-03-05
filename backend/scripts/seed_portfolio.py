@@ -73,8 +73,8 @@ MANUAL_HOLDINGS: list[dict] = [
     {
         "symbol": "APAD",
         "quantity": 15000,
-        "purchase_price": 0.0003871,  # 0.0% PNL (airdrop)
-        "notes": "CoinGecko import",
+        "purchase_price": None,  # airdrop — no cost basis
+        "notes": "Airdrop",
     },
     {
         "symbol": "EX",
@@ -108,7 +108,7 @@ COST_BASIS_OVERRIDES: list[dict] = [
     {"symbol": "ZEPH", "purchase_price": 0.8193, "notes": "CoinGecko -47.2%"},
     {"symbol": "USDT", "purchase_price": 1.00, "notes": "Stablecoin"},
     {"symbol": "ABX", "purchase_price": 0.1602, "notes": "CoinGecko -90.3%"},
-    {"symbol": "APAD", "purchase_price": 0.0003871, "notes": "CoinGecko 0.0%"},
+    # APAD excluded — airdrop, no cost basis
     {"symbol": "EX", "purchase_price": 0.01127, "notes": "CoinGecko +4.3%"},
     {"symbol": "AYIN", "purchase_price": 19.36, "notes": "CoinGecko -99.9%"},
 ]

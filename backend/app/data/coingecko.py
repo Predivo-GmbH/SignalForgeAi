@@ -97,9 +97,9 @@ _SYMBOL_OVERRIDES: dict[str, str] = {
     "RIO": "realio-network",
     "ORAI": "oraichain-token",
     "ZEPH": "zephyr-protocol",
-    "ABX": "abyss-token",
-    "APAD": "anypad",
-    "EX": "exmo-coin",
+    "ABX": "alphbanx",
+    "APAD": "alphpad",
+    "EX": "elexium",
     "AYIN": "ayin",
 }
 

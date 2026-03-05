@@ -56,6 +56,7 @@ const SOURCE_STYLE: Record<string, { label: string; cls: string; color: string }
 
 const STABLECOINS = new Set(["USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"]);
 const SMALL_BALANCE_THRESHOLD = 1; // $1
+const TOP_PERFORMER_MIN_VALUE = 50; // exclude tiny positions from top performer
 
 /* ---- Helpers ---- */
 
@@ -138,11 +139,11 @@ function DonutChart({
   totalValue: number;
   onSliceClick?: (label: string) => void;
 }) {
-  const size = 200;
+  const size = 180;
   const cx = size / 2;
   const cy = size / 2;
-  const outerR = 88;
-  const innerR = 62;
+  const outerR = 80;
+  const innerR = 56;
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   // Build arcs
@@ -179,63 +180,63 @@ function DonutChart({
   });
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        className="shrink-0"
-      >
-        {arcs.map((arc) => (
-          <path
-            key={arc.idx}
-            d={arc.d}
-            fill={arc.color}
-            opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.4 : 1}
-            className="transition-opacity duration-150"
-            onMouseEnter={() => setHoveredIdx(arc.idx)}
-            onMouseLeave={() => setHoveredIdx(null)}
-            onClick={() => onSliceClick?.(arc.label)}
-            style={{ cursor: "pointer" }}
-          />
-        ))}
-        {/* Center text */}
-        <text x={cx} y={cy - 8} textAnchor="middle" className="fill-(--color-text-secondary) text-[10px]" fontSize="10">
-          Total Value
-        </text>
-        <text x={cx} y={cy + 12} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="16">
-          {fmtUsd(totalValue)}
-        </text>
-      </svg>
-
-      {/* Hover tooltip text — fixed height to prevent layout shift */}
-      <div className={cn("text-center h-5 -mt-1 transition-opacity duration-150", hoveredIdx != null ? "opacity-100" : "opacity-0")}>
-        {hoveredIdx != null && slices[hoveredIdx] && (
-          <>
-            <span className="text-xs font-semibold text-(--color-text-primary)">
-              {slices[hoveredIdx].label}
+    <div className="flex items-start gap-5">
+      {/* Donut SVG */}
+      <div className="shrink-0 flex flex-col items-center">
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="shrink-0"
+        >
+          {arcs.map((arc) => (
+            <path
+              key={arc.idx}
+              d={arc.d}
+              fill={arc.color}
+              opacity={hoveredIdx != null && hoveredIdx !== arc.idx ? 0.4 : 1}
+              className="transition-opacity duration-150"
+              onMouseEnter={() => setHoveredIdx(arc.idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              onClick={() => onSliceClick?.(arc.label)}
+              style={{ cursor: "pointer" }}
+            />
+          ))}
+          {/* Center text */}
+          <text x={cx} y={cy - 6} textAnchor="middle" className="fill-(--color-text-secondary) text-[9px]" fontSize="9">
+            Total Value
+          </text>
+          <text x={cx} y={cy + 12} textAnchor="middle" className="fill-(--color-text-primary) font-bold" fontSize="14">
+            {fmtUsd(totalValue)}
+          </text>
+        </svg>
+        {/* Hover tooltip below chart */}
+        <div className={cn("text-center h-5 mt-1 transition-opacity duration-150", hoveredIdx != null ? "opacity-100" : "opacity-0")}>
+          {hoveredIdx != null && slices[hoveredIdx] && (
+            <span className="text-[11px] text-(--color-text-secondary)">
+              {fmtUsd(slices[hoveredIdx].value)}
             </span>
-            <span className="text-xs text-(--color-text-secondary) ml-1.5">
-              {fmtUsd(slices[hoveredIdx].value)} ({slices[hoveredIdx].pct.toFixed(1)}%)
-            </span>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Legend */}
-      <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 w-full">
+      {/* Legend — single column to the right of donut */}
+      <div className="flex flex-col gap-1.5 pt-1 min-w-0">
         {slices.map((s, i) => (
           <div
             key={`${s.label}-${i}`}
-            className="flex items-center gap-2 cursor-pointer"
+            className={cn(
+              "flex items-center gap-2.5 cursor-pointer rounded-md px-1.5 py-0.5 -mx-1.5 transition-colors duration-100",
+              hoveredIdx === i && "bg-(--color-bg-elevated)/60",
+            )}
             onMouseEnter={() => setHoveredIdx(i)}
             onMouseLeave={() => setHoveredIdx(null)}
             onClick={() => onSliceClick?.(s.label)}
           >
-            <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
-            <span className="text-[11px] text-(--color-text-secondary) truncate">{s.label}</span>
-            <span className="text-[11px] font-mono font-medium text-(--color-text-primary) ml-auto">
-              {s.pct.toFixed(1)}%
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="text-xs text-(--color-text-secondary) truncate">{s.label}</span>
+            <span className="text-xs font-mono font-medium text-(--color-text-primary) ml-auto tabular-nums whitespace-nowrap">
+              {s.pct.toFixed(2)}%
             </span>
           </div>
         ))}
@@ -273,8 +274,8 @@ function PortfolioOverviewHeader({
   const totalPnlPct = totalCostBasis > 0 ? (totalPnlUsd / totalCostBasis) * 100 : null;
   const hasCostBasis = combined.some((c) => c.avgCost != null);
 
-  // Top performer 24h
-  const withChange = combined.filter((c) => c.change24hPct != null);
+  // Top performer 24h (exclude small positions)
+  const withChange = combined.filter((c) => c.change24hPct != null && c.totalValue >= TOP_PERFORMER_MIN_VALUE);
   const topPerformer = withChange.length > 0
     ? withChange.reduce((a, b) => ((a.change24hPct ?? 0) > (b.change24hPct ?? 0) ? a : b))
     : null;
@@ -992,7 +993,7 @@ export function HoldingsCard() {
   const [editItem, setEditItem] = useState<HoldingItem | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [hideSmall, setHideSmall] = useState(false);
+  const [hideSmall, setHideSmall] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
@@ -1223,15 +1224,18 @@ export function HoldingsCard() {
 
         {/* Donut + Source breakdown side by side */}
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Donut chart */}
+          {/* Donut chart section */}
           {donutSlices.length > 0 && donutTotal > 0 && (
             <div
               className={cn(
-                "shrink-0 transition-all duration-700 ease-out",
+                "shrink-0 transition-all duration-700 ease-out space-y-3",
                 reveal ? "opacity-100 scale-100" : "opacity-0 scale-90",
               )}
               style={{ transitionDelay: "150ms" }}
             >
+              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+                Holdings
+              </p>
               <DonutChart
                 slices={donutSlices}
                 totalValue={donutTotal}
@@ -1310,7 +1314,7 @@ export function HoldingsCard() {
         style={{ transitionDelay: "200ms" }}
       >
         {/* Table header with controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <h3 className="text-sm font-semibold text-(--color-text-primary)">All Assets</h3>
 
           <div className="flex items-center gap-3">
@@ -1354,8 +1358,10 @@ export function HoldingsCard() {
                 {hideSmall ? `${smallCount} hidden` : `Hide small (<$1)`}
               </button>
             )}
+          </div>
 
-            {/* Add holding */}
+          {/* Add holding — right-aligned */}
+          <div className="sm:ml-auto">
             {!showForm && !editItem && (
               <button
                 onClick={() => setShowForm(true)}
