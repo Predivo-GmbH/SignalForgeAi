@@ -1085,7 +1085,7 @@ function ExchangeRoutingTab() {
                         )}
                       >
                         {SUPPORTED_EXCHANGES.map((ex) => (
-                          <option key={ex.id} value={ex.id}>
+                          <option key={ex.id} value={ex.id} className="bg-[#1a1b2e] text-white">
                             {ex.name}
                           </option>
                         ))}
