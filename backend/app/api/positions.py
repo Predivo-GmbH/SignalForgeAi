@@ -101,14 +101,32 @@ async def account_state(
 ):
     """Return current account state aggregated from DB positions and trades.
 
-    - **equity**: starting equity (10 000) + sum of realised PnL from trades
+    - **equity**: live portfolio value + sum of realised PnL from trades
     - **daily_pnl**: sum of PnL from trades closed today
     - **open_positions**: count of currently open positions
     """
     import uuid
     from datetime import date, datetime, timezone
 
+    from app.api.holdings import (
+        _enrich_holdings,
+        _fetch_exchange_holdings,
+        _fetch_manual_holdings,
+        _fetch_prices,
+    )
+
     uid = uuid.UUID(user_id)
+
+    # Live portfolio value from holdings
+    exchange = await _fetch_exchange_holdings(db, user_id)
+    manual = await _fetch_manual_holdings(db, user_id)
+    all_holdings = exchange + manual
+    if all_holdings:
+        unique_symbols = list({h.symbol.upper() for h in all_holdings})
+        prices = await _fetch_prices(unique_symbols)
+        _, portfolio_value = _enrich_holdings(all_holdings, prices)
+    else:
+        portfolio_value = 0.0
 
     # Realised PnL — lifetime sum of closed trades
     res = await db.execute(
@@ -135,19 +153,8 @@ async def account_state(
     )
     open_count: int = res.scalar_one()
 
-    # Pull account equity from user's active strategy config, fallback to 10k
-    from app.models.strategy import Strategy
-
-    strat_res = await db.execute(
-        select(Strategy.config).where(
-            Strategy.user_id == uid, Strategy.is_active == True  # noqa: E712
-        ).limit(1)
-    )
-    strat_cfg = strat_res.scalar_one_or_none() or {}
-    initial_equity = float(strat_cfg.get("account_equity", 10_000.0))
-
     return {
-        "equity": round(initial_equity + realized_pnl, 2),
+        "equity": round(portfolio_value + realized_pnl, 2),
         "daily_pnl": round(daily_pnl, 2),
         "open_positions": open_count,
         "max_positions": 5,
