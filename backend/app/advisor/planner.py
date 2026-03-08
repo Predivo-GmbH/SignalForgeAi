@@ -55,6 +55,21 @@ RISK FEATURES (enable/disable based on conditions):
 - max_hold_hours (1-168): Close position after this many hours.
 - correlation_monitor_enabled (bool) + correlation_threshold (0.3-0.95)
 
+USDT RESERVE POLICY:
+You must also recommend the optimal USDT reserve percentage for the portfolio.
+This controls how much of the portfolio value stays as USDT (dry powder) and is
+NOT deployed into trades. The reserve ensures the system can act on buy signals.
+
+Guidelines for usdt_reserve_pct (0.0 - 0.50):
+- Strong bull market, high trending%: 0.05 - 0.10 (maximize exposure)
+- Normal/mixed market: 0.10 - 0.20 (balanced)
+- Weak/choppy market, low trending%: 0.15 - 0.25 (preserve capital)
+- Bear market, high chaotic%: 0.25 - 0.40 (defensive, keep dry powder)
+- Extreme fear/crash conditions: 0.35 - 0.50 (cash-heavy, wait for opportunities)
+
+Include "usdt_reserve_pct" in strategy_config and "reserve_reasoning" (1 sentence
+explaining your choice) in the top-level response.
+
 CRITICAL RULES:
 - Choose parameters that match current market conditions. If the market is
   not suitable for trading, strict parameters that produce zero trades is
@@ -119,9 +134,11 @@ Return ONLY valid JSON:
     "cppi_enabled": false,
     "max_hold_hours": 24,
     "correlation_monitor_enabled": true,
-    "correlation_threshold": 0.7
+    "correlation_threshold": 0.7,
+    "usdt_reserve_pct": 0.15
   }},
   "reasoning": "Detailed explanation of why these parameters are optimal",
+  "reserve_reasoning": "Why this USDT reserve % is optimal for current conditions",
   "expected_behavior": "What to expect over 1 week (2-3 sentences)",
   "warnings": ["risk warning 1", "risk warning 2"]
 }}"""

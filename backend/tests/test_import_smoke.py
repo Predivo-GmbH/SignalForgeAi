@@ -107,6 +107,11 @@ DEFERRED_IMPORTS = [
     ("app.core.token_blacklist", "are_user_tokens_invalid"),
     ("app.core.token_blacklist", "blacklist_token"),
     ("app.core.token_blacklist", "blacklist_all_user_tokens"),
+    # --- app/api/simulation.py (AI reserve recommendation) ---
+    ("app.advisor.claude_client", "ModelTier"),
+    ("app.advisor.claude_client", "claude_client"),
+    # --- app/tasks/execute_signals.py (paper portfolio update) ---
+    ("app.models.simulation", "PaperSimulation"),
     # --- app/tasks (Celery tasks) ---
     ("app.tasks.task_utils", "task_lock"),
     ("app.core.database", "task_session"),

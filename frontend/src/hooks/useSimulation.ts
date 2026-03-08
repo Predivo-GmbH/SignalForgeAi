@@ -22,6 +22,7 @@ export interface SimulationData {
   stopped_at: string | null;
   initial_value_usd: number;
   initial_holdings: SimulationHolding[];
+  paper_holdings: SimulationHolding[];
   snapshots: SimulationSnapshot[];
   latest_bh_value: number;
   latest_sf_value: number;
@@ -30,6 +31,62 @@ export interface SimulationData {
   sf_trades: number;
   sf_win_rate: number;
   sf_open_positions: number;
+  // Reserve info
+  usdt_reserve_pct: number;
+  usdt_reserve_mode: "ai" | "manual" | "auto_accept";
+  usdt_balance: number;
+  ai_suggested_reserve_pct: number | null;
+  ai_reserve_reasoning: string | null;
+}
+
+export interface PortfolioHolding {
+  symbol: string;
+  quantity: number;
+  initial_quantity?: number;
+  quantity_change?: number;
+  initial_price?: number;
+  current_price: number;
+  value_usd: number;
+  initial_value_usd: number;
+  pnl_usd: number;
+  pnl_pct: number;
+  change_24h_pct: number | null;
+  image_url: string | null;
+  market_cap: number | null;
+  market_cap_rank: number | null;
+}
+
+export interface BHPortfolioData {
+  type: "buy_and_hold";
+  total_value_usd: number;
+  initial_value_usd: number;
+  total_pnl_usd: number;
+  total_pnl_pct: number;
+  holdings: PortfolioHolding[];
+}
+
+export interface PaperPortfolioData {
+  type: "paper_trading";
+  total_value_usd: number;
+  initial_value_usd: number;
+  total_pnl_usd: number;
+  total_pnl_pct: number;
+  holdings: PortfolioHolding[];
+  usdt_balance: number;
+  usdt_reserve_pct: number;
+  usdt_reserve_target_usd: number;
+  usdt_reserve_status: "at_target" | "below_target" | "above_target";
+  usdt_reserve_mode: string;
+  ai_suggested_reserve_pct: number | null;
+  ai_reserve_reasoning: string | null;
+  open_positions: {
+    symbol: string;
+    direction: string;
+    quantity: number;
+    entry_price: number;
+    current_price: number | null;
+    unrealized_pnl: number | null;
+  }[];
 }
 
 export function useSimulation() {
@@ -62,6 +119,44 @@ export function useStopSimulation() {
   return useMutation({
     mutationFn: (simId: string) =>
       api.post<SimulationData>(`/simulation/${simId}/stop`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["simulation"] });
+    },
+  });
+}
+
+export function useBHPortfolio(simId: string | undefined) {
+  return useQuery({
+    queryKey: ["simulation", simId, "portfolio", "bh"],
+    queryFn: () => api.get<BHPortfolioData>(`/simulation/${simId}/portfolio/bh`),
+    enabled: !!simId,
+    refetchInterval: 60_000,
+  });
+}
+
+export function usePaperPortfolio(simId: string | undefined) {
+  return useQuery({
+    queryKey: ["simulation", simId, "portfolio", "paper"],
+    queryFn: () =>
+      api.get<PaperPortfolioData>(`/simulation/${simId}/portfolio/paper`),
+    enabled: !!simId,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useUpdateReserve() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      simId,
+      usdt_reserve_pct,
+      mode,
+    }: {
+      simId: string;
+      usdt_reserve_pct: number;
+      mode: string;
+    }) =>
+      api.put(`/simulation/${simId}/reserve`, { usdt_reserve_pct, mode }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulation"] });
     },

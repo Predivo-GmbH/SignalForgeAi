@@ -2,18 +2,12 @@
 
 Simulation Model
 ================
-Both Buy & Hold (B&H) and SignalForge (SF) start with the **same portfolio**
-— the user's actual holdings at the moment the simulation was started.
+Two portfolios tracked:
+  B&H value   = sum(initial_qty × current_price)  — frozen snapshot
+  SF  value   = sum(paper_qty  × current_price)   — live paper portfolio
 
-  B&H value  = sum(initial_qty × current_price)  for each holding
-  SF  value  = B&H value + realized_pnl + unrealized_pnl  from SF trades
-
-Key properties:
-  • With zero trades, SF ≡ B&H  (market moves apply equally to both sides).
-  • SF only diverges from B&H when the engine actually executes trades.
-  • This makes the comparison fair: any difference is purely the result of
-    SignalForge's trading decisions, not an artifact of treating one side
-    as cash and the other as crypto.
+The paper portfolio diverges from B&H only when trades execute.
+With zero trades, paper_holdings == initial_holdings, so SF ≡ B&H.
 """
 
 import logging
@@ -41,13 +35,10 @@ def snapshot_simulation(self):
 
 
 async def _snapshot_async():
-    from sqlalchemy import func, select
+    from sqlalchemy import select
 
     from app.core.database import task_session
-    from app.models.position import Position
-    from app.models.signal import Signal
     from app.models.simulation import PaperSimulation, SimulationSnapshot
-    from app.models.trade import Trade
 
     async with task_session() as db:
         result = await db.execute(
@@ -58,10 +49,14 @@ async def _snapshot_async():
         if not simulations:
             return
 
-        # Collect all symbols we need prices for
+        # Collect all symbols we need prices for (both B&H and paper)
         all_symbols: set[str] = set()
         for sim in simulations:
             for h in (sim.initial_holdings or []):
+                sym = h.get("symbol", "").upper()
+                if sym:
+                    all_symbols.add(sym)
+            for h in (sim.paper_holdings or []):
                 sym = h.get("symbol", "").upper()
                 if sym:
                     all_symbols.add(sym)
@@ -73,8 +68,6 @@ async def _snapshot_async():
             try:
                 # --- Buy & Hold value ---
                 # B&H = sum(initial_qty * current_price) for each holding.
-                # Represents what the portfolio would be worth if you simply
-                # held everything unchanged from the simulation start.
                 bh_value = 0.0
                 for h in (sim.initial_holdings or []):
                     sym = h.get("symbol", "").upper()
@@ -82,27 +75,32 @@ async def _snapshot_async():
                     price = prices.get(sym, h.get("price_usd", 0))
                     bh_value += qty * price
 
-                # --- SignalForge value ---
-                # SF = B&H + net trade P&L.  Both sides start with the same
-                # portfolio.  With zero trades SF exactly equals B&H (the
-                # market moves apply to both).  SF only diverges when the
-                # engine actually executes trades on top of the base holdings.
-                pnl_result = await db.execute(
-                    select(func.coalesce(func.sum(Trade.pnl), 0.0))
-                    .join(Signal, Trade.signal_id == Signal.id)
-                    .where(Signal.strategy_id == sim.strategy_id)
-                )
-                realized_pnl = float(pnl_result.scalar())
+                # --- Paper portfolio (SF) value ---
+                # SF = sum(paper_qty * current_price) for each holding.
+                # This directly reflects the paper portfolio state after trades.
+                sf_value = 0.0
+                usdt_balance = 0.0
+                for h in (sim.paper_holdings or []):
+                    sym = h.get("symbol", "").upper()
+                    qty = h.get("quantity", 0)
+                    if sym in _STABLECOINS:
+                        sf_value += qty
+                        if sym == "USDT":
+                            usdt_balance = qty
+                    else:
+                        price = prices.get(sym, h.get("price_usd", 0))
+                        sf_value += qty * price
+                        # Update stored price in paper_holdings
+                        h["price_usd"] = price
+                        h["value_usd"] = round(qty * price, 2)
 
-                pos_result = await db.execute(
-                    select(
-                        func.coalesce(func.sum(Position.unrealized_pnl), 0.0)
-                    ).where(
-                        Position.strategy_id == sim.strategy_id,
-                        Position.is_open == True,  # noqa: E712
-                    )
-                )
-                unrealized_pnl = float(pos_result.scalar())
+                # Update paper_holdings prices (mark as modified for JSON column)
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(sim, "paper_holdings")
+
+                # Positions value (from open positions for this strategy)
+                from sqlalchemy import func
+                from app.models.position import Position
 
                 pos_value_result = await db.execute(
                     select(
@@ -116,8 +114,7 @@ async def _snapshot_async():
                 )
                 positions_value = float(pos_value_result.scalar())
 
-                sf_value = bh_value + realized_pnl + unrealized_pnl
-                sf_cash = sf_value - positions_value
+                sf_cash = usdt_balance
 
                 snapshot = SimulationSnapshot(
                     simulation_id=sim.id,
@@ -128,8 +125,8 @@ async def _snapshot_async():
                 )
                 db.add(snapshot)
                 logger.info(
-                    "Snapshot: sim=%s B&H=$%.2f SF=$%.2f",
-                    sim.id, bh_value, sf_value,
+                    "Snapshot: sim=%s B&H=$%.2f SF=$%.2f USDT=$%.2f",
+                    sim.id, bh_value, sf_value, usdt_balance,
                 )
             except Exception:
                 logger.exception("Failed snapshot for simulation %s", sim.id)
