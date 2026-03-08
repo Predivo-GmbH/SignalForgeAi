@@ -146,19 +146,16 @@ async def start_simulation(
             detail="Portfolio value too low to start a simulation.",
         )
 
-    # --- Get AI USDT reserve recommendation ---
-    ai_reserve_pct = 0.15  # sensible default
-    ai_reserve_reasoning = "Default 15% reserve — AI recommendation pending."
-    try:
-        ai_reserve_pct, ai_reserve_reasoning = await _get_ai_reserve_recommendation(db, uid)
-        ai_reserve_reasoning = ai_reserve_reasoning[:2000]  # truncate to column limit
-    except Exception:
-        logger.warning("AI reserve recommendation failed, using default 15%%")
+    # Paper holdings start as an exact copy of real holdings.
+    # USDT for trading comes from existing USDT balance and future sells —
+    # no artificial rebalancing at start.
+    paper_holdings = copy.deepcopy(holdings_snapshot)
 
-    # --- Build paper_holdings: copy of initial, then seed USDT reserve ---
-    paper_holdings = _seed_usdt_reserve(
-        copy.deepcopy(holdings_snapshot), ai_reserve_pct, total_value
+    # Determine existing USDT balance for reserve tracking
+    existing_usdt = sum(
+        h["quantity"] for h in holdings_snapshot if h["symbol"] == "USDT"
     )
+    usdt_reserve_pct = existing_usdt / total_value if total_value > 0 else 0.0
 
     # Create simulation strategy
     strategy = Strategy(
@@ -189,9 +186,9 @@ async def start_simulation(
             "max_drawdown_pct": 0.15,
             "cppi_enabled": True,
             "max_hold_hours": 48,
-            # Simulation marker + reserve
+            # Simulation marker
             "is_simulation": True,
-            "usdt_reserve_pct": ai_reserve_pct,
+            "usdt_reserve_pct": usdt_reserve_pct,
         },
     )
     db.add(strategy)
@@ -206,10 +203,10 @@ async def start_simulation(
         initial_holdings=holdings_snapshot,
         initial_value_usd=round(total_value, 2),
         paper_holdings=paper_holdings,
-        usdt_reserve_pct=ai_reserve_pct,
-        usdt_reserve_mode="ai",
-        ai_suggested_reserve_pct=ai_reserve_pct,
-        ai_reserve_reasoning=ai_reserve_reasoning,
+        usdt_reserve_pct=usdt_reserve_pct,
+        usdt_reserve_mode="manual",
+        ai_suggested_reserve_pct=None,
+        ai_reserve_reasoning=None,
     )
     db.add(sim)
 
@@ -218,7 +215,7 @@ async def start_simulation(
         simulation_id=sim.id,
         bh_value_usd=round(total_value, 2),
         sf_value_usd=round(total_value, 2),
-        sf_cash_usd=round(total_value * ai_reserve_pct, 2),
+        sf_cash_usd=round(existing_usdt, 2),
         sf_positions_value=0.0,
     )
     db.add(snapshot)
@@ -232,8 +229,7 @@ async def start_simulation(
         "initial_value_usd": round(total_value, 2),
         "holdings_count": len(holdings_snapshot),
         "trading_symbols": sorted(symbols_for_trading),
-        "usdt_reserve_pct": ai_reserve_pct,
-        "reserve_reasoning": ai_reserve_reasoning,
+        "usdt_reserve_pct": usdt_reserve_pct,
         "started_at": sim.started_at.isoformat() if sim.started_at else None,
     }
 
