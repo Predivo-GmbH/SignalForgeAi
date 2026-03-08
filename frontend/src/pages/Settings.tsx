@@ -930,14 +930,32 @@ function ExchangeRoutingTab() {
   const [exchangeMap, setExchangeMap] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 
-  // Init from saved exchange_map, falling back to the source exchange where the coin is held
+  const EXCHANGE_IDS = new Set(SUPPORTED_EXCHANGES.map((e) => e.id));
+
+  // Pick the best default exchange for a pair:
+  // 1. Saved exchange_map entry
+  // 2. Source exchange (if it's a real exchange, not "manual")
+  // 3. First available exchange from availability data (prefer binance)
+  // 4. Empty string for unavailable pairs
+  const pickDefault = (pair: string, source: string): string => {
+    if (savedMap[pair]) return savedMap[pair];
+    if (EXCHANGE_IDS.has(source)) return source;
+    if (availabilityData) {
+      const avail = availabilityData.availability[pair] ?? [];
+      if (avail.length === 0) return "";
+      if (avail.includes("binance")) return "binance";
+      return avail[0];
+    }
+    return "";
+  };
+
   useEffect(() => {
     const initial: Record<string, string> = {};
     for (const p of sortedPairs) {
-      initial[p.pair] = savedMap[p.pair] ?? p.source ?? "binance";
+      initial[p.pair] = pickDefault(p.pair, p.source);
     }
     setExchangeMap(initial);
-  }, [JSON.stringify(pairSymbols), JSON.stringify(savedMap)]);
+  }, [JSON.stringify(pairSymbols), JSON.stringify(savedMap), availabilityData]);
 
   const handleSave = () => {
     if (!strategy) return;
@@ -954,7 +972,7 @@ function ExchangeRoutingTab() {
   };
 
   const savedInit = Object.fromEntries(
-    sortedPairs.map((p) => [p.pair, savedMap[p.pair] ?? p.source ?? "binance"]),
+    sortedPairs.map((p) => [p.pair, pickDefault(p.pair, p.source)]),
   );
   const hasChanges = JSON.stringify(exchangeMap) !== JSON.stringify(savedInit);
 
@@ -1049,26 +1067,30 @@ function ExchangeRoutingTab() {
                     >
                       {pair}
                     </span>
-                    <select
-                      value={selectedExchange}
-                      onChange={(e) =>
-                        setExchangeMap((prev) => ({ ...prev, [pair]: e.target.value }))
-                      }
-                      disabled={notOnAny}
-                      className={cn(
-                        "flex-1 h-9 rounded-lg border px-3 text-sm focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer",
-                        notOnExchange && !notOnAny
-                          ? "border-(--color-warning) bg-(--color-warning)/5 text-(--color-text-primary)"
-                          : "border-(--color-border) bg-(--color-bg-elevated) text-(--color-text-primary)",
-                        notOnAny && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      {SUPPORTED_EXCHANGES.map((ex) => (
-                        <option key={ex.id} value={ex.id}>
-                          {ex.name}
-                        </option>
-                      ))}
-                    </select>
+                    {notOnAny ? (
+                      <span className="flex-1 h-9 rounded-lg border border-(--color-negative)/30 bg-(--color-negative)/5 px-3 text-sm text-(--color-negative) flex items-center opacity-60">
+                        Not available
+                      </span>
+                    ) : (
+                      <select
+                        value={selectedExchange}
+                        onChange={(e) =>
+                          setExchangeMap((prev) => ({ ...prev, [pair]: e.target.value }))
+                        }
+                        className={cn(
+                          "flex-1 h-9 rounded-lg border px-3 text-sm focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer",
+                          notOnExchange
+                            ? "border-(--color-warning) bg-(--color-warning)/5 text-(--color-text-primary)"
+                            : "border-(--color-border) bg-(--color-bg-elevated) text-(--color-text-primary)",
+                        )}
+                      >
+                        {SUPPORTED_EXCHANGES.map((ex) => (
+                          <option key={ex.id} value={ex.id}>
+                            {ex.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <span className="text-[10px] text-(--color-text-secondary) min-w-[60px]">
                       held on {source}
                     </span>
