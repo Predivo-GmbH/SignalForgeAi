@@ -13,6 +13,7 @@ from app.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models.pipeline_log import PipelineLog
+from app.models.signal import Signal
 from app.models.strategy import Strategy
 
 logger = logging.getLogger(__name__)
@@ -86,10 +87,41 @@ async def get_pipeline_log(
         )
     ).scalars().all()
 
+    # For passed entries, look up the corresponding signal status
+    passed_rows = [r for r in rows if r.block_reason is None and r.created_at]
+    signal_map: dict[tuple, dict] = {}
+    if passed_rows:
+        # Find signals created within 5 minutes of each passed pipeline entry
+        from datetime import timedelta
+
+        for pr in passed_rows:
+            window_start = pr.created_at - timedelta(minutes=1)
+            window_end = pr.created_at + timedelta(minutes=5)
+            sig_result = await db.execute(
+                select(Signal.status, Signal.ai_reasoning, Signal.ai_recommendation)
+                .where(
+                    Signal.strategy_id == pr.strategy_id,
+                    Signal.symbol == pr.symbol,
+                    Signal.timeframe == pr.timeframe,
+                    Signal.created_at >= window_start,
+                    Signal.created_at <= window_end,
+                )
+                .order_by(Signal.created_at.desc())
+                .limit(1)
+            )
+            sig = sig_result.first()
+            if sig:
+                signal_map[(str(pr.id),)] = {
+                    "signal_status": sig[0],
+                    "signal_ai_reasoning": sig[1],
+                    "signal_ai_recommendation": sig[2],
+                }
+
     return {
         "items": [
             {
                 "id": str(r.id),
+                "strategy_id": str(r.strategy_id),
                 "symbol": r.symbol,
                 "timeframe": r.timeframe,
                 "action": r.action,
@@ -97,6 +129,7 @@ async def get_pipeline_log(
                 "confluence_score": r.confluence_score,
                 "regime": r.regime,
                 "created_at": r.created_at.isoformat() if r.created_at else None,
+                **signal_map.get((str(r.id),), {}),
             }
             for r in rows
         ],

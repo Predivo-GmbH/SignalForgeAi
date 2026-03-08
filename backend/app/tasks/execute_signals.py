@@ -40,7 +40,7 @@ async def _execute_async():
     from app.execution.position_manager import PositionManagerDB
     from app.models.order import Order
     from app.models.signal import Signal
-    from app.models.strategy import Strategy
+    from app.models.strategy import BrokerConnection, Strategy
 
     # Default to paper adapter
     paper = PaperAdapter()
@@ -151,36 +151,84 @@ async def _execute_async():
                 except Exception as e:
                     logger.warning("Min notional check failed (proceeding): %s", e)
 
-                # --- Holdings-based position cap (use actual exchange balances) ---
+                # --- Holdings-based position cap ---
+                # BUY: check quote asset (e.g. USDT), SELL: check base asset.
+                # Live trading: exchange balances only.
+                # Paper trading: full portfolio (exchange + manual holdings).
                 try:
-                    from app.api.holdings import _fetch_exchange_holdings
-
-                    exchange_holdings = await _fetch_exchange_holdings(db, user_id)
-                    base_symbol = sig.symbol.split("/")[0]
-
-                    # Sum across all exchanges (user may hold asset on multiple)
-                    available_qty = sum(
-                        h.quantity for h in exchange_holdings
-                        if h.symbol == base_symbol
+                    from app.api.holdings import (
+                        _fetch_exchange_holdings,
+                        _fetch_manual_holdings,
                     )
 
-                    if available_qty <= 0:
-                        logger.warning(
-                            "Holdings cap REJECT: no %s holdings for user %s, "
-                            "skipping signal %s",
-                            base_symbol, user_id, sig.id,
-                        )
-                        sig.status = "rejected"
-                        await db.commit()
-                        continue
+                    has_live_conn = await db.execute(
+                        select(BrokerConnection.id).where(
+                            BrokerConnection.user_id == strategy.user_id,
+                            BrokerConnection.is_paper.is_(False),
+                            BrokerConnection.purpose == "trade",
+                        ).limit(1)
+                    )
+                    is_live = has_live_conn.scalar_one_or_none() is not None
 
-                    if quantity > available_qty:
-                        logger.info(
-                            "Holdings cap: reduced %s quantity %.6f -> %.6f "
-                            "for signal %s (actual holding)",
-                            base_symbol, quantity, available_qty, sig.id,
+                    if is_live:
+                        all_holdings = await _fetch_exchange_holdings(db, user_id)
+                    else:
+                        # Paper: use full portfolio (exchange + manual)
+                        exchange_h = await _fetch_exchange_holdings(db, user_id)
+                        manual_h = await _fetch_manual_holdings(db, user_id)
+                        all_holdings = exchange_h + manual_h
+
+                    parts = sig.symbol.split("/")
+                    base_symbol = parts[0]
+                    quote_symbol = parts[1] if len(parts) > 1 else "USDT"
+
+                    if sig.direction == "SELL":
+                        available_qty = sum(
+                            h.quantity for h in all_holdings
+                            if h.symbol == base_symbol
                         )
-                        quantity = available_qty
+                        if available_qty <= 0:
+                            logger.warning(
+                                "Holdings cap REJECT: no %s holdings for user %s, "
+                                "skipping SELL signal %s",
+                                base_symbol, user_id, sig.id,
+                            )
+                            sig.status = "rejected"
+                            await db.commit()
+                            continue
+                        if quantity > available_qty:
+                            logger.info(
+                                "Holdings cap: reduced %s SELL quantity %.6f -> %.6f "
+                                "for signal %s (actual holding)",
+                                base_symbol, quantity, available_qty, sig.id,
+                            )
+                            quantity = available_qty
+                    else:
+                        # BUY: check quote asset balance covers the order
+                        entry_price = sig.entry_price or 0.0
+                        required_quote = quantity * entry_price
+                        available_quote = sum(
+                            h.quantity for h in all_holdings
+                            if h.symbol == quote_symbol
+                        )
+                        if available_quote <= 0:
+                            logger.warning(
+                                "Holdings cap REJECT: no %s holdings for user %s, "
+                                "skipping BUY signal %s",
+                                quote_symbol, user_id, sig.id,
+                            )
+                            sig.status = "rejected"
+                            await db.commit()
+                            continue
+                        if required_quote > available_quote and entry_price > 0:
+                            max_buyable = available_quote / entry_price
+                            logger.info(
+                                "Holdings cap: reduced %s BUY quantity %.6f -> %.6f "
+                                "for signal %s (only %.2f %s available)",
+                                base_symbol, quantity, max_buyable, sig.id,
+                                available_quote, quote_symbol,
+                            )
+                            quantity = max_buyable
                 except Exception as e:
                     logger.warning(
                         "Holdings cap check failed (proceeding with formula size): %s", e

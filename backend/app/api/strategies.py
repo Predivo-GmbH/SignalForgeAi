@@ -58,6 +58,11 @@ class StrategyConfig(BaseModel):
     min_trigger_count: int = Field(default=2, ge=1, le=5)
     trigger_lookback_candles: int = Field(default=1, ge=1, le=10)
     ema_slope_threshold: float = Field(default=0.001, ge=0.0001, le=0.01)
+    # -- Exchange routing per symbol --
+    exchange_map: dict[str, str] = Field(
+        default_factory=dict,
+        description="Maps trading pair to exchange, e.g. {'BTC/USDT': 'binance', 'ETH/USDT': 'kraken'}",
+    )
 
 
 STRATEGY_PRESETS: dict[str, dict] = {

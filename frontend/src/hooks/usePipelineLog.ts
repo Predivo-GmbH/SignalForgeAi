@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 
 export interface PipelineLogEntry {
   id: string;
+  strategy_id: string;
   symbol: string;
   timeframe: string;
   action: "BUY" | "SELL" | "NO_TRADE";
@@ -10,6 +11,9 @@ export interface PipelineLogEntry {
   confluence_score: number | null;
   regime: string | null;
   created_at: string;
+  signal_status?: string;
+  signal_ai_reasoning?: string;
+  signal_ai_recommendation?: string;
 }
 
 export interface PipelineLogResponse {

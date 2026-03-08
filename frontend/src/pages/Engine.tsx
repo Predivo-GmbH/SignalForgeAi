@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   Cpu,
@@ -15,6 +17,7 @@ import {
   RotateCcw,
   MinusCircle,
   Filter,
+  ExternalLink,
 } from "lucide-react";
 import { useSystemStatus, useRestartWorker, type RestartPhase } from "@/hooks/useSystemStatus";
 import { useEngineStatus } from "@/hooks/useEngineStatus";
@@ -823,7 +826,111 @@ function PipelineRunCard({
 /*  Pipeline Run Detail (expanded)                                    */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/*  Signal Status Badge with AI Reasoning Tooltip                      */
+/* ------------------------------------------------------------------ */
+
+function signalStatusColor(status: string): string {
+  switch (status.toLowerCase()) {
+    case "active":
+    case "filled":
+      return "var(--color-positive)";
+    case "rejected":
+    case "cancelled":
+    case "expired":
+    case "failed":
+      return "var(--color-negative)";
+    case "pending":
+      return "var(--color-warning)";
+    default:
+      return "var(--color-text-secondary)";
+  }
+}
+
+function SignalStatusBadge({ entry }: { entry: PipelineLogEntry }) {
+  const [show, setShow] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const hideTimer = useRef<number>(0);
+
+  const handleEnter = () => { clearTimeout(hideTimer.current); setShow(true); };
+  const handleLeave = () => { hideTimer.current = window.setTimeout(() => setShow(false), 120); };
+
+  const status = entry.signal_status ?? "unknown";
+  const color = signalStatusColor(status);
+  const hasTooltip = !!entry.signal_ai_reasoning;
+
+  let tooltipStyle: React.CSSProperties = {};
+  if (show && triggerRef.current) {
+    const rect = triggerRef.current.getBoundingClientRect();
+    const openUp = rect.top > window.innerHeight / 2;
+    tooltipStyle = {
+      right: Math.max(8, window.innerWidth - rect.right),
+      ...(openUp
+        ? { bottom: window.innerHeight - rect.top + 6 }
+        : { top: rect.bottom + 6 }),
+    };
+  }
+
+  return (
+    <span
+      ref={triggerRef}
+      className={hasTooltip ? "cursor-help" : ""}
+      onMouseEnter={hasTooltip ? handleEnter : undefined}
+      onMouseLeave={hasTooltip ? handleLeave : undefined}
+    >
+      <span
+        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+        style={{
+          backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
+          color,
+        }}
+      >
+        {status}
+      </span>
+      {show && hasTooltip && createPortal(
+        <div
+          className="fixed z-[200] w-72 bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-lg shadow-xl p-3 text-xs space-y-2"
+          style={tooltipStyle}
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
+          <p className="font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
+            AI Assessment
+            {entry.signal_ai_recommendation && (
+              <span
+                className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${
+                    entry.signal_ai_recommendation === "confirm" || entry.signal_ai_recommendation === "strong_confirm"
+                      ? "var(--color-positive)"
+                      : entry.signal_ai_recommendation === "caution"
+                        ? "var(--color-warning)"
+                        : "var(--color-negative)"
+                  } 15%, transparent)`,
+                  color:
+                    entry.signal_ai_recommendation === "confirm" || entry.signal_ai_recommendation === "strong_confirm"
+                      ? "var(--color-positive)"
+                      : entry.signal_ai_recommendation === "caution"
+                        ? "var(--color-warning)"
+                        : "var(--color-negative)",
+                }}
+              >
+                {entry.signal_ai_recommendation}
+              </span>
+            )}
+          </p>
+          <p className="text-[var(--color-text-secondary)] leading-relaxed">
+            {entry.signal_ai_reasoning}
+          </p>
+        </div>,
+        document.body,
+      )}
+    </span>
+  );
+}
+
 function PipelineRunDetail({ runTime }: { runTime: string }) {
+  const navigate = useNavigate();
   const since = runTime;
   const untilDate = new Date(new Date(runTime).getTime() + 5 * 60 * 1000);
   const until = untilDate.toISOString();
@@ -966,12 +1073,18 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
               <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Regime
               </th>
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+                Signal Status
+              </th>
+              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-center">
+                Detail
+              </th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-4 text-center text-xs text-[var(--color-text-secondary)]">
+                <td colSpan={8} className="px-5 py-4 text-center text-xs text-[var(--color-text-secondary)]">
                   No entries match the selected filters.
                 </td>
               </tr>
@@ -1021,6 +1134,26 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
                 </td>
                 <td className="px-4 py-2 text-xs text-[var(--color-text-secondary)] capitalize">
                   {entry.regime?.replace("_", " ") ?? "—"}
+                </td>
+                <td className="px-4 py-2">
+                  {!entry.block_reason && entry.signal_status ? (
+                    <SignalStatusBadge entry={entry} />
+                  ) : (
+                    <span className="text-[var(--color-text-secondary)]/40">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-2 text-center">
+                  {!entry.block_reason && entry.strategy_id ? (
+                    <button
+                      onClick={() => navigate(`/strategies/${entry.strategy_id}`)}
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--color-accent)] hover:underline"
+                      title="View signal lifecycle on Strategy page"
+                    >
+                      View <ExternalLink className="w-3 h-3" />
+                    </button>
+                  ) : (
+                    <span className="text-[var(--color-text-secondary)]/40">—</span>
+                  )}
                 </td>
               </tr>
             ))}
