@@ -1,5 +1,6 @@
 """Strategies CRUD API — create, list, get, update, activate, delete."""
 
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -556,3 +557,62 @@ async def delete_strategy(
     await db.delete(strategy)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------- Exchange Availability ----------
+
+SUPPORTED_EXCHANGE_IDS = ["binance", "kucoin", "mexc", "bitstamp", "cryptocom", "kraken"]
+
+# In-memory cache: {exchange_id: (timestamp, set_of_symbols)}
+_exchange_markets_cache: dict[str, tuple[float, set[str]]] = {}
+_CACHE_TTL = 3600  # 1 hour
+
+
+def _get_exchange_symbols(exchange_id: str) -> set[str]:
+    """Load market symbols for an exchange, with 1-hour TTL cache."""
+    cached = _exchange_markets_cache.get(exchange_id)
+    if cached and (time.time() - cached[0]) < _CACHE_TTL:
+        return cached[1]
+
+    import ccxt
+
+    ex = getattr(ccxt, exchange_id)()
+    ex.load_markets()
+    symbols = set(ex.symbols)
+    _exchange_markets_cache[exchange_id] = (time.time(), symbols)
+    return symbols
+
+
+@router.get("/exchange-availability")
+@limiter.limit("10/minute")
+async def exchange_availability(
+    request: Request,
+    symbols: str = Query(..., description="Comma-separated trading pairs"),
+    user_id: str = Depends(get_current_user),
+):
+    """Return which supported exchanges list each symbol.
+
+    Response: {symbol: [exchange_id, ...], ...}
+    Also returns symbols not available on any exchange.
+    """
+    pairs = [s.strip() for s in symbols.split(",") if s.strip()]
+    if not pairs:
+        raise HTTPException(status_code=422, detail="No symbols provided")
+
+    # Load markets (cached per exchange)
+    exchange_symbols: dict[str, set[str]] = {}
+    for eid in SUPPORTED_EXCHANGE_IDS:
+        try:
+            exchange_symbols[eid] = _get_exchange_symbols(eid)
+        except Exception:
+            exchange_symbols[eid] = set()
+
+    availability: dict[str, list[str]] = {}
+    unavailable: list[str] = []
+    for pair in pairs:
+        available_on = [eid for eid in SUPPORTED_EXCHANGE_IDS if pair in exchange_symbols[eid]]
+        availability[pair] = available_on
+        if not available_on:
+            unavailable.append(pair)
+
+    return {"availability": availability, "unavailable": unavailable}

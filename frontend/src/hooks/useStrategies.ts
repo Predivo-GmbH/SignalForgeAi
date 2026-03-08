@@ -85,3 +85,21 @@ export function useDeleteStrategy() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });
 }
+
+export interface ExchangeAvailability {
+  availability: Record<string, string[]>;
+  unavailable: string[];
+}
+
+export function useExchangeAvailability(symbols: string[]) {
+  const joined = symbols.join(",");
+  return useQuery({
+    queryKey: ["exchange-availability", joined],
+    queryFn: () =>
+      api.get<ExchangeAvailability>(
+        `/strategies/exchange-availability?symbols=${encodeURIComponent(joined)}`,
+      ),
+    enabled: symbols.length > 0,
+    staleTime: 60 * 60 * 1000, // 1 hour — markets don't change often
+  });
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import {
   Shield,
@@ -21,6 +21,10 @@ import {
   Pencil,
   Clock,
   AlertTriangle,
+  ArrowLeftRight,
+  Save,
+  Check,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -30,12 +34,13 @@ import {
   useBrokerHealth,
 } from "@/hooks/useBrokerConnections";
 import type { ConnectBrokerRequest } from "@/hooks/useBrokerConnections";
+import { useStrategies, useUpdateStrategy, useExchangeAvailability } from "@/hooks/useStrategies";
 import { AiUsageTab } from "@/components/settings/AiUsageTab";
 import { TwoFactorSetup } from "@/components/settings/TwoFactorSetup";
 import { useProfile, useChangePassword, useChangeEmail } from "@/hooks/useProfile";
 import { useAuth } from "@/lib/auth";
 
-type Tab = "profile" | "connections" | "ai-usage";
+type Tab = "profile" | "connections" | "exchanges" | "ai-usage";
 
 /* ---- Broker metadata ---- */
 
@@ -880,6 +885,286 @@ function ProfileTab() {
   );
 }
 
+/* ---- Exchange Routing Tab ---- */
+
+const SUPPORTED_EXCHANGES = [
+  { name: "Binance", id: "binance" },
+  { name: "KuCoin", id: "kucoin" },
+  { name: "MEXC", id: "mexc" },
+  { name: "Bitstamp", id: "bitstamp" },
+  { name: "Crypto.com", id: "cryptocom" },
+  { name: "Kraken", id: "kraken" },
+];
+
+function ExchangeRoutingTab() {
+  const { data: strategiesData, isLoading: strategiesLoading } = useStrategies();
+  const strategies = strategiesData?.strategies ?? [];
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string>("");
+  const selectedStrategy = strategies.find((s) => s.id === selectedStrategyId);
+
+  // Auto-select first strategy
+  useEffect(() => {
+    if (strategies.length > 0 && !selectedStrategyId) {
+      setSelectedStrategyId(strategies[0].id);
+    }
+  }, [strategies, selectedStrategyId]);
+
+  if (strategiesLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
+      </div>
+    );
+  }
+
+  if (strategies.length === 0) {
+    return (
+      <div className="bg-(--color-bg-elevated)/50 border border-(--color-border) rounded-xl p-8 text-center space-y-3">
+        <ArrowLeftRight className="w-8 h-8 text-(--color-text-secondary) mx-auto" />
+        <p className="text-sm text-(--color-text-secondary)">
+          No strategies configured. Create a strategy first to set up exchange routing.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <Tooltip text="Control which exchange provides market data and executes trades for each trading pair. Pairs not available on the chosen exchange will show a warning.">
+          <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
+            Exchange Routing
+          </h2>
+        </Tooltip>
+        <p className="text-sm text-(--color-text-secondary) mt-0.5">
+          Configure which exchange to use for each trading pair
+        </p>
+      </div>
+
+      {strategies.length > 1 && (
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+            Strategy
+          </label>
+          <select
+            value={selectedStrategyId}
+            onChange={(e) => setSelectedStrategyId(e.target.value)}
+            className="w-full max-w-xs bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+          >
+            {strategies.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {selectedStrategy && (
+        <ExchangeMapEditor
+          strategyId={selectedStrategy.id}
+          config={selectedStrategy.config}
+        />
+      )}
+    </div>
+  );
+}
+
+function ExchangeMapEditor({
+  strategyId,
+  config,
+}: {
+  strategyId: string;
+  config: Record<string, unknown>;
+}) {
+  const symbols = (config.symbols as string[]) ?? [];
+  const savedMap = (config.exchange_map as Record<string, string>) ?? {};
+  const [exchangeMap, setExchangeMap] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
+  const updateMutation = useUpdateStrategy();
+  const { data: connections } = useBrokerConnections();
+  const hasLiveTrading = connections?.some((c) => !c.is_paper && c.purpose === "trade") ?? false;
+  const { data: availabilityData, isLoading: availLoading } = useExchangeAvailability(symbols);
+
+  useEffect(() => {
+    const initial: Record<string, string> = {};
+    for (const sym of symbols) {
+      initial[sym] = savedMap[sym] ?? "binance";
+    }
+    setExchangeMap(initial);
+  }, [JSON.stringify(symbols), JSON.stringify(savedMap)]);
+
+  const handleSave = () => {
+    const newConfig = { ...config, exchange_map: exchangeMap };
+    updateMutation.mutate(
+      { id: strategyId, config: newConfig },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
+  };
+
+  const hasChanges = JSON.stringify(exchangeMap) !== JSON.stringify(
+    Object.fromEntries(symbols.map((s) => [s, savedMap[s] ?? "binance"])),
+  );
+
+  const isUnavailable = (sym: string, exchange: string): boolean => {
+    if (!availabilityData) return false;
+    const avail = availabilityData.availability[sym];
+    return avail !== undefined && !avail.includes(exchange);
+  };
+
+  const unavailablePairs = availabilityData?.unavailable ?? [];
+  const mismatchedPairs = symbols.filter((sym) => isUnavailable(sym, exchangeMap[sym] ?? "binance"));
+
+  return (
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+      {!hasLiveTrading && (
+        <p className="text-xs text-(--color-warning) flex items-center gap-1.5">
+          <Info className="w-3.5 h-3.5 shrink-0" />
+          Paper trading mode — exchange selection only affects market data source.
+          Trades are still validated against your portfolio holdings (USDT to buy, crypto to sell).
+        </p>
+      )}
+
+      {unavailablePairs.length > 0 && (
+        <div className="bg-(--color-negative)/10 border border-(--color-negative)/30 rounded-lg p-3">
+          <p className="text-xs font-semibold text-(--color-negative) mb-1">
+            Not tradeable on any supported exchange
+          </p>
+          <p className="text-xs text-(--color-text-secondary)">
+            The following pairs are not listed on any of the 6 supported exchanges
+            and will not receive market data or trade signals:
+          </p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {unavailablePairs.map((sym) => (
+              <span
+                key={sym}
+                className="text-xs font-semibold text-(--color-negative) bg-(--color-negative)/10 rounded px-2 py-0.5"
+              >
+                {sym}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {symbols.length === 0 ? (
+        <p className="text-xs text-(--color-text-secondary) italic">
+          No trading pairs configured in this strategy.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {symbols.map((sym) => {
+            const selectedExchange = exchangeMap[sym] ?? "binance";
+            const notOnExchange = isUnavailable(sym, selectedExchange);
+            const pairAvail = availabilityData?.availability[sym] ?? [];
+            const notOnAny = availabilityData ? pairAvail.length === 0 : false;
+
+            return (
+              <div key={sym}>
+                <div className="flex items-center gap-4">
+                  <span
+                    className={cn(
+                      "text-sm font-semibold rounded-md px-3 py-1.5 min-w-[120px] text-center",
+                      notOnAny
+                        ? "text-(--color-negative) bg-(--color-negative)/10 line-through"
+                        : "text-(--color-accent) bg-(--color-accent-soft)",
+                    )}
+                  >
+                    {sym}
+                  </span>
+                  <select
+                    value={selectedExchange}
+                    onChange={(e) =>
+                      setExchangeMap((prev) => ({ ...prev, [sym]: e.target.value }))
+                    }
+                    disabled={notOnAny}
+                    className={cn(
+                      "flex-1 h-9 rounded-lg border px-3 text-sm focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer",
+                      notOnExchange && !notOnAny
+                        ? "border-(--color-warning) bg-(--color-warning)/5 text-(--color-text-primary)"
+                        : "border-(--color-border) bg-(--color-bg-elevated) text-(--color-text-primary)",
+                      notOnAny && "opacity-50 cursor-not-allowed",
+                    )}
+                  >
+                    {SUPPORTED_EXCHANGES.map((ex) => (
+                      <option key={ex.id} value={ex.id}>
+                        {ex.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {notOnExchange && !notOnAny && (
+                  <p className="text-xs text-(--color-warning) mt-1 ml-[136px]">
+                    {sym} is not listed on{" "}
+                    {SUPPORTED_EXCHANGES.find((e) => e.id === selectedExchange)?.name ?? selectedExchange}.
+                    {pairAvail.length > 0 && (
+                      <>
+                        {" "}Available on:{" "}
+                        {pairAvail
+                          .map((eid) => SUPPORTED_EXCHANGES.find((e) => e.id === eid)?.name ?? eid)
+                          .join(", ")}
+                        .
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {availLoading && (
+        <p className="text-xs text-(--color-text-secondary) italic">
+          Checking exchange availability...
+        </p>
+      )}
+
+      <div className="flex items-center gap-3 pt-2 border-t border-(--color-border)/50">
+        <button
+          onClick={handleSave}
+          disabled={!hasChanges || updateMutation.isPending}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            hasChanges
+              ? "bg-(--color-accent) text-white hover:bg-(--color-accent)/90"
+              : "bg-(--color-bg-elevated) text-(--color-text-secondary) cursor-not-allowed",
+          )}
+        >
+          {saved ? (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              Saved
+            </>
+          ) : updateMutation.isPending ? (
+            "Saving..."
+          ) : (
+            <>
+              <Save className="w-3.5 h-3.5" />
+              Save Exchange Config
+            </>
+          )}
+        </button>
+        {mismatchedPairs.length > 0 && hasChanges && (
+          <span className="text-xs text-(--color-warning)">
+            {mismatchedPairs.length} pair{mismatchedPairs.length > 1 ? "s" : ""} routed to exchanges where they&apos;re not listed
+          </span>
+        )}
+        {updateMutation.isError && (
+          <span className="text-xs text-(--color-negative)">
+            Failed to save. Please try again.
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---- Main Page ---- */
 
 export function SettingsPage() {
@@ -924,6 +1209,18 @@ export function SettingsPage() {
             Connections
           </button>
           <button
+            onClick={() => setActiveTab("exchanges")}
+            className={cn(
+              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              activeTab === "exchanges"
+                ? "border-(--color-accent) text-(--color-accent)"
+                : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
+            )}
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+            Exchanges
+          </button>
+          <button
             onClick={() => setActiveTab("ai-usage")}
             className={cn(
               "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
@@ -941,6 +1238,7 @@ export function SettingsPage() {
       {/* Tab content */}
       {activeTab === "profile" && <ProfileTab />}
       {activeTab === "connections" && <ConnectionsTab />}
+      {activeTab === "exchanges" && <ExchangeRoutingTab />}
       {activeTab === "ai-usage" && <AiUsageTab />}
     </div>
   );
