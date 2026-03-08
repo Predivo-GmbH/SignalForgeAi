@@ -1048,6 +1048,12 @@ function ExchangeRoutingTab() {
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-(--color-text-secondary) font-medium px-1">
+              <span className="min-w-[120px] text-center">Pair</span>
+              <span className="min-w-[90px] text-center">Held on</span>
+              <span className="w-3.5" />
+              <span className="flex-1">Trade on</span>
+            </div>
             {sortedPairs.map(({ pair, source }) => {
               const selectedExchange = exchangeMap[pair] ?? source ?? "binance";
               const notOnExchange = isUnavailable(pair, selectedExchange);
@@ -1067,6 +1073,10 @@ function ExchangeRoutingTab() {
                     >
                       {pair}
                     </span>
+                    <span className="text-xs text-(--color-text-secondary) min-w-[90px] text-center shrink-0">
+                      {SUPPORTED_EXCHANGES.find((e) => e.id === source)?.name ?? source}
+                    </span>
+                    <ArrowLeftRight size={14} className="text-(--color-text-secondary) shrink-0" />
                     {notOnAny ? (
                       <span className="flex-1 h-9 rounded-lg border border-(--color-negative)/30 bg-(--color-negative)/5 px-3 text-sm text-(--color-negative) flex items-center opacity-60">
                         Not available
@@ -1091,9 +1101,6 @@ function ExchangeRoutingTab() {
                         ))}
                       </select>
                     )}
-                    <span className="text-[10px] text-(--color-text-secondary) min-w-[60px]">
-                      held on {source}
-                    </span>
                   </div>
                   {notOnExchange && !notOnAny && (
                     <p className="text-xs text-(--color-warning) mt-1 ml-[136px]">
