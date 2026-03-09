@@ -61,6 +61,33 @@ export function useDrawdownState() {
   });
 }
 
+export interface DashboardSimulation {
+  id: string;
+  status: string;
+  initial_value_usd: number;
+  bh_value: number;
+  paper_value: number;
+  bh_return_pct: number;
+  paper_return_pct: number;
+}
+
+export interface DashboardSnapshot {
+  equity: number;
+  balance: number;
+  daily_pnl: number;
+  open_positions: number;
+  max_positions: number;
+  simulation: DashboardSimulation | null;
+}
+
+export function useDashboardSnapshot() {
+  return useQuery({
+    queryKey: ["dashboard-snapshot"],
+    queryFn: () => api.get<DashboardSnapshot>("/positions/dashboard-snapshot"),
+    refetchInterval: 30_000,
+  });
+}
+
 export function useClosePosition() {
   const queryClient = useQueryClient();
   return useMutation({

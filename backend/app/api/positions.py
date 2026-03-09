@@ -161,6 +161,122 @@ async def account_state(
     }
 
 
+@router.get("/dashboard-snapshot")
+@limiter.limit("60/minute")
+async def dashboard_snapshot(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Single endpoint for all Dashboard values — one price fetch, consistent numbers."""
+    import uuid
+    from datetime import date, datetime, timezone
+
+    from app.api.holdings import (
+        _enrich_holdings,
+        _fetch_exchange_holdings,
+        _fetch_manual_holdings,
+        _fetch_prices,
+    )
+    from app.models.simulation import PaperSimulation
+
+    uid = uuid.UUID(user_id)
+
+    # --- 1. Fetch holdings + prices ONCE ---
+    exchange = await _fetch_exchange_holdings(db, user_id)
+    manual = await _fetch_manual_holdings(db, user_id)
+    all_holdings = exchange + manual
+
+    if all_holdings:
+        unique_symbols = list({h.symbol.upper() for h in all_holdings})
+        prices = await _fetch_prices(unique_symbols)
+        enriched, portfolio_value = _enrich_holdings(list(all_holdings), prices)
+    else:
+        prices = {}
+        enriched = []
+        portfolio_value = 0.0
+
+    # --- 2. Trades: realized PnL + daily PnL ---
+    res = await db.execute(
+        select(func.coalesce(func.sum(Trade.pnl), 0.0)).where(Trade.user_id == uid)
+    )
+    realized_pnl: float = res.scalar_one()
+
+    today_start = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
+    res = await db.execute(
+        select(func.coalesce(func.sum(Trade.pnl), 0.0)).where(
+            Trade.user_id == uid,
+            Trade.exit_time >= today_start,
+        )
+    )
+    daily_pnl: float = res.scalar_one()
+
+    res = await db.execute(
+        select(func.count(Position.id)).where(
+            Position.user_id == uid,
+            Position.is_open == True,  # noqa: E712
+        )
+    )
+    open_count: int = res.scalar_one()
+
+    equity = round(portfolio_value + realized_pnl, 2)
+    balance = round(portfolio_value, 2)
+
+    # --- 3. Simulation values using SAME prices ---
+    sim_data = None
+    sim_res = await db.execute(
+        select(PaperSimulation).where(
+            PaperSimulation.user_id == uid,
+            PaperSimulation.status == "running",
+        )
+    )
+    sim = sim_res.scalar_one_or_none()
+
+    if sim:
+        # B&H value: initial quantities × current prices
+        bh_value = 0.0
+        for h in (sim.initial_holdings or []):
+            sym = h["symbol"]
+            qty = h["quantity"]
+            info = prices.get(sym, {})
+            price = info.get("price") or h.get("price_usd", 0)
+            bh_value += qty * price
+
+        # Paper value: paper quantities × current prices
+        paper_value = 0.0
+        for h in (sim.paper_holdings or []):
+            sym = h["symbol"]
+            qty = h["quantity"]
+            if qty <= 0:
+                continue
+            if sym in {"USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"}:
+                paper_value += qty
+            else:
+                info = prices.get(sym, {})
+                price = info.get("price") or h.get("price_usd", 0)
+                paper_value += qty * price
+
+        initial = sim.initial_value_usd or 0
+        sim_data = {
+            "id": str(sim.id),
+            "status": sim.status,
+            "initial_value_usd": initial,
+            "bh_value": round(bh_value, 2),
+            "paper_value": round(paper_value, 2),
+            "bh_return_pct": round((bh_value - initial) / initial * 100, 2) if initial > 0 else 0,
+            "paper_return_pct": round((paper_value - initial) / initial * 100, 2) if initial > 0 else 0,
+        }
+
+    return {
+        "equity": equity,
+        "balance": balance,
+        "daily_pnl": round(daily_pnl, 2),
+        "open_positions": open_count,
+        "max_positions": 5,
+        "simulation": sim_data,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

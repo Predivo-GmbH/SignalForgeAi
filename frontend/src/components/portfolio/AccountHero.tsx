@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { TrendingUp, TrendingDown, Loader2, AlertTriangle, CheckCircle } from "lucide-react";
-import { useAccountState, useDrawdownState } from "@/hooks/usePositions";
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from "lucide-react";
+import { useDrawdownState } from "@/hooks/usePositions";
 import { cn } from "@/lib/cn";
 import { pnlColor } from "@/lib/format";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -12,23 +12,17 @@ const LEVEL_CONFIG: Record<number, { label: string; color: string; bg: string }>
   3: { label: "Emergency", color: "text-(--color-negative)", bg: "bg-(--color-negative)/20" },
 };
 
-export function AccountHero() {
-  const { data: account, isLoading: accountLoading } = useAccountState();
-  const { data: drawdown, isLoading: drawdownLoading } = useDrawdownState();
+interface AccountHeroProps {
+  equity: number;
+  dailyPnl: number;
+  openPositions: number;
+  maxPositions: number;
+}
 
-  if (accountLoading || drawdownLoading) {
-    return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 flex items-center justify-center min-h-[120px]">
-        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
-      </div>
-    );
-  }
+export function AccountHero({ equity, dailyPnl, openPositions, maxPositions }: AccountHeroProps) {
+  const { data: drawdown } = useDrawdownState();
 
-  const equity = account?.equity ?? 10000;
-  const dailyPnl = account?.daily_pnl ?? 0;
   const dailyPct = equity > 0 ? (dailyPnl / equity) * 100 : 0;
-  const openCount = account?.open_positions ?? 0;
-  const maxPositions = account?.max_positions ?? 5;
 
   const level = drawdown?.level ?? 0;
   const cfg = LEVEL_CONFIG[Math.min(level, 3)];
@@ -64,7 +58,7 @@ export function AccountHero() {
             </div>
             <Tooltip text="Number of currently open trading positions out of the maximum allowed by your risk settings.">
               <span className="text-xs text-(--color-text-secondary) cursor-help">
-                {openCount} / {maxPositions} positions
+                {openPositions} / {maxPositions} positions
               </span>
             </Tooltip>
           </div>

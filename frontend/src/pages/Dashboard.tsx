@@ -20,6 +20,7 @@ import {
   useBHPortfolio,
   usePaperPortfolio,
 } from "@/hooks/useSimulation";
+import { useDashboardSnapshot } from "@/hooks/usePositions";
 import { AccountHero } from "@/components/portfolio/AccountHero";
 import { HoldingsCard } from "@/components/portfolio/HoldingsCard";
 import { PortfolioEquitySection } from "@/components/portfolio/PortfolioEquitySection";
@@ -35,6 +36,7 @@ export function PortfolioPage() {
   const navigate = useNavigate();
   const { data: strategiesData, isLoading: strategiesLoading } = useStrategies();
   const { data: sim, isLoading: simLoading } = useSimulation();
+  const { data: snapshot } = useDashboardSnapshot();
   const startMutation = useStartSimulation();
   const stopMutation = useStopSimulation();
 
@@ -82,7 +84,14 @@ export function PortfolioPage() {
       )}
 
       {/* Account Hero */}
-      {hasActiveStrategy && <AccountHero />}
+      {hasActiveStrategy && snapshot && (
+        <AccountHero
+          equity={snapshot.equity}
+          dailyPnl={snapshot.daily_pnl}
+          openPositions={snapshot.open_positions}
+          maxPositions={snapshot.max_positions}
+        />
+      )}
 
       {/* Tab bar + Simulation controls */}
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl">
@@ -131,7 +140,7 @@ export function PortfolioPage() {
 
         {/* Comparison bar (when simulation active) */}
         {hasSimulation && (activeTab === "bh" || activeTab === "paper") && (
-          <ComparisonBar sim={sim} />
+          <ComparisonBar sim={sim} snapshot={snapshot ?? null} />
         )}
 
         {/* Tab content */}
@@ -346,10 +355,19 @@ function SimulationButton({
   );
 }
 
-function ComparisonBar({ sim }: { sim: NonNullable<ReturnType<typeof useSimulation>["data"]> }) {
-  const diff = sim.latest_sf_value - sim.latest_bh_value;
-  const diffPct =
-    sim.initial_value_usd > 0 ? (diff / sim.initial_value_usd) * 100 : 0;
+function ComparisonBar({ sim, snapshot }: {
+  sim: NonNullable<ReturnType<typeof useSimulation>["data"]>;
+  snapshot: import("@/hooks/usePositions").DashboardSnapshot | null;
+}) {
+  // Use snapshot values (single price fetch) when available, fallback to sim
+  const bhValue = snapshot?.simulation?.bh_value ?? sim.latest_bh_value;
+  const sfValue = snapshot?.simulation?.paper_value ?? sim.latest_sf_value;
+  const bhReturnPct = snapshot?.simulation?.bh_return_pct ?? sim.bh_return_pct;
+  const sfReturnPct = snapshot?.simulation?.paper_return_pct ?? sim.sf_return_pct;
+  const initialValue = snapshot?.simulation?.initial_value_usd ?? sim.initial_value_usd;
+
+  const diff = sfValue - bhValue;
+  const diffPct = initialValue > 0 ? (diff / initialValue) * 100 : 0;
   const sfAhead = diff >= 0;
 
   return (
@@ -361,13 +379,13 @@ function ComparisonBar({ sim }: { sim: NonNullable<ReturnType<typeof useSimulati
             Buy & Hold
           </span>
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-            {fmtUsd(sim.latest_bh_value)}
+            {fmtUsd(bhValue)}
             <span
               className="text-[11px] font-medium ml-1.5"
-              style={{ color: pnlColor(sim.bh_return_pct) }}
+              style={{ color: pnlColor(bhReturnPct) }}
             >
-              {sim.bh_return_pct >= 0 ? "+" : ""}
-              {sim.bh_return_pct.toFixed(2)}%
+              {bhReturnPct >= 0 ? "+" : ""}
+              {bhReturnPct.toFixed(2)}%
             </span>
           </p>
         </div>
@@ -397,13 +415,13 @@ function ComparisonBar({ sim }: { sim: NonNullable<ReturnType<typeof useSimulati
           SignalForge
         </span>
         <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-          {fmtUsd(sim.latest_sf_value)}
+          {fmtUsd(sfValue)}
           <span
             className="text-[11px] font-medium ml-1.5"
-            style={{ color: pnlColor(sim.sf_return_pct) }}
+            style={{ color: pnlColor(sfReturnPct) }}
           >
-            {sim.sf_return_pct >= 0 ? "+" : ""}
-            {sim.sf_return_pct.toFixed(2)}%
+            {sfReturnPct >= 0 ? "+" : ""}
+            {sfReturnPct.toFixed(2)}%
           </span>
         </p>
       </div>
