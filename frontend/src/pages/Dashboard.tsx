@@ -464,11 +464,11 @@ function SimulationChart({
     return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
   };
 
-  // SVG dimensions — fills container width via viewBox + preserveAspectRatio="none"
+  // SVG dimensions — left margin baked into viewBox so all coords are unified
   const W = 1000;
   const H = 220;
-  const ml = 0; // no left margin — Y labels are HTML overlay
-  const mr = 0;
+  const ml = 60; // left margin for Y-axis labels inside SVG
+  const mr = 8;
   const mt = 8;
   const mb = 24;
   const pw = W - ml - mr;
@@ -545,35 +545,39 @@ function SimulationChart({
         </span>
       </div>
 
-      {/* Chart area */}
+      {/* Chart area — single coordinate system, no padding tricks */}
       <div className="relative">
-        {/* Y-axis labels — positioned absolutely on the left inside chart area */}
-        <div className="absolute left-0 top-0 bottom-0 w-14 z-10 pointer-events-none" style={{ paddingBottom: mb }}>
-          {yTicks.map((v, i) => (
-            <span
-              key={i}
-              className="absolute right-1 text-[10px] text-[var(--color-text-secondary)] tabular-nums -translate-y-1/2"
-              style={{ top: `${((1 - (v - minV) / vRange) * 100 * ph / (ph + mt)) + (mt / (ph + mt)) * 100}%` }}
-            >
-              {fmtVal(v)}
-            </span>
-          ))}
-        </div>
-
-        {/* SVG chart */}
         <svg
           ref={svgRef}
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
           className="w-full cursor-crosshair block"
-          style={{ height: 200, paddingLeft: 56 }}
+          style={{ height: 200 }}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoverIdx(null)}
         >
           {/* Horizontal grid */}
           {yTicks.map((v, i) => (
-            <line key={i} x1={0} x2={W} y1={yAt(v)} y2={yAt(v)}
+            <line key={i} x1={ml} x2={W - mr} y1={yAt(v)} y2={yAt(v)}
               stroke="var(--color-border)" strokeWidth="1" opacity="0.3" />
+          ))}
+
+          {/* Y-axis labels inside SVG */}
+          {yTicks.map((v, i) => (
+            <text key={`y${i}`} x={ml - 8} y={yAt(v) + 4} textAnchor="end"
+              fill="var(--color-text-secondary)" fontSize="22" fontFamily="system-ui"
+            >
+              {fmtVal(v)}
+            </text>
+          ))}
+
+          {/* X-axis labels inside SVG */}
+          {xIdxs.map((idx) => (
+            <text key={`x${idx}`} x={xAt(idx)} y={H - 4} textAnchor="middle"
+              fill="var(--color-text-secondary)" fontSize="22" fontFamily="system-ui"
+            >
+              {fmtAxisLabel(snapshots[idx].timestamp)}
+            </text>
           ))}
 
           {/* SF gradient fill */}
@@ -608,33 +612,25 @@ function SimulationChart({
           )}
         </svg>
 
-        {/* Hover dots — rendered as HTML so they don't stretch with preserveAspectRatio="none" */}
+        {/* Hover dots — HTML so they don't stretch with preserveAspectRatio="none" */}
         {hoverIdx != null && (() => {
           const snap = snapshots[hoverIdx];
           const xPct = (xAt(hoverIdx) / W) * 100;
-          // Account for paddingLeft (56px) — dots need CSS calc
-          const bhYPct = ((yAt(snap.bh_value_usd)) / H) * 100;
-          const sfYPct = ((yAt(snap.sf_value_usd)) / H) * 100;
+          const bhYPct = (yAt(snap.bh_value_usd) / H) * 100;
+          const sfYPct = (yAt(snap.sf_value_usd) / H) * 100;
           return (
             <>
               <div
                 className="absolute w-2 h-2 rounded-full border-2 border-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `calc(56px + (100% - 56px) * ${xPct / 100})`, top: `${bhYPct}%` }}
+                style={{ left: `${xPct}%`, top: `${bhYPct}%` }}
               />
               <div
                 className="absolute w-2.5 h-2.5 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `calc(56px + (100% - 56px) * ${xPct / 100})`, top: `${sfYPct}%` }}
+                style={{ left: `${xPct}%`, top: `${sfYPct}%` }}
               />
             </>
           );
         })()}
-
-        {/* X-axis labels */}
-        <div className="flex justify-between text-[10px] text-[var(--color-text-secondary)] tabular-nums mt-1" style={{ paddingLeft: 56 }}>
-          {xIdxs.map((idx) => (
-            <span key={idx}>{fmtAxisLabel(snapshots[idx].timestamp)}</span>
-          ))}
-        </div>
       </div>
     </div>
   );
