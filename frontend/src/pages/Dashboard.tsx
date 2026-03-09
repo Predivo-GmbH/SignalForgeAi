@@ -499,9 +499,9 @@ function SimulationChart({
   const xIdxs: number[] = [];
   for (let i = 0; i < xCount; i++) xIdxs.push(Math.round((i / Math.max(xCount - 1, 1)) * (snapshots.length - 1)));
 
-  // Convert viewBox coords to percentage for HTML overlays
+  // Convert viewBox coords to pixel positions within the CHART_H container
   const xPct = (i: number) => (xAt(i) / W) * 100;
-  const yPct = (v: number) => (yAt(v) / H) * 100;
+  const yPx = (v: number) => (yAt(v) / H) * CHART_H;
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const el = svgRef.current;
@@ -561,73 +561,75 @@ function SimulationChart({
         </div>
 
         {/* Plot area */}
-        <div className="flex-1 relative">
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            className="w-full cursor-crosshair block"
-            style={{ height: CHART_H }}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => setHoverIdx(null)}
-          >
-            {/* Horizontal grid */}
-            {yTicks.map((v, i) => (
-              <line key={i} x1={0} x2={W} y1={yAt(v)} y2={yAt(v)}
-                stroke="var(--color-border)" strokeWidth="1" opacity="0.3" />
-            ))}
+        <div className="flex-1">
+          {/* SVG + dots wrapper — overflow-hidden ensures height stays at CHART_H for % positioning */}
+          <div className="relative overflow-hidden" style={{ height: CHART_H }}>
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${W} ${H}`}
+              preserveAspectRatio="none"
+              className="absolute inset-0 w-full h-full cursor-crosshair block"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setHoverIdx(null)}
+            >
+              {/* Horizontal grid */}
+              {yTicks.map((v, i) => (
+                <line key={i} x1={0} x2={W} y1={yAt(v)} y2={yAt(v)}
+                  stroke="var(--color-border)" strokeWidth="1" opacity="0.3" />
+              ))}
 
-            {/* SF gradient fill */}
-            <defs>
-              <linearGradient id="sfGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.15" />
-                <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path d={buildArea(snapshots.map((s) => s.sf_value_usd))} fill="url(#sfGrad)" />
+              {/* SF gradient fill */}
+              <defs>
+                <linearGradient id="sfGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d={buildArea(snapshots.map((s) => s.sf_value_usd))} fill="url(#sfGrad)" />
 
-            {/* B&H line */}
-            <path
-              d={buildPath(snapshots.map((s) => s.bh_value_usd))}
-              fill="none" stroke="var(--color-text-secondary)" strokeWidth="2" opacity="0.4"
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* SF line */}
-            <path
-              d={buildPath(snapshots.map((s) => s.sf_value_usd))}
-              fill="none" stroke="var(--color-accent)" strokeWidth="2.5"
-              vectorEffect="non-scaling-stroke"
-            />
-
-            {/* Hover vertical line */}
-            {hoverIdx != null && (
-              <line
-                x1={xAt(hoverIdx)} x2={xAt(hoverIdx)} y1={0} y2={H}
-                stroke="var(--color-text-secondary)" strokeWidth="1" opacity="0.4"
-                vectorEffect="non-scaling-stroke" strokeDasharray="4 3"
+              {/* B&H line */}
+              <path
+                d={buildPath(snapshots.map((s) => s.bh_value_usd))}
+                fill="none" stroke="var(--color-text-secondary)" strokeWidth="2" opacity="0.4"
+                vectorEffect="non-scaling-stroke"
               />
-            )}
-          </svg>
+              {/* SF line */}
+              <path
+                d={buildPath(snapshots.map((s) => s.sf_value_usd))}
+                fill="none" stroke="var(--color-accent)" strokeWidth="2.5"
+                vectorEffect="non-scaling-stroke"
+              />
 
-          {/* Hover dots — HTML over the SVG */}
-          {hoverIdx != null && (() => {
-            const snap = snapshots[hoverIdx];
-            const x = xPct(hoverIdx);
-            const bhY = yPct(snap.bh_value_usd);
-            const sfY = yPct(snap.sf_value_usd);
-            return (
-              <>
-                <div
-                  className="absolute w-2 h-2 rounded-full border-2 border-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${x}%`, top: `${bhY}%` }}
+              {/* Hover vertical line */}
+              {hoverIdx != null && (
+                <line
+                  x1={xAt(hoverIdx)} x2={xAt(hoverIdx)} y1={0} y2={H}
+                  stroke="var(--color-text-secondary)" strokeWidth="1" opacity="0.4"
+                  vectorEffect="non-scaling-stroke" strokeDasharray="4 3"
                 />
-                <div
-                  className="absolute w-2.5 h-2.5 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${x}%`, top: `${sfY}%` }}
-                />
-              </>
-            );
-          })()}
+              )}
+            </svg>
+
+            {/* Hover dots — pixel-positioned to match SVG exactly */}
+            {hoverIdx != null && (() => {
+              const snap = snapshots[hoverIdx];
+              const x = xPct(hoverIdx);
+              const bhY = yPx(snap.bh_value_usd);
+              const sfY = yPx(snap.sf_value_usd);
+              return (
+                <>
+                  <div
+                    className="absolute w-2 h-2 rounded-full border-2 border-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2 z-10"
+                    style={{ left: `${x}%`, top: bhY }}
+                  />
+                  <div
+                    className="absolute w-2.5 h-2.5 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2 z-10"
+                    style={{ left: `${x}%`, top: sfY }}
+                  />
+                </>
+              );
+            })()}
+          </div>
 
           {/* X-axis labels — HTML below SVG */}
           <div className="flex justify-between mt-1">
