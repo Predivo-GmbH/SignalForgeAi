@@ -143,7 +143,7 @@ export function PortfolioPage() {
 
         {/* Tab content */}
         <div className="p-4 sm:p-5">
-          {activeTab === "holdings" && <HoldingsCard />}
+          {activeTab === "holdings" && <HoldingsCard overrideTotal={snapshot?.balance} />}
 
           {activeTab === "bh" && hasSimulation && (
             portfolioLoading ? (

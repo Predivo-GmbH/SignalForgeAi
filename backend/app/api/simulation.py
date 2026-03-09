@@ -403,13 +403,30 @@ async def get_combined_portfolio_endpoint(
 async def _get_combined_portfolio(
     db: AsyncSession, sim_id: str, user_id: str
 ) -> dict:
-    """Build both B&H and Paper portfolio views from ONE price fetch."""
+    """Build both B&H and Paper portfolio views from ONE price fetch.
+
+    Uses live portfolio value as the single source of truth for totals.
+    B&H total = live portfolio value (always).
+    Paper total = live portfolio value when no trades exist, diverges after trades.
+    """
     sim = await _get_user_simulation(db, sim_id, user_id)
 
-    from app.api.holdings import _fetch_prices
+    from app.api.holdings import (
+        _enrich_holdings,
+        _fetch_exchange_holdings,
+        _fetch_manual_holdings,
+        _fetch_prices,
+    )
 
-    # Collect all symbols from both initial and paper holdings
+    # Fetch live portfolio value — single source of truth
+    exchange = await _fetch_exchange_holdings(db, user_id)
+    manual = await _fetch_manual_holdings(db, user_id)
+    all_live = exchange + manual
+
+    # Collect all symbols: live + initial + paper holdings
     all_syms = set()
+    for h in all_live:
+        all_syms.add(h.symbol.upper())
     for h in (sim.initial_holdings or []):
         all_syms.add(h["symbol"])
     for h in (sim.paper_holdings or []):
@@ -418,9 +435,15 @@ async def _get_combined_portfolio(
     # ONE price fetch for everything
     prices = await _fetch_prices(list(all_syms)) if all_syms else {}
 
-    # --- Build B&H portfolio ---
+    # Live portfolio value = single source of truth
+    if all_live:
+        _, live_portfolio_value = _enrich_holdings(list(all_live), prices)
+    else:
+        live_portfolio_value = 0.0
+
+    # --- Build B&H portfolio (per-holding detail) ---
     bh_holdings = []
-    bh_total = 0.0
+    bh_sum = 0.0  # sum of per-holding values (for proportional adjustment)
     for h in (sim.initial_holdings or []):
         sym = h["symbol"]
         qty = h["quantity"]
@@ -428,7 +451,7 @@ async def _get_combined_portfolio(
         current_price = info.get("price") or h.get("price_usd", 0)
         value = qty * current_price
         initial_value = h.get("value_usd", 0)
-        bh_total += value
+        bh_sum += value
 
         bh_holdings.append({
             "symbol": sym,
@@ -446,6 +469,17 @@ async def _get_combined_portfolio(
         })
     bh_holdings.sort(key=lambda x: x["value_usd"], reverse=True)
 
+    # B&H total = live portfolio value (single source of truth)
+    bh_total = live_portfolio_value
+
+    # --- Check if trades have modified paper_holdings ---
+    sim_trade_res = await db.execute(
+        select(func.count(Trade.id))
+        .join(Signal, Trade.signal_id == Signal.id)
+        .where(Signal.strategy_id == sim.strategy_id)
+    )
+    sim_trade_count = sim_trade_res.scalar_one() or 0
+
     # --- Build Paper portfolio ---
     paper = sim.paper_holdings or []
     pos_result = await db.execute(
@@ -457,7 +491,7 @@ async def _get_combined_portfolio(
     open_positions = pos_result.scalars().all()
 
     paper_holdings = []
-    paper_total = 0.0
+    paper_sum = 0.0
     usdt_balance = 0.0
 
     for h in paper:
@@ -472,7 +506,7 @@ async def _get_combined_portfolio(
         else:
             current_price = info.get("price") or h.get("price_usd", 0)
         value = qty * current_price
-        paper_total += value
+        paper_sum += value
 
         if sym == "USDT":
             usdt_balance = qty
@@ -499,6 +533,9 @@ async def _get_combined_portfolio(
             "market_cap_rank": info.get("market_cap_rank"),
         })
     paper_holdings.sort(key=lambda x: x["value_usd"], reverse=True)
+
+    # Paper total: live portfolio value when no trades, computed from paper_holdings otherwise
+    paper_total = live_portfolio_value if sim_trade_count == 0 else paper_sum
 
     reserve_target_usd = paper_total * sim.usdt_reserve_pct
     reserve_status = "at_target"

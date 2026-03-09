@@ -932,7 +932,7 @@ function SortHeader({
 
 /* ---- Main Card ---- */
 
-export function HoldingsCard() {
+export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
   const { data, isLoading } = useHoldings();
   const { data: brokerConns } = useBrokerConnections();
   const deleteMutation = useDeleteHolding();
@@ -978,7 +978,7 @@ export function HoldingsCard() {
   }, [isLoading]);
 
   const allHoldings = data?.holdings ?? [];
-  const totalValue = data?.total_value_usd ?? null;
+  const totalValue = overrideTotal ?? data?.total_value_usd ?? null;
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
