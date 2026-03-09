@@ -217,7 +217,7 @@ export function PortfolioPage() {
           <SimulationChart snapshots={sim.snapshots} />
           <div className="flex items-center gap-4 mt-2 text-[11px] text-[var(--color-text-secondary)]">
             <span className="flex items-center gap-1.5">
-              <span className="w-3 h-0.5 rounded bg-[var(--color-text-secondary)] opacity-40" />
+              <svg width="12" height="2" className="opacity-70"><line x1="0" y1="1" x2="12" y2="1" stroke="var(--color-text-secondary)" strokeWidth="1.5" strokeDasharray="3 2" /></svg>
               Buy & Hold
             </span>
             <span className="flex items-center gap-1.5">
@@ -443,11 +443,11 @@ function SimulationChart({
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-  // Layout
-  const w = 600;
-  const h = 180;
-  const marginLeft = 70;
-  const marginRight = 16;
+  // Layout — wide viewBox so the chart fills the container
+  const w = 900;
+  const h = 200;
+  const marginLeft = 60;
+  const marginRight = 12;
   const marginTop = 12;
   const marginBottom = 32;
   const plotW = w - marginLeft - marginRight;
@@ -483,14 +483,26 @@ function SimulationChart({
   }
 
   const fmtAxisVal = (v: number) => {
-    if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`;
+    if (v >= 100_000) return `$${(v / 1000).toFixed(0)}k`;
+    if (v >= 10_000) return `$${(v / 1000).toFixed(1)}k`;
+    if (v >= 1_000) return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
     return `$${v.toFixed(0)}`;
   };
+
+  // Determine if snapshots span multiple days
+  const firstDate = new Date(snapshots[0].timestamp);
+  const lastDate = new Date(snapshots[snapshots.length - 1].timestamp);
+  const spansDays =
+    firstDate.toDateString() !== lastDate.toDateString();
 
   const fmtDate = (ts: string, short?: boolean) => {
     const d = new Date(ts);
     if (short) {
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      if (spansDays) {
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }
+      // Same day — show time only
+      return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
     }
     return d.toLocaleString("en-US", {
       month: "short",
@@ -526,8 +538,8 @@ function SimulationChart({
     <div ref={containerRef} className="relative" onMouseLeave={() => setHoverIdx(null)}>
       <svg
         viewBox={`0 0 ${w} ${h}`}
-        className="w-full"
-        style={{ height: 180 }}
+        className="w-full cursor-crosshair"
+        style={{ height: 200 }}
         preserveAspectRatio="xMidYMid meet"
         onMouseMove={handleMouseMove}
       >
@@ -573,20 +585,21 @@ function SimulationChart({
           </text>
         ))}
 
-        {/* B&H line */}
-        <path
-          d={toPath(snapshots.map((s) => s.bh_value_usd))}
-          fill="none"
-          stroke="var(--color-text-secondary)"
-          strokeWidth="1.5"
-          opacity="0.5"
-        />
-        {/* SF line */}
+        {/* SF line (drawn first = behind) */}
         <path
           d={toPath(snapshots.map((s) => s.sf_value_usd))}
           fill="none"
           stroke="var(--color-accent)"
           strokeWidth="2"
+        />
+        {/* B&H line — dashed so it's visible even when overlapping SF */}
+        <path
+          d={toPath(snapshots.map((s) => s.bh_value_usd))}
+          fill="none"
+          stroke="var(--color-text-secondary)"
+          strokeWidth="1.5"
+          strokeDasharray="6 3"
+          opacity="0.7"
         />
 
         {/* Hover crosshair + dots */}
