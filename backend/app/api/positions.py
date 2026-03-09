@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.execution.position_manager import PositionManagerDB
 from app.models.position import Position
+from app.models.signal import Signal
 from app.models.trade import Trade
 
 logger = logging.getLogger(__name__)
@@ -222,7 +223,9 @@ async def dashboard_snapshot(
     equity = round(portfolio_value + realized_pnl, 2)
     balance = round(portfolio_value, 2)
 
-    # --- 3. Simulation values using SAME prices ---
+    # --- 3. Simulation values — single source of truth ---
+    # B&H = "hold what you have" = live portfolio_value (always).
+    # Paper = portfolio_value until trades make it diverge.
     sim_data = None
     sim_res = await db.execute(
         select(PaperSimulation).where(
@@ -233,28 +236,34 @@ async def dashboard_snapshot(
     sim = sim_res.scalar_one_or_none()
 
     if sim:
-        # B&H value: initial quantities × current prices
-        bh_value = 0.0
-        for h in (sim.initial_holdings or []):
-            sym = h["symbol"]
-            qty = h["quantity"]
-            info = prices.get(sym, {})
-            price = info.get("price") or h.get("price_usd", 0)
-            bh_value += qty * price
+        # B&H value IS the live portfolio — same holdings, same prices.
+        bh_value = portfolio_value
 
-        # Paper value: paper quantities × current prices
-        paper_value = 0.0
-        for h in (sim.paper_holdings or []):
-            sym = h["symbol"]
-            qty = h["quantity"]
-            if qty <= 0:
-                continue
-            if sym in {"USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"}:
-                paper_value += qty
-            else:
-                info = prices.get(sym, {})
-                price = info.get("price") or h.get("price_usd", 0)
-                paper_value += qty * price
+        # Check if any trades have been executed for this simulation
+        sim_trade_res = await db.execute(
+            select(func.count(Trade.id))
+            .join(Signal, Trade.signal_id == Signal.id)
+            .where(Signal.strategy_id == sim.strategy_id)
+        )
+        sim_trade_count = sim_trade_res.scalar_one() or 0
+
+        if sim_trade_count == 0:
+            # No trades — paper portfolio is identical to live portfolio
+            paper_value = portfolio_value
+        else:
+            # Trades have modified paper_holdings — compute from those
+            paper_value = 0.0
+            for h in (sim.paper_holdings or []):
+                sym = h["symbol"]
+                qty = h["quantity"]
+                if qty <= 0:
+                    continue
+                if sym in {"USDT", "USDC", "BUSD", "DAI", "TUSD", "FDUSD", "USDP", "USD"}:
+                    paper_value += qty
+                else:
+                    info = prices.get(sym, {})
+                    price = info.get("price") or h.get("price_usd", 0)
+                    paper_value += qty * price
 
         initial = sim.initial_value_usd or 0
         sim_data = {

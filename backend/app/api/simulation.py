@@ -4,14 +4,11 @@ Simulation Model
 ================
 Both sides start with the user's real portfolio snapshot.
 
-  B&H portfolio   = frozen initial_holdings × current prices (never changes)
-  Paper portfolio  = starts as copy of initial_holdings, then diverges with trades
+  B&H portfolio   = live portfolio value (single source of truth)
+  Paper portfolio  = same as B&H until trades make it diverge
 
-USDT Reserve Policy
-===================
-The AI Advisor recommends an optimal USDT reserve % based on market conditions.
-At simulation start, the system trims holdings proportionally to seed the reserve.
-The reserve influences trading bias — buy signals are sized down when USDT is low.
+Paper holdings start as an exact copy of real holdings — no artificial
+rebalancing. USDT comes from existing balance and future trade sells.
 """
 
 import copy
