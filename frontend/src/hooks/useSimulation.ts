@@ -125,23 +125,31 @@ export function useStopSimulation() {
   });
 }
 
-export function useBHPortfolio(simId: string | undefined) {
+interface CombinedPortfolio {
+  bh: BHPortfolioData;
+  paper: PaperPortfolioData;
+}
+
+/** Fetches both B&H and Paper portfolios from a single price fetch. */
+export function useCombinedPortfolio(simId: string | undefined) {
   return useQuery({
-    queryKey: ["simulation", simId, "portfolio", "bh"],
-    queryFn: () => api.get<BHPortfolioData>(`/simulation/${simId}/portfolio/bh`),
+    queryKey: ["simulation", simId, "portfolio"],
+    queryFn: () => api.get<CombinedPortfolio>(`/simulation/${simId}/portfolio`),
     enabled: !!simId,
     refetchInterval: 60_000,
   });
 }
 
+/** @deprecated Use useCombinedPortfolio instead */
+export function useBHPortfolio(simId: string | undefined) {
+  const { data, ...rest } = useCombinedPortfolio(simId);
+  return { data: data?.bh, ...rest };
+}
+
+/** @deprecated Use useCombinedPortfolio instead */
 export function usePaperPortfolio(simId: string | undefined) {
-  return useQuery({
-    queryKey: ["simulation", simId, "portfolio", "paper"],
-    queryFn: () =>
-      api.get<PaperPortfolioData>(`/simulation/${simId}/portfolio/paper`),
-    enabled: !!simId,
-    refetchInterval: 60_000,
-  });
+  const { data, ...rest } = useCombinedPortfolio(simId);
+  return { data: data?.paper, ...rest };
 }
 
 export function useUpdateReserve() {

@@ -17,8 +17,7 @@ import {
   useSimulation,
   useStartSimulation,
   useStopSimulation,
-  useBHPortfolio,
-  usePaperPortfolio,
+  useCombinedPortfolio,
 } from "@/hooks/useSimulation";
 import { useDashboardSnapshot } from "@/hooks/usePositions";
 import { AccountHero } from "@/components/portfolio/AccountHero";
@@ -47,13 +46,12 @@ export function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<Tab>("holdings");
   const [stopConfirming, setStopConfirming] = useState(false);
 
-  // Fetch portfolio data when on simulation tabs
-  const { data: bhPortfolio, isLoading: bhLoading } = useBHPortfolio(
-    activeTab === "bh" ? sim?.id : undefined
+  // Fetch both portfolios from a single price fetch when simulation active
+  const { data: combined, isLoading: portfolioLoading } = useCombinedPortfolio(
+    hasSimulation && (activeTab === "bh" || activeTab === "paper") ? sim?.id : undefined
   );
-  const { data: paperPortfolio, isLoading: paperLoading } = usePaperPortfolio(
-    activeTab === "paper" ? sim?.id : undefined
-  );
+  const bhPortfolio = combined?.bh;
+  const paperPortfolio = combined?.paper;
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 max-w-[1600px] mx-auto w-full overflow-x-hidden">
@@ -148,7 +146,7 @@ export function PortfolioPage() {
           {activeTab === "holdings" && <HoldingsCard />}
 
           {activeTab === "bh" && hasSimulation && (
-            bhLoading ? (
+            portfolioLoading ? (
               <LoadingSpinner />
             ) : bhPortfolio ? (
               <SimulationPortfolio
@@ -165,7 +163,7 @@ export function PortfolioPage() {
           )}
 
           {activeTab === "paper" && hasSimulation && (
-            paperLoading ? (
+            portfolioLoading ? (
               <LoadingSpinner />
             ) : paperPortfolio ? (
               <div className="space-y-4">

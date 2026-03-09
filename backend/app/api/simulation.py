@@ -374,15 +374,56 @@ async def get_bh_portfolio(
     db: AsyncSession = Depends(get_db),
 ):
     """Return the Buy & Hold portfolio — initial holdings at current prices."""
+    combined = await _get_combined_portfolio(db, sim_id, user_id)
+    return combined["bh"]
+
+
+@router.get("/{sim_id}/portfolio/paper")
+@limiter.limit("60/minute")
+async def get_paper_portfolio(
+    request: Request,
+    sim_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the Paper Trading portfolio — current paper holdings at live prices."""
+    combined = await _get_combined_portfolio(db, sim_id, user_id)
+    return combined["paper"]
+
+
+@router.get("/{sim_id}/portfolio")
+@limiter.limit("60/minute")
+async def get_combined_portfolio_endpoint(
+    request: Request,
+    sim_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return both B&H and Paper portfolios from a single price fetch."""
+    return await _get_combined_portfolio(db, sim_id, user_id)
+
+
+async def _get_combined_portfolio(
+    db: AsyncSession, sim_id: str, user_id: str
+) -> dict:
+    """Build both B&H and Paper portfolio views from ONE price fetch."""
     sim = await _get_user_simulation(db, sim_id, user_id)
 
     from app.api.holdings import _fetch_prices
 
-    symbols = [h["symbol"] for h in (sim.initial_holdings or [])]
-    prices = await _fetch_prices(symbols) if symbols else {}
+    # Collect all symbols from both initial and paper holdings
+    all_syms = set()
+    for h in (sim.initial_holdings or []):
+        all_syms.add(h["symbol"])
+    for h in (sim.paper_holdings or []):
+        all_syms.add(h["symbol"])
 
-    holdings = []
-    total_value = 0.0
+    # ONE price fetch for everything
+    prices = await _fetch_prices(list(all_syms)) if all_syms else {}
+
+    # --- Build B&H portfolio ---
+    bh_holdings = []
+    bh_total = 0.0
     for h in (sim.initial_holdings or []):
         sym = h["symbol"]
         qty = h["quantity"]
@@ -390,9 +431,9 @@ async def get_bh_portfolio(
         current_price = info.get("price") or h.get("price_usd", 0)
         value = qty * current_price
         initial_value = h.get("value_usd", 0)
-        total_value += value
+        bh_total += value
 
-        holdings.append({
+        bh_holdings.append({
             "symbol": sym,
             "quantity": qty,
             "initial_price": h.get("price_usd", 0),
@@ -406,40 +447,10 @@ async def get_bh_portfolio(
             "market_cap": info.get("market_cap"),
             "market_cap_rank": info.get("market_cap_rank"),
         })
+    bh_holdings.sort(key=lambda x: x["value_usd"], reverse=True)
 
-    # Sort by value descending
-    holdings.sort(key=lambda x: x["value_usd"], reverse=True)
-
-    return {
-        "type": "buy_and_hold",
-        "total_value_usd": round(total_value, 2),
-        "initial_value_usd": sim.initial_value_usd,
-        "total_pnl_usd": round(total_value - sim.initial_value_usd, 2),
-        "total_pnl_pct": round(
-            (total_value - sim.initial_value_usd) / sim.initial_value_usd * 100, 2
-        ) if sim.initial_value_usd > 0 else 0,
-        "holdings": holdings,
-    }
-
-
-@router.get("/{sim_id}/portfolio/paper")
-@limiter.limit("60/minute")
-async def get_paper_portfolio(
-    request: Request,
-    sim_id: str,
-    user_id: str = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Return the Paper Trading portfolio — current paper holdings at live prices."""
-    sim = await _get_user_simulation(db, sim_id, user_id)
-
-    from app.api.holdings import _fetch_prices
-
+    # --- Build Paper portfolio ---
     paper = sim.paper_holdings or []
-    symbols = [h["symbol"] for h in paper]
-    prices = await _fetch_prices(symbols) if symbols else {}
-
-    # Also get open positions for this simulation strategy
     pos_result = await db.execute(
         select(Position).where(
             Position.strategy_id == sim.strategy_id,
@@ -448,8 +459,8 @@ async def get_paper_portfolio(
     )
     open_positions = pos_result.scalars().all()
 
-    holdings = []
-    total_value = 0.0
+    paper_holdings = []
+    paper_total = 0.0
     usdt_balance = 0.0
 
     for h in paper:
@@ -464,19 +475,18 @@ async def get_paper_portfolio(
         else:
             current_price = info.get("price") or h.get("price_usd", 0)
         value = qty * current_price
-        total_value += value
+        paper_total += value
 
         if sym == "USDT":
             usdt_balance = qty
 
-        # Find initial holding to compute P&L
         initial_h = next(
             (ih for ih in (sim.initial_holdings or []) if ih["symbol"] == sym), None
         )
         initial_value = initial_h["value_usd"] if initial_h else 0
         initial_qty = initial_h["quantity"] if initial_h else 0
 
-        holdings.append({
+        paper_holdings.append({
             "symbol": sym,
             "quantity": qty,
             "initial_quantity": initial_qty,
@@ -491,44 +501,52 @@ async def get_paper_portfolio(
             "market_cap": info.get("market_cap"),
             "market_cap_rank": info.get("market_cap_rank"),
         })
+    paper_holdings.sort(key=lambda x: x["value_usd"], reverse=True)
 
-    holdings.sort(key=lambda x: x["value_usd"], reverse=True)
-
-    # Reserve status
-    reserve_target_usd = total_value * sim.usdt_reserve_pct
+    reserve_target_usd = paper_total * sim.usdt_reserve_pct
     reserve_status = "at_target"
     if usdt_balance < reserve_target_usd * 0.9:
         reserve_status = "below_target"
     elif usdt_balance > reserve_target_usd * 1.1:
         reserve_status = "above_target"
 
+    initial = sim.initial_value_usd or 0
+
     return {
-        "type": "paper_trading",
-        "total_value_usd": round(total_value, 2),
-        "initial_value_usd": sim.initial_value_usd,
-        "total_pnl_usd": round(total_value - sim.initial_value_usd, 2),
-        "total_pnl_pct": round(
-            (total_value - sim.initial_value_usd) / sim.initial_value_usd * 100, 2
-        ) if sim.initial_value_usd > 0 else 0,
-        "holdings": holdings,
-        "usdt_balance": round(usdt_balance, 2),
-        "usdt_reserve_pct": sim.usdt_reserve_pct,
-        "usdt_reserve_target_usd": round(reserve_target_usd, 2),
-        "usdt_reserve_status": reserve_status,
-        "usdt_reserve_mode": sim.usdt_reserve_mode,
-        "ai_suggested_reserve_pct": sim.ai_suggested_reserve_pct,
-        "ai_reserve_reasoning": sim.ai_reserve_reasoning,
-        "open_positions": [
-            {
-                "symbol": p.symbol,
-                "direction": p.direction,
-                "quantity": p.quantity,
-                "entry_price": p.entry_price,
-                "current_price": p.current_price,
-                "unrealized_pnl": p.unrealized_pnl,
-            }
-            for p in open_positions
-        ],
+        "bh": {
+            "type": "buy_and_hold",
+            "total_value_usd": round(bh_total, 2),
+            "initial_value_usd": initial,
+            "total_pnl_usd": round(bh_total - initial, 2),
+            "total_pnl_pct": round((bh_total - initial) / initial * 100, 2) if initial > 0 else 0,
+            "holdings": bh_holdings,
+        },
+        "paper": {
+            "type": "paper_trading",
+            "total_value_usd": round(paper_total, 2),
+            "initial_value_usd": initial,
+            "total_pnl_usd": round(paper_total - initial, 2),
+            "total_pnl_pct": round((paper_total - initial) / initial * 100, 2) if initial > 0 else 0,
+            "holdings": paper_holdings,
+            "usdt_balance": round(usdt_balance, 2),
+            "usdt_reserve_pct": sim.usdt_reserve_pct,
+            "usdt_reserve_target_usd": round(reserve_target_usd, 2),
+            "usdt_reserve_status": reserve_status,
+            "usdt_reserve_mode": sim.usdt_reserve_mode,
+            "ai_suggested_reserve_pct": sim.ai_suggested_reserve_pct,
+            "ai_reserve_reasoning": sim.ai_reserve_reasoning,
+            "open_positions": [
+                {
+                    "symbol": p.symbol,
+                    "direction": p.direction,
+                    "quantity": p.quantity,
+                    "entry_price": p.entry_price,
+                    "current_price": p.current_price,
+                    "unrealized_pnl": p.unrealized_pnl,
+                }
+                for p in open_positions
+            ],
+        },
     }
 
 
