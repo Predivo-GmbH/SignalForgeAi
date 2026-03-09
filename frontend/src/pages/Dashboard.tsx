@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Sparkles,
@@ -437,49 +437,228 @@ function ComparisonBar({ sim, snapshot }: {
 function SimulationChart({
   snapshots,
 }: {
-  snapshots: { bh_value_usd: number; sf_value_usd: number }[];
+  snapshots: { timestamp: string; bh_value_usd: number; sf_value_usd: number }[];
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  // Layout
   const w = 600;
-  const h = 80;
-  const pad = 4;
+  const h = 180;
+  const marginLeft = 70;
+  const marginRight = 16;
+  const marginTop = 12;
+  const marginBottom = 32;
+  const plotW = w - marginLeft - marginRight;
+  const plotH = h - marginTop - marginBottom;
 
   const allValues = snapshots.flatMap((s) => [s.bh_value_usd, s.sf_value_usd]);
-  const min = Math.min(...allValues) * 0.998;
-  const max = Math.max(...allValues) * 1.002;
-  const range = max - min || 1;
+  const minVal = Math.min(...allValues) * 0.998;
+  const maxVal = Math.max(...allValues) * 1.002;
+  const valRange = maxVal - minVal || 1;
 
-  const toPath = (values: number[]) => {
-    const step = (w - pad * 2) / Math.max(values.length - 1, 1);
-    return values
-      .map((v, i) => {
-        const x = pad + i * step;
-        const y = h - pad - ((v - min) / range) * (h - pad * 2);
-        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
+  const toX = (i: number) =>
+    marginLeft + (i / Math.max(snapshots.length - 1, 1)) * plotW;
+  const toY = (v: number) =>
+    marginTop + plotH - ((v - minVal) / valRange) * plotH;
+
+  const toPath = (values: number[]) =>
+    values
+      .map((v, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(v).toFixed(1)}`)
       .join(" ");
+
+  // Y-axis ticks (4-5 ticks)
+  const yTickCount = 4;
+  const yTicks: number[] = [];
+  for (let i = 0; i <= yTickCount; i++) {
+    yTicks.push(minVal + (valRange * i) / yTickCount);
+  }
+
+  // X-axis ticks — pick ~5 evenly spaced labels
+  const xTickCount = Math.min(5, snapshots.length);
+  const xTicks: number[] = [];
+  for (let i = 0; i < xTickCount; i++) {
+    xTicks.push(Math.round((i / Math.max(xTickCount - 1, 1)) * (snapshots.length - 1)));
+  }
+
+  const fmtAxisVal = (v: number) => {
+    if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`;
+    return `$${v.toFixed(0)}`;
   };
 
+  const fmtDate = (ts: string, short?: boolean) => {
+    const d = new Date(ts);
+    if (short) {
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const relX = (e.clientX - rect.left) / rect.width;
+    const svgX = relX * w;
+    // Find closest snapshot index
+    let closest = 0;
+    let closestDist = Infinity;
+    for (let i = 0; i < snapshots.length; i++) {
+      const dist = Math.abs(toX(i) - svgX);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = i;
+      }
+    }
+    setHoverIdx(closest);
+    setTooltipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const snap = hoverIdx != null ? snapshots[hoverIdx] : null;
+  const diff = snap ? snap.sf_value_usd - snap.bh_value_usd : 0;
+
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      className="w-full"
-      style={{ height: 80 }}
-      preserveAspectRatio="none"
-    >
-      <path
-        d={toPath(snapshots.map((s) => s.bh_value_usd))}
-        fill="none"
-        stroke="var(--color-text-secondary)"
-        strokeWidth="1.5"
-        opacity="0.4"
-      />
-      <path
-        d={toPath(snapshots.map((s) => s.sf_value_usd))}
-        fill="none"
-        stroke="var(--color-accent)"
-        strokeWidth="2"
-      />
-    </svg>
+    <div ref={containerRef} className="relative" onMouseLeave={() => setHoverIdx(null)}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="w-full"
+        style={{ height: 180 }}
+        preserveAspectRatio="xMidYMid meet"
+        onMouseMove={handleMouseMove}
+      >
+        {/* Grid lines */}
+        {yTicks.map((v, i) => (
+          <line
+            key={`grid-${i}`}
+            x1={marginLeft}
+            x2={w - marginRight}
+            y1={toY(v)}
+            y2={toY(v)}
+            stroke="var(--color-border)"
+            strokeWidth="0.5"
+            strokeDasharray="4 3"
+          />
+        ))}
+
+        {/* Y-axis labels */}
+        {yTicks.map((v, i) => (
+          <text
+            key={`y-${i}`}
+            x={marginLeft - 6}
+            y={toY(v) + 3}
+            textAnchor="end"
+            fill="var(--color-text-secondary)"
+            fontSize="10"
+          >
+            {fmtAxisVal(v)}
+          </text>
+        ))}
+
+        {/* X-axis labels */}
+        {xTicks.map((idx) => (
+          <text
+            key={`x-${idx}`}
+            x={toX(idx)}
+            y={h - 6}
+            textAnchor="middle"
+            fill="var(--color-text-secondary)"
+            fontSize="10"
+          >
+            {fmtDate(snapshots[idx].timestamp, true)}
+          </text>
+        ))}
+
+        {/* B&H line */}
+        <path
+          d={toPath(snapshots.map((s) => s.bh_value_usd))}
+          fill="none"
+          stroke="var(--color-text-secondary)"
+          strokeWidth="1.5"
+          opacity="0.5"
+        />
+        {/* SF line */}
+        <path
+          d={toPath(snapshots.map((s) => s.sf_value_usd))}
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="2"
+        />
+
+        {/* Hover crosshair + dots */}
+        {hoverIdx != null && snap && (
+          <>
+            <line
+              x1={toX(hoverIdx)}
+              x2={toX(hoverIdx)}
+              y1={marginTop}
+              y2={marginTop + plotH}
+              stroke="var(--color-text-secondary)"
+              strokeWidth="0.75"
+              strokeDasharray="3 2"
+              opacity="0.5"
+            />
+            <circle
+              cx={toX(hoverIdx)}
+              cy={toY(snap.bh_value_usd)}
+              r="3.5"
+              fill="var(--color-bg-surface)"
+              stroke="var(--color-text-secondary)"
+              strokeWidth="1.5"
+            />
+            <circle
+              cx={toX(hoverIdx)}
+              cy={toY(snap.sf_value_usd)}
+              r="3.5"
+              fill="var(--color-bg-surface)"
+              stroke="var(--color-accent)"
+              strokeWidth="1.5"
+            />
+          </>
+        )}
+      </svg>
+
+      {/* Tooltip */}
+      {hoverIdx != null && snap && (
+        <div
+          className="absolute z-50 pointer-events-none bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg shadow-lg px-3 py-2 text-xs"
+          style={{
+            left: Math.min(tooltipPos.x + 12, (containerRef.current?.clientWidth ?? 300) - 200),
+            top: Math.max(tooltipPos.y - 80, 0),
+            minWidth: 180,
+          }}
+        >
+          <div className="text-[var(--color-text-secondary)] mb-1.5 font-medium">
+            {fmtDate(snap.timestamp)}
+          </div>
+          <div className="flex justify-between gap-4 mb-0.5">
+            <span className="text-[var(--color-text-secondary)] opacity-60">Buy & Hold</span>
+            <span className="text-[var(--color-text-primary)] tabular-nums font-medium">
+              {fmtUsd(snap.bh_value_usd)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-4 mb-1">
+            <span className="text-[var(--color-accent)]">SignalForge</span>
+            <span className="text-[var(--color-text-primary)] tabular-nums font-medium">
+              {fmtUsd(snap.sf_value_usd)}
+            </span>
+          </div>
+          <div className="border-t border-[var(--color-border)] pt-1 flex justify-between gap-4">
+            <span className="text-[var(--color-text-secondary)]">Difference</span>
+            <span
+              className="tabular-nums font-medium"
+              style={{ color: diff >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
+            >
+              {diff >= 0 ? "+" : ""}{fmtUsd(diff)}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
