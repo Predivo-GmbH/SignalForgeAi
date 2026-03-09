@@ -464,23 +464,22 @@ function SimulationChart({
     return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
   };
 
-  // SVG dimensions — left margin baked into viewBox so all coords are unified
-  const W = 1000;
-  const H = 220;
-  const ml = 60; // left margin for Y-axis labels inside SVG
-  const mr = 8;
-  const mt = 8;
-  const mb = 24;
-  const pw = W - ml - mr;
-  const ph = H - mt - mb;
+  // Chart layout — SVG is just the plot area (no text inside SVG).
+  // HTML handles all labels to avoid distortion from preserveAspectRatio="none".
+  const CHART_H = 180; // px height of the SVG plot area
+  const Y_LABEL_W = 52; // px width reserved for Y-axis labels
+  const W = 1000; // SVG viewBox width (arbitrary, maps to full plot width)
+  const H = 1000; // SVG viewBox height (arbitrary, maps to full plot height)
+  const pw = W;
+  const ph = H;
 
   const allVals = snapshots.flatMap((s) => [s.bh_value_usd, s.sf_value_usd]);
   const minV = Math.min(...allVals) * 0.998;
   const maxV = Math.max(...allVals) * 1.002;
   const vRange = maxV - minV || 1;
 
-  const xAt = (i: number) => ml + (i / Math.max(snapshots.length - 1, 1)) * pw;
-  const yAt = (v: number) => mt + ph - ((v - minV) / vRange) * ph;
+  const xAt = (i: number) => (i / Math.max(snapshots.length - 1, 1)) * pw;
+  const yAt = (v: number) => ph - ((v - minV) / vRange) * ph;
 
   const buildPath = (vals: number[]) =>
     vals.map((v, i) => `${i === 0 ? "M" : "L"}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
@@ -488,7 +487,7 @@ function SimulationChart({
   // Build filled area path (line + close to bottom)
   const buildArea = (vals: number[]) => {
     const line = vals.map((v, i) => `${i === 0 ? "M" : "L"}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
-    return `${line} L${xAt(vals.length - 1).toFixed(1)},${(mt + ph).toFixed(1)} L${xAt(0).toFixed(1)},${(mt + ph).toFixed(1)} Z`;
+    return `${line} L${xAt(vals.length - 1).toFixed(1)},${ph.toFixed(1)} L${xAt(0).toFixed(1)},${ph.toFixed(1)} Z`;
   };
 
   // Y-axis ticks
@@ -500,17 +499,22 @@ function SimulationChart({
   const xIdxs: number[] = [];
   for (let i = 0; i < xCount; i++) xIdxs.push(Math.round((i / Math.max(xCount - 1, 1)) * (snapshots.length - 1)));
 
+  // Convert viewBox coords to percentage for HTML overlays
+  const xPct = (i: number) => (xAt(i) / W) * 100;
+  const yPct = (v: number) => (yAt(v) / H) * 100;
+
   const handleMouseMove = (e: React.MouseEvent) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
+    const el = svgRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
     const relX = (e.clientX - rect.left) / rect.width;
-    const svgX = relX * W;
-    // Binary-ish snap to nearest point
+    // Map to data index
+    const dataX = relX; // 0..1 across the plot
     let best = 0;
     let bestD = Infinity;
     for (let i = 0; i < snapshots.length; i++) {
-      const d = Math.abs(xAt(i) - svgX);
+      const frac = i / Math.max(snapshots.length - 1, 1);
+      const d = Math.abs(frac - dataX);
       if (d < bestD) { bestD = d; best = i; }
     }
     setHoverIdx(best);
@@ -545,92 +549,95 @@ function SimulationChart({
         </span>
       </div>
 
-      {/* Chart area — single coordinate system, no padding tricks */}
-      <div className="relative">
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          className="w-full cursor-crosshair block"
-          style={{ height: 200 }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoverIdx(null)}
-        >
-          {/* Horizontal grid */}
-          {yTicks.map((v, i) => (
-            <line key={i} x1={ml} x2={W - mr} y1={yAt(v)} y2={yAt(v)}
-              stroke="var(--color-border)" strokeWidth="1" opacity="0.3" />
-          ))}
-
-          {/* Y-axis labels inside SVG */}
-          {yTicks.map((v, i) => (
-            <text key={`y${i}`} x={ml - 8} y={yAt(v) + 4} textAnchor="end"
-              fill="var(--color-text-secondary)" fontSize="22" fontFamily="system-ui"
-            >
+      {/* Chart layout: Y-labels | plot area */}
+      <div className="flex">
+        {/* Y-axis labels — HTML, outside SVG */}
+        <div className="flex-none flex flex-col justify-between text-right pr-2" style={{ width: Y_LABEL_W, height: CHART_H }}>
+          {[...yTicks].reverse().map((v, i) => (
+            <span key={i} className="text-[10px] text-[var(--color-text-secondary)] tabular-nums leading-none">
               {fmtVal(v)}
-            </text>
+            </span>
           ))}
+        </div>
 
-          {/* X-axis labels inside SVG */}
-          {xIdxs.map((idx) => (
-            <text key={`x${idx}`} x={xAt(idx)} y={H - 4} textAnchor="middle"
-              fill="var(--color-text-secondary)" fontSize="22" fontFamily="system-ui"
-            >
-              {fmtAxisLabel(snapshots[idx].timestamp)}
-            </text>
-          ))}
+        {/* Plot area */}
+        <div className="flex-1 relative">
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            className="w-full cursor-crosshair block"
+            style={{ height: CHART_H }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoverIdx(null)}
+          >
+            {/* Horizontal grid */}
+            {yTicks.map((v, i) => (
+              <line key={i} x1={0} x2={W} y1={yAt(v)} y2={yAt(v)}
+                stroke="var(--color-border)" strokeWidth="1" opacity="0.3" />
+            ))}
 
-          {/* SF gradient fill */}
-          <defs>
-            <linearGradient id="sfGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d={buildArea(snapshots.map((s) => s.sf_value_usd))} fill="url(#sfGrad)" />
+            {/* SF gradient fill */}
+            <defs>
+              <linearGradient id="sfGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={buildArea(snapshots.map((s) => s.sf_value_usd))} fill="url(#sfGrad)" />
 
-          {/* B&H line */}
-          <path
-            d={buildPath(snapshots.map((s) => s.bh_value_usd))}
-            fill="none" stroke="var(--color-text-secondary)" strokeWidth="2" opacity="0.4"
-            vectorEffect="non-scaling-stroke"
-          />
-          {/* SF line */}
-          <path
-            d={buildPath(snapshots.map((s) => s.sf_value_usd))}
-            fill="none" stroke="var(--color-accent)" strokeWidth="2.5"
-            vectorEffect="non-scaling-stroke"
-          />
-
-          {/* Hover vertical line */}
-          {hoverIdx != null && (
-            <line
-              x1={xAt(hoverIdx)} x2={xAt(hoverIdx)} y1={mt} y2={mt + ph}
-              stroke="var(--color-text-secondary)" strokeWidth="1" opacity="0.4"
-              vectorEffect="non-scaling-stroke" strokeDasharray="4 3"
+            {/* B&H line */}
+            <path
+              d={buildPath(snapshots.map((s) => s.bh_value_usd))}
+              fill="none" stroke="var(--color-text-secondary)" strokeWidth="2" opacity="0.4"
+              vectorEffect="non-scaling-stroke"
             />
-          )}
-        </svg>
+            {/* SF line */}
+            <path
+              d={buildPath(snapshots.map((s) => s.sf_value_usd))}
+              fill="none" stroke="var(--color-accent)" strokeWidth="2.5"
+              vectorEffect="non-scaling-stroke"
+            />
 
-        {/* Hover dots — HTML so they don't stretch with preserveAspectRatio="none" */}
-        {hoverIdx != null && (() => {
-          const snap = snapshots[hoverIdx];
-          const xPct = (xAt(hoverIdx) / W) * 100;
-          const bhYPct = (yAt(snap.bh_value_usd) / H) * 100;
-          const sfYPct = (yAt(snap.sf_value_usd) / H) * 100;
-          return (
-            <>
-              <div
-                className="absolute w-2 h-2 rounded-full border-2 border-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${xPct}%`, top: `${bhYPct}%` }}
+            {/* Hover vertical line */}
+            {hoverIdx != null && (
+              <line
+                x1={xAt(hoverIdx)} x2={xAt(hoverIdx)} y1={0} y2={H}
+                stroke="var(--color-text-secondary)" strokeWidth="1" opacity="0.4"
+                vectorEffect="non-scaling-stroke" strokeDasharray="4 3"
               />
-              <div
-                className="absolute w-2.5 h-2.5 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${xPct}%`, top: `${sfYPct}%` }}
-              />
-            </>
-          );
-        })()}
+            )}
+          </svg>
+
+          {/* Hover dots — HTML over the SVG */}
+          {hoverIdx != null && (() => {
+            const snap = snapshots[hoverIdx];
+            const x = xPct(hoverIdx);
+            const bhY = yPct(snap.bh_value_usd);
+            const sfY = yPct(snap.sf_value_usd);
+            return (
+              <>
+                <div
+                  className="absolute w-2 h-2 rounded-full border-2 border-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${x}%`, top: `${bhY}%` }}
+                />
+                <div
+                  className="absolute w-2.5 h-2.5 rounded-full border-2 border-[var(--color-accent)] bg-[var(--color-bg-surface)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${x}%`, top: `${sfY}%` }}
+                />
+              </>
+            );
+          })()}
+
+          {/* X-axis labels — HTML below SVG */}
+          <div className="flex justify-between mt-1">
+            {xIdxs.map((idx) => (
+              <span key={idx} className="text-[10px] text-[var(--color-text-secondary)] tabular-nums">
+                {fmtAxisLabel(snapshots[idx].timestamp)}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
