@@ -343,10 +343,19 @@ async def exchange_availability(
 # ---------- Watchlist ----------
 
 
+class SymbolLastStatus(BaseModel):
+    action: str  # BUY, SELL, NO_TRADE
+    block_reason: str | None
+    regime: str | None
+    confluence_score: int | None
+    checked_at: str  # ISO 8601
+
+
 class WatchlistSymbol(BaseModel):
     symbol: str
     source: str  # "ai_deploy" | "portfolio_sync" | "universe_discovery"
     in_portfolio: bool
+    last_status: SymbolLastStatus | None = None
 
 
 class WatchlistResponse(BaseModel):
@@ -374,9 +383,11 @@ async def get_watchlist(
     Candidate pool symbols are being ingested but not yet in any strategy.
     """
     import redis
+    from sqlalchemy import func
 
     from app.config import settings
     from app.models.holding import ManualHolding
+    from app.models.pipeline_log import PipelineLog
     from app.tasks.expand_symbol_universe import _BLOCKLIST_KEY, _POOL_KEY
     from app.tasks.sync_portfolio_symbols import _HELD_BASES_KEY
 
@@ -441,11 +452,45 @@ async def get_watchlist(
             return "universe_discovery"
         return "ai_deploy"
 
+    # Latest pipeline log per symbol — shows current regime/block status
+    latest_logs: dict[str, PipelineLog] = {}
+    if strategy and strategy_symbols_raw:
+        latest_subq = (
+            select(
+                PipelineLog.symbol,
+                func.max(PipelineLog.created_at).label("latest"),
+            )
+            .where(PipelineLog.strategy_id == strategy.id)
+            .group_by(PipelineLog.symbol)
+            .subquery()
+        )
+        logs_result = await db.execute(
+            select(PipelineLog).join(
+                latest_subq,
+                (PipelineLog.symbol == latest_subq.c.symbol)
+                & (PipelineLog.created_at == latest_subq.c.latest),
+            ).where(PipelineLog.strategy_id == strategy.id)
+        )
+        latest_logs = {log.symbol: log for log in logs_result.scalars().all()}
+
+    def _last_status(sym: str) -> SymbolLastStatus | None:
+        log = latest_logs.get(sym)
+        if not log:
+            return None
+        return SymbolLastStatus(
+            action=log.action,
+            block_reason=log.block_reason,
+            regime=log.regime,
+            confluence_score=log.confluence_score,
+            checked_at=log.created_at.isoformat(),
+        )
+
     strategy_symbols = [
         WatchlistSymbol(
             symbol=sym,
             source=_classify(sym),
             in_portfolio=sym.split("/")[0].upper() in held_bases,
+            last_status=_last_status(sym),
         )
         for sym in strategy_symbols_raw
     ]

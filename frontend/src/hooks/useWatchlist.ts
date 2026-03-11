@@ -1,10 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
+export interface SymbolLastStatus {
+  action: string;
+  block_reason: string | null;
+  regime: string | null;
+  confluence_score: number | null;
+  checked_at: string; // ISO 8601
+}
+
 export interface WatchlistSymbol {
   symbol: string;
   source: "ai_deploy" | "portfolio_sync" | "universe_discovery";
   in_portfolio: boolean;
+  last_status: SymbolLastStatus | null;
 }
 
 export interface WatchlistData {

@@ -2,17 +2,21 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Info } from "lucide-react";
 
 interface TooltipProps {
-  text: string;
+  text?: string;
+  /** Rich content — takes priority over text when provided. */
+  content?: React.ReactNode;
+  /** Widens the tooltip to w-80 (320px) for rich content. */
+  wide?: boolean;
   /** When true, renders the default Info icon trigger (same as omitting children). */
   icon?: boolean;
   children?: React.ReactNode;
 }
 
-export function Tooltip({ text, children }: TooltipProps) {
+export function Tooltip({ text, content, wide, children }: TooltipProps) {
   const [show, setShow] = useState(false);
   const [coords, setCoords] = useState({ left: 0, top: 0, pos: "bottom" as "top" | "bottom" });
   const ref = useRef<HTMLSpanElement>(null);
-  const tooltipWidth = 256; // w-64
+  const tooltipWidth = wide ? 320 : 256; // w-80 or w-64
   const gap = 8;
 
   const computePosition = useCallback(() => {
@@ -90,7 +94,7 @@ export function Tooltip({ text, children }: TooltipProps) {
       )}
       {show && (
         <div
-          className="fixed z-[100] w-64 px-3 py-2 text-xs leading-relaxed text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg shadow-lg pointer-events-none"
+          className={`fixed z-[100] ${wide ? "w-80" : "w-64"} px-3 py-2 text-xs leading-relaxed text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg shadow-lg pointer-events-none`}
           style={{
             left: `${coords.left}px`,
             transform: "translateX(-50%)",
@@ -99,7 +103,7 @@ export function Tooltip({ text, children }: TooltipProps) {
               : { top: `${coords.top}px` }),
           }}
         >
-          {text}
+          {content ?? text}
         </div>
       )}
     </span>

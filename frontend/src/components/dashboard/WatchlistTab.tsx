@@ -292,6 +292,94 @@ export function WatchlistTab() {
   );
 }
 
+function _timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const BLOCK_REASON_LABELS: Record<string, string> = {
+  no_trend: "No trend detected",
+  chaotic_regime: "Chaotic market regime",
+  low_confluence: "Confluence below threshold",
+  mtf_filter: "Higher-timeframe contradiction",
+  position_filter: "Position already open",
+  ai_reject: "AI rejected signal",
+  dedup: "Duplicate signal",
+  error: "Pipeline error",
+};
+
+const SOURCE_DESCRIPTIONS: Record<WatchlistSymbol["source"], (item: WatchlistSymbol) => string> = {
+  portfolio_sync: (item) =>
+    `You hold ${item.symbol.split("/")[0]}. Added automatically so the pipeline can generate SELL signals to protect your position in a downtrend.`,
+  universe_discovery: () =>
+    "AI-curated from universe expansion. Evaluated across all connected exchanges and approved for its market structure quality.",
+  ai_deploy: () =>
+    "Added by the AI Advisor when the strategy was deployed.",
+};
+
+function SymbolTooltipContent({ item }: { item: WatchlistSymbol }) {
+  const cfg = SOURCE_CONFIG[item.source] ?? SOURCE_CONFIG.ai_deploy;
+  const Icon = cfg.icon;
+  const s = item.last_status;
+
+  const statusColor =
+    !s ? "text-[var(--color-text-secondary)]"
+    : s.block_reason ? "text-[var(--color-warning,#f59e0b)]"
+    : s.action === "BUY" || s.action === "SELL" ? "text-[var(--color-positive)]"
+    : "text-[var(--color-text-secondary)]";
+
+  const statusText =
+    !s ? "No pipeline data yet"
+    : s.block_reason ? (BLOCK_REASON_LABELS[s.block_reason] ?? s.block_reason)
+    : s.action === "NO_TRADE" ? "Passed all filters — no signal generated"
+    : `${s.action} signal generated`;
+
+  return (
+    <div className="space-y-2">
+      {/* Source header */}
+      <div className="flex items-center gap-1.5 font-semibold">
+        <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+        <Icon className="w-3.5 h-3.5" />
+        <span>{cfg.label}</span>
+      </div>
+      {/* Why it's here */}
+      <p className="text-[var(--color-text-secondary)] leading-snug">
+        {SOURCE_DESCRIPTIONS[item.source](item)}
+      </p>
+      {/* Divider */}
+      <div className="border-t border-[var(--color-border)]" />
+      {/* Pipeline status */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[var(--color-text-secondary)]">Last check</span>
+          <span className="tabular-nums">{s ? _timeAgo(s.checked_at) : "—"}</span>
+        </div>
+        {s?.regime && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[var(--color-text-secondary)]">Regime</span>
+            <span className="capitalize">{s.regime.replace(/_/g, " ")}</span>
+          </div>
+        )}
+        {s?.confluence_score != null && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[var(--color-text-secondary)]">Confluence</span>
+            <span className="tabular-nums">{s.confluence_score}</span>
+          </div>
+        )}
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-[var(--color-text-secondary)] shrink-0">Status</span>
+          <span className={`text-right ${statusColor}`}>{statusText}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SymbolChip({ item }: { item: WatchlistSymbol }) {
   const cfg = SOURCE_CONFIG[item.source] ?? SOURCE_CONFIG.ai_deploy;
   const remove = useRemoveWatchlistSymbol();
@@ -299,7 +387,9 @@ function SymbolChip({ item }: { item: WatchlistSymbol }) {
 
   return (
     <span className={`inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-accent)]/40 ${canRemove ? "pl-2.5 pr-1.5" : "px-2.5"} py-1`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+      <Tooltip content={<SymbolTooltipContent item={item} />} wide>
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 cursor-help ${cfg.dot}`} />
+      </Tooltip>
       {item.symbol}
       {canRemove && (
         <Tooltip text="Remove and block — won't be re-added by auto-discovery">
