@@ -362,7 +362,39 @@ async def _sync_portfolio_async():
         except Exception:
             pass
 
-        to_add, to_remove = _build_sync_ops(holdings, strategies, open_position_symbols, universe_symbols)
+        to_add_raw, to_remove = _build_sync_ops(holdings, strategies, open_position_symbols, universe_symbols)
+
+        # Quality gate: only add symbols that have enough candle data for the pipeline to evaluate.
+        # Symbols without data are held assets we still track via synthetic positions, but they
+        # must not pollute the active watchlist until the pipeline can actually analyse them.
+        to_add: list[str] = []
+        if to_add_raw:
+            from sqlalchemy import func, select as sa_select
+
+            from app.models.candle import Candle as CandleModel
+
+            primary_tf_for_gate = strategies[0].config.get("timeframes", ["4h"])[0]
+            candle_gate_result = await db.execute(
+                sa_select(CandleModel.symbol, func.count(CandleModel.symbol).label("cnt"))
+                .where(
+                    CandleModel.symbol.in_(to_add_raw),
+                    CandleModel.timeframe == primary_tf_for_gate,
+                )
+                .group_by(CandleModel.symbol)
+            )
+            candle_gate_counts = {row.symbol: row.cnt for row in candle_gate_result.all()}
+            min_candles_gate = settings.portfolio_sync_min_candles
+
+            for sym in to_add_raw:
+                cnt = candle_gate_counts.get(sym, 0)
+                if cnt >= min_candles_gate:
+                    to_add.append(sym)
+                else:
+                    logger.info(
+                        "sync_portfolio_symbols: skipping watchlist add for %s — "
+                        "only %d/%d %s candles (synthetic position still maintained)",
+                        sym, cnt, min_candles_gate, primary_tf_for_gate,
+                    )
 
         # Build held_symbols (full normalised pairs with qty > 0, no stables/fiat)
         held_symbols: set[str] = set()

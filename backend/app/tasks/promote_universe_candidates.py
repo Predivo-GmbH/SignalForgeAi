@@ -114,12 +114,12 @@ async def _promote_async(symbols: list[str] | None):
             candle_counts = {row.symbol: row.cnt for row in candle_result.all()}
 
             min_candles = settings.universe_promotion_lookback_candles
-            ready = [
+            has_enough_candles = [
                 sym for sym in candidates_to_check
                 if candle_counts.get(sym, 0) >= min_candles
             ]
 
-            if not ready:
+            if not has_enough_candles:
                 logger.debug(
                     "promote_universe_candidates: %d checked, none ready yet "
                     "(need %d %s candles)",
@@ -127,9 +127,76 @@ async def _promote_async(symbols: list[str] | None):
                 )
                 return
 
+            # Quality gate: run the signal pipeline on each symbol's recent candles.
+            # Only promote if the symbol shows a non-chaotic regime and minimum confluence —
+            # having candle history is necessary but not sufficient for a useful watchlist entry.
+            import pandas as pd
+
+            from app.engine.pipeline import SignalPipeline
+            from app.storage.candle_storage import CandleStorage
+
+            pipeline = SignalPipeline(
+                min_confluence=primary_strategy.config.get("min_confluence", 70),
+                exchange=settings.default_exchange,
+            )
+            min_signal_confluence = settings.universe_min_signal_confluence
+            ready: list[str] = []
+
+            for sym in has_enough_candles:
+                try:
+                    candles_data = await CandleStorage.load_candles_db(
+                        db, sym, primary_timeframe, limit=min_candles,
+                    )
+                    if len(candles_data) < 100:
+                        logger.info(
+                            "promote_universe_candidates: %s skipped — "
+                            "only %d usable candles after load",
+                            sym, len(candles_data),
+                        )
+                        continue
+
+                    df = pd.DataFrame(candles_data)
+                    result = pipeline.process(sym, primary_timeframe, df)
+
+                    if result.regime == "chaotic":
+                        logger.info(
+                            "promote_universe_candidates: %s rejected — chaotic regime",
+                            sym,
+                        )
+                        continue
+
+                    if result.confluence_score < min_signal_confluence:
+                        logger.info(
+                            "promote_universe_candidates: %s rejected — "
+                            "confluence %d < %d minimum",
+                            sym, result.confluence_score, min_signal_confluence,
+                        )
+                        continue
+
+                    logger.info(
+                        "promote_universe_candidates: %s passed quality gate "
+                        "(regime=%s, confluence=%d)",
+                        sym, result.regime, result.confluence_score,
+                    )
+                    ready.append(sym)
+
+                except Exception:
+                    logger.warning(
+                        "promote_universe_candidates: pipeline check failed for %s — skipping",
+                        sym, exc_info=True,
+                    )
+
+            if not ready:
+                logger.info(
+                    "promote_universe_candidates: %d had enough candles but none passed "
+                    "quality gate (regime + confluence >= %d)",
+                    len(has_enough_candles), min_signal_confluence,
+                )
+                return
+
             logger.info(
-                "promote_universe_candidates: %d symbols ready for promotion: %s",
-                len(ready), ready,
+                "promote_universe_candidates: %d/%d symbols passed quality gate: %s",
+                len(ready), len(has_enough_candles), ready,
             )
 
             # Group by source exchange
