@@ -267,6 +267,36 @@ def test_synthetic_position_created_for_held_symbol():
     assert added.is_open is True
 
 
+def test_synthetic_position_uses_actual_holding_quantity():
+    """Synthetic BUY position must carry the actual held quantity, not 0.0."""
+    import asyncio
+
+    from app.tasks.sync_portfolio_symbols import _sync_portfolio_positions
+
+    mock_db = AsyncMock()
+
+    open_result = MagicMock()
+    open_result.scalars.return_value.all.return_value = []
+
+    candle_result = MagicMock()
+    candle_result.first.return_value = (100.0,)
+
+    mock_db.execute = AsyncMock(side_effect=[open_result, candle_result])
+
+    asyncio.run(_sync_portfolio_positions(
+        db=mock_db,
+        user_id="00000000-0000-0000-0000-000000000001",
+        strategy_id="00000000-0000-0000-0000-000000000002",
+        held_symbols={"RENDER/USDT"},
+        primary_timeframe="4h",
+        held_quantities={"RENDER/USDT": 123.5},
+    ))
+
+    mock_db.add.assert_called_once()
+    added = mock_db.add.call_args[0][0]
+    assert added.quantity == 123.5
+
+
 def test_synthetic_position_not_created_when_open_buy_exists():
     """If a real open BUY position already exists, no synthetic position is created."""
     import asyncio

@@ -378,6 +378,22 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                     # AI enrichment — failures reject the signal (no trading without AI)
                     await _ai_enrich_signal(signal, signal_row, db, df)
 
+                    # NULL ai_recommendation means no AI gate ran — reject (no trading without AI)
+                    if signal_row.ai_recommendation is None:
+                        signal_row.ai_recommendation = "reject"
+                        signal_row.ai_reasoning = (
+                            "AI signal quality evaluation did not run — "
+                            "signal rejected per no-trading-without-AI policy."
+                        )
+                        signal_row.ai_quality_score = 0
+                        logger.warning(
+                            "AI gate missing for %s %s %s — rejecting signal "
+                            "(ai_signal_quality_enabled=%s, ai_multi_timeframe_enabled=%s)",
+                            signal.action, symbol, timeframe,
+                            settings.ai_signal_quality_enabled,
+                            settings.ai_multi_timeframe_enabled,
+                        )
+
                     # Honor AI reject in live mode
                     if signal_row.ai_recommendation == "reject":
                         signal_row.status = "rejected"
@@ -478,6 +494,15 @@ async def _ai_enrich_signal(signal, signal_row, db, df):
             mtf_data = await mtf_analyzer.analyze(signal.symbol, signal_data, db)
             signal_row.mtf_confidence = mtf_data.get("mtf_confidence")
             signal_row.mtf_alignment = mtf_data.get("timeframe_alignment")
+
+            # MTF reject is a hard block — enforce directly (CLAUDE.md core principle)
+            if mtf_data.get("recommendation") == "reject":
+                signal_row.ai_recommendation = "reject"
+                signal_row.ai_reasoning = (
+                    f"MTF analysis rejected: {mtf_data.get('reasoning', 'no higher-timeframe alignment')}"
+                )
+                signal_row.ai_quality_score = 0
+                return
 
         # Signal quality evaluation
         if settings.ai_signal_quality_enabled:

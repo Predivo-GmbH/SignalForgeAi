@@ -121,6 +121,7 @@ async def _sync_portfolio_positions(
     strategy_id: str,
     held_symbols: set[str],
     primary_timeframe: str,
+    held_quantities: dict[str, float] | None = None,
 ) -> None:
     """Maintain synthetic BUY positions for portfolio holdings.
 
@@ -165,6 +166,7 @@ async def _sync_portfolio_positions(
             )
 
     # Create synthetic positions for held symbols without any open BUY position
+    qty_map = held_quantities or {}
     for sym in held_symbols:
         if sym in has_open_buy:
             continue
@@ -179,13 +181,16 @@ async def _sync_portfolio_positions(
         row = candle_row.first()
         entry_price = float(row[0]) if row else 0.0
 
+        # Use actual holding quantity so PnL tracking is meaningful
+        actual_qty = qty_map.get(sym, 0.0)
+
         pos = Position(
             user_id=uid,
             order_id=None,
             strategy_id=uuid.UUID(strategy_id) if strategy_id else None,
             symbol=sym,
             direction="BUY",
-            quantity=0.0,
+            quantity=actual_qty,
             entry_price=entry_price,
             current_price=entry_price,
             stop_loss=None,
@@ -361,6 +366,7 @@ async def _sync_portfolio_async():
 
         # Build held_symbols (full normalised pairs with qty > 0, no stables/fiat)
         held_symbols: set[str] = set()
+        held_quantities: dict[str, float] = {}  # symbol → total quantity across all sources
         held_bases: set[str] = set()
         for h in holdings:
             normalised = _normalise_symbol(h.symbol)
@@ -368,6 +374,7 @@ async def _sync_portfolio_async():
             if base not in _STABLECOINS and base not in _NON_TRADEABLE and h.quantity > 0:
                 held_symbols.add(normalised)
                 held_bases.add(base)
+                held_quantities[normalised] = held_quantities.get(normalised, 0.0) + h.quantity
 
         # Cache held bases so the watchlist endpoint can classify without a live exchange call
         try:
@@ -391,6 +398,7 @@ async def _sync_portfolio_async():
             strategy_id=str(primary_strategy.id),
             held_symbols=held_symbols,
             primary_timeframe=primary_timeframe,
+            held_quantities=held_quantities,
         )
 
         if not to_add and not to_remove:
