@@ -22,7 +22,7 @@ def ingest_candles(self):
 
     from app.tasks.task_utils import task_lock
 
-    with task_lock("ingest_candles", timeout=1800) as acquired:
+    with task_lock("ingest_candles", timeout=120) as acquired:
         if not acquired:
             return
         try:
@@ -225,6 +225,10 @@ def backfill_symbols(
     ex = exchange or settings.default_exchange
     try:
         asyncio.run(_backfill_async(symbols, timeframes or DEFAULT_TIMEFRAMES, ex))
+        # Trigger immediate promotion check — if these symbols are universe candidates
+        # with enough candles now, they enter the active watchlist within minutes.
+        from app.tasks.promote_universe_candidates import promote_universe_candidates
+        promote_universe_candidates.delay(symbols)
     except (ConnectionError, OSError, TimeoutError) as exc:
         logger.warning("backfill_symbols transient error: %s — retrying", exc)
         self.retry(exc=exc, countdown=60)

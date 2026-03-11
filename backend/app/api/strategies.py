@@ -340,6 +340,268 @@ async def exchange_availability(
     return {"availability": availability, "unavailable": unavailable}
 
 
+# ---------- Watchlist ----------
+
+
+class WatchlistSymbol(BaseModel):
+    symbol: str
+    source: str  # "ai_deploy" | "portfolio_sync" | "universe_discovery"
+    in_portfolio: bool
+
+
+class WatchlistResponse(BaseModel):
+    strategy_symbols: list[WatchlistSymbol]
+    candidate_pool: list[str]
+    blocklist: list[str]
+    total_strategy_symbols: int
+    total_candidates: int
+
+
+@router.get("/watchlist", response_model=WatchlistResponse)
+@limiter.limit("60/minute")
+async def get_watchlist(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the current strategy watchlist and candidate pool.
+
+    Strategy symbols are annotated with their source:
+    - ai_deploy: original symbols chosen by the AI Advisor at deploy time
+    - portfolio_sync: added automatically because the user holds this asset
+    - universe_discovery: promoted from the candidate pool after building candle history
+
+    Candidate pool symbols are being ingested but not yet in any strategy.
+    """
+    import redis
+
+    from app.config import settings
+    from app.models.holding import ManualHolding
+    from app.tasks.expand_symbol_universe import _BLOCKLIST_KEY, _POOL_KEY
+    from app.tasks.sync_portfolio_symbols import _HELD_BASES_KEY
+
+    uid = uuid.UUID(user_id)
+
+    # Active strategy
+    strat_result = await db.execute(
+        select(Strategy).where(
+            Strategy.user_id == uid,
+            Strategy.is_active == True,  # noqa: E712
+        )
+    )
+    strategy = strat_result.scalar_one_or_none()
+
+    strategy_symbols_raw: list[str] = []
+    if strategy:
+        strategy_symbols_raw = strategy.config.get("symbols", [])
+
+    # Held bases — written by sync task every 5 min (most accurate source)
+    held_bases: set[str] = set()
+    try:
+        r = redis.from_url(settings.redis_url)
+        raw_held = r.smembers(_HELD_BASES_KEY)
+        r.close()
+        held_bases = {s.decode() if isinstance(s, bytes) else s for s in raw_held}
+    except Exception:
+        pass
+
+    if not held_bases:
+        # Sync task hasn't run yet — fall back to ManualHolding
+        holding_result = await db.execute(
+            select(ManualHolding).where(ManualHolding.user_id == uid)
+        )
+        held_bases = {
+            h.symbol.upper().split("/")[0]
+            for h in holding_result.scalars().all()
+            if h.quantity > 0
+        }
+
+    # Universe-promoted symbols get their own source badge
+    universe_promoted: set[str] = set()
+    try:
+        r2 = redis.from_url(settings.redis_url)
+        raw_promoted = r2.smembers("signalforge:universe:promoted_symbols")
+        r2.close()
+        universe_promoted = {s.decode() if isinstance(s, bytes) else s for s in raw_promoted}
+    except Exception:
+        pass
+
+    symbol_sources: dict[str, str] = strategy.config.get("symbol_sources", {}) if strategy else {}
+
+    def _classify(sym: str) -> str:
+        # Prefer the persistent source recorded at add-time — survives Redis expiry
+        stored = symbol_sources.get(sym)
+        if stored in ("ai_deploy", "portfolio_sync", "universe_discovery"):
+            return stored
+        # Fallback: infer from live Redis state for symbols added before symbol_sources existed
+        base = sym.split("/")[0].upper()
+        if base in held_bases:
+            return "portfolio_sync"
+        if sym in universe_promoted:
+            return "universe_discovery"
+        return "ai_deploy"
+
+    strategy_symbols = [
+        WatchlistSymbol(
+            symbol=sym,
+            source=_classify(sym),
+            in_portfolio=sym.split("/")[0].upper() in held_bases,
+        )
+        for sym in strategy_symbols_raw
+    ]
+
+    # One-time migration: persist inferred sources so future reads don't rely on Redis state
+    if strategy and any(sym not in symbol_sources for sym in strategy_symbols_raw):
+        new_sources = {ws.symbol: ws.source for ws in strategy_symbols}
+        merged = {**new_sources, **symbol_sources}  # existing entries win
+        cfg = dict(strategy.config)
+        cfg["symbol_sources"] = merged
+        strategy.config = cfg
+        await db.commit()
+
+    # Candidate pool and blocklist from Redis
+    candidate_pool: list[str] = []
+    blocklist: list[str] = []
+    try:
+        r = redis.from_url(settings.redis_url)
+        raw_pool = r.smembers(_POOL_KEY)
+        raw_block = r.smembers(_BLOCKLIST_KEY)
+        r.close()
+        candidate_pool = sorted(
+            s.decode() if isinstance(s, bytes) else s for s in raw_pool
+        )
+        blocklist = sorted(
+            s.decode() if isinstance(s, bytes) else s for s in raw_block
+        )
+    except Exception:
+        pass
+
+    return WatchlistResponse(
+        strategy_symbols=strategy_symbols,
+        candidate_pool=candidate_pool,
+        blocklist=blocklist,
+        total_strategy_symbols=len(strategy_symbols),
+        total_candidates=len(candidate_pool),
+    )
+
+
+# ---------- Candidate management ----------
+
+
+@router.delete("/candidates/{symbol:path}", status_code=204)
+@limiter.limit("30/minute")
+async def remove_candidate(
+    request: Request,
+    symbol: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Remove a symbol from the candidate pool and add it to the blocklist.
+
+    The blocklist prevents auto-discovery from re-adding this symbol in future cycles.
+    """
+    import redis
+
+    from app.config import settings
+    from app.tasks.expand_symbol_universe import _BLOCKLIST_KEY, _POOL_KEY
+
+    sym = symbol.upper()
+    try:
+        r = redis.from_url(settings.redis_url)
+        pipe = r.pipeline()
+        pipe.srem(_POOL_KEY, sym)
+        pipe.sadd(_BLOCKLIST_KEY, sym)  # permanent — no TTL
+        pipe.execute()
+        r.close()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Redis unavailable")
+
+
+@router.post("/candidates/{symbol:path}/unblock", status_code=204)
+@limiter.limit("30/minute")
+async def unblock_candidate(
+    request: Request,
+    symbol: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Remove a symbol from the blocklist so auto-discovery can add it again."""
+    import redis
+
+    from app.config import settings
+    from app.tasks.expand_symbol_universe import _BLOCKLIST_KEY
+
+    sym = symbol.upper()
+    try:
+        r = redis.from_url(settings.redis_url)
+        r.srem(_BLOCKLIST_KEY, sym)
+        r.close()
+    except Exception:
+        raise HTTPException(status_code=503, detail="Redis unavailable")
+
+
+@router.delete("/symbols/{symbol:path}", status_code=204)
+@limiter.limit("30/minute")
+async def remove_watchlist_symbol(
+    request: Request,
+    symbol: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a universe-discovered symbol from the active watchlist and blocklist it.
+
+    Only universe_discovery symbols may be removed this way — portfolio and
+    ai_deploy symbols cannot be removed via this endpoint.
+    """
+    import redis
+
+    from app.advisor.symbol_rotation import SymbolRotationManager
+    from app.config import settings
+    from app.tasks.expand_symbol_universe import _BLOCKLIST_KEY, _PROMOTED_KEY
+
+    uid = uuid.UUID(user_id)
+    sym = symbol.upper()
+
+    strat_result = await db.execute(
+        select(Strategy).where(Strategy.user_id == uid, Strategy.is_active == True)  # noqa: E712
+    )
+    strategy = strat_result.scalar_one_or_none()
+    if not strategy or sym not in strategy.config.get("symbols", []):
+        raise HTTPException(status_code=404, detail="Symbol not found in active strategy")
+
+    rotation = SymbolRotationManager()
+    removed = await rotation.remove_symbols(strategy, [sym], db)
+
+    if removed:
+        await db.commit()
+        # Blocklist so auto-discovery doesn't re-add it; remove from promoted set
+        try:
+            r = redis.from_url(settings.redis_url)
+            pipe = r.pipeline()
+            pipe.sadd(_BLOCKLIST_KEY, sym)
+            pipe.srem(_PROMOTED_KEY, sym)
+            pipe.execute()
+            r.close()
+        except Exception:
+            pass  # Redis failure doesn't roll back the DB removal
+
+
+@router.post("/discover", status_code=202)
+@limiter.limit("5/minute")
+async def trigger_discovery(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+):
+    """Trigger an immediate AI-driven universe discovery scan.
+
+    Runs the same process as the 6-hour scheduled task — fetches tickers from
+    all connected exchanges, AI evaluates candidates, backfills approved ones.
+    Returns immediately; work happens asynchronously in the worker.
+    """
+    from app.tasks.expand_symbol_universe import expand_symbol_universe
+
+    expand_symbol_universe.delay()
+    return {"queued": True, "message": "Discovery scan queued. Results appear in the watchlist within minutes."}
+
+
 # ---------- Strategy by ID ----------
 
 

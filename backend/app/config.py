@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     # Exchange
     default_exchange: str = "binance"
 
+    # Portfolio symbol sync
+    portfolio_symbol_sync_enabled: bool = True
+
+    # Universe expansion
+    universe_expansion_enabled: bool = True
+    universe_min_volume_usd: float = 500_000
+    universe_max_candidates: int = 1000      # max symbols in candidate pool
+    universe_max_per_strategy: int = 500     # effectively no cap — volume filter is the real gate
+    universe_promotion_lookback_candles: int = 300  # candles needed before pipeline evaluates
+
     # Sentry
     sentry_dsn: str = ""
 

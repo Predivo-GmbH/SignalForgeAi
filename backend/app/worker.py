@@ -43,6 +43,9 @@ celery_app.conf.include = [
     "app.tasks.pattern_analysis",
     "app.tasks.flush_ai_usage",
     "app.tasks.simulation_snapshot",
+    "app.tasks.sync_portfolio_symbols",
+    "app.tasks.expand_symbol_universe",
+    "app.tasks.promote_universe_candidates",
 ]
 
 # ---------------------------------------------------------------------------
@@ -93,5 +96,13 @@ celery_app.conf.beat_schedule = {
     "snapshot-simulation-1h": {
         "task": "snapshot_simulation",
         "schedule": 3600.0,
+    },
+    "sync-portfolio-symbols-5m": {
+        "task": "sync_portfolio_symbols",
+        "schedule": 300.0,
+    },
+    "expand-symbol-universe-6h": {
+        "task": "expand_symbol_universe",
+        "schedule": 21600.0,
     },
 }

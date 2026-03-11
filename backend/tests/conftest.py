@@ -7,7 +7,7 @@ from app.core.rate_limit import limiter
 from app.main import app
 from app.models.base import Base
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+TEST_DATABASE_URL = "sqlite+aiosqlite:////tmp/test.db"
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 
