@@ -133,11 +133,10 @@ async def _promote_async(symbols: list[str] | None):
             import pandas as pd
 
             from app.engine.pipeline import SignalPipeline
-            from app.storage.candle_storage import CandleStorage
+            from app.data.storage import CandleStorage
 
             pipeline = SignalPipeline(
                 min_confluence=primary_strategy.config.get("min_confluence", 70),
-                exchange=settings.default_exchange,
             )
             min_signal_confluence = settings.universe_min_signal_confluence
             ready: list[str] = []

@@ -232,8 +232,71 @@ async def deploy_plan(
 
     # Get the AI's full strategy config
     strategy_config = plan.get("strategy_config", plan.get("risk_config", {}))
-    symbols = [c["symbol"] for c in selected_cryptos]
+    symbols_candidate = [c["symbol"] for c in selected_cryptos]
     timeframes = strategy_config.get("timeframes", ["1h"])
+
+    # ------------------------------------------------------------------
+    # Quality gate: only deploy symbols that show a non-chaotic regime
+    # and minimum confluence — same bar as universe_discovery promotion.
+    # This prevents symbols that will never trade from polluting the watchlist.
+    # ------------------------------------------------------------------
+    import pandas as pd
+
+    from app.config import settings as _settings
+    from app.engine.pipeline import SignalPipeline
+    from app.data.storage import CandleStorage
+
+    primary_timeframe = timeframes[0]
+    min_signal_confluence = _settings.universe_min_signal_confluence
+    min_candles_needed = _settings.universe_promotion_lookback_candles
+
+    pipeline = SignalPipeline(
+        min_confluence=strategy_config.get("min_confluence", 50),
+    )
+
+    quality_passed: list[str] = []
+    quality_rejected: list[tuple[str, str]] = []
+
+    for sym in symbols_candidate:
+        try:
+            candles_data = await CandleStorage.load_candles_db(
+                db, sym, primary_timeframe, limit=min_candles_needed,
+            )
+            if len(candles_data) < 100:
+                quality_rejected.append((sym, f"only {len(candles_data)} candles"))
+                logger.info("deploy quality gate: %s rejected — only %d candles", sym, len(candles_data))
+                continue
+            df = pd.DataFrame(candles_data)
+            result = pipeline.process(sym, primary_timeframe, df)
+            # AI-deploy gate: only block chaotic regime — the market is too noisy for
+            # any reliable signal. Low confluence in a trending regime is fine; it means
+            # no trigger has fired yet, not that the symbol is permanently worthless.
+            if result.regime == "chaotic":
+                quality_rejected.append((sym, "chaotic_regime"))
+                logger.info("deploy quality gate: %s rejected — chaotic regime", sym)
+                continue
+            logger.info(
+                "deploy quality gate: %s passed (regime=%s, confluence=%d)",
+                sym, result.regime, result.confluence_score,
+            )
+            quality_passed.append(sym)
+        except Exception:
+            logger.warning("deploy quality gate: check failed for %s — including anyway", sym, exc_info=True)
+            quality_passed.append(sym)
+
+    if len(quality_passed) >= 3:
+        symbols = quality_passed
+        logger.info(
+            "deploy quality gate: %d/%d symbols passed: %s | rejected: %s",
+            len(quality_passed), len(symbols_candidate), quality_passed, quality_rejected,
+        )
+    else:
+        # Too few passed — deploy all candidates rather than an empty strategy
+        symbols = symbols_candidate
+        logger.warning(
+            "deploy quality gate: only %d/%d passed — deploying all %d to avoid empty strategy",
+            len(quality_passed), len(symbols_candidate), len(symbols_candidate),
+        )
 
     # Build the final config — AI's config is used directly
     from app.api.strategies import StrategyConfig
@@ -243,12 +306,17 @@ async def deploy_plan(
         "timeframes": timeframes,
         **strategy_config,
     }
-    config["symbols"] = symbols  # Ensure symbols match selected_cryptos
+    config["symbols"] = symbols
+    # Record source for every deployed symbol so the watchlist API never needs
+    # to infer it from Redis state (which can misclassify ai_deploy as universe_discovery).
+    config["symbol_sources"] = {sym: "ai_deploy" for sym in symbols}
 
     # Validate through Pydantic model (fills in defaults for any missing fields)
     try:
         validated = StrategyConfig(**config)
         config = validated.model_dump()
+        # Pydantic may drop unknown keys — restore symbol_sources
+        config["symbol_sources"] = {sym: "ai_deploy" for sym in symbols}
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=f"Invalid strategy configuration: {e}")
     except Exception:
@@ -256,6 +324,13 @@ async def deploy_plan(
         raise HTTPException(status_code=422, detail="Invalid strategy configuration")
 
     uid = uuid.UUID(user_id)
+
+    # Deactivate any previously active strategies before creating the new one
+    from sqlalchemy import select as sa_select, update as sa_update
+
+    await db.execute(
+        sa_update(Strategy).where(Strategy.is_active == True).values(is_active=False)  # noqa: E712
+    )
 
     # Create new strategy
     strategy_name = "AI Advisor — Optimal"
@@ -277,10 +352,14 @@ async def deploy_plan(
     except Exception as e:
         logger.warning("Failed to trigger backfill task: %s", e)
 
+    rejected_note = (
+        f" ({len(quality_rejected)} symbol(s) filtered by quality gate)"
+        if quality_rejected else ""
+    )
     return DeployResponse(
         strategy_id=str(strategy.id),
         strategy_name=strategy_name,
         symbols_count=len(symbols),
-        message=f"Optimal strategy deployed with {len(symbols)} symbols! "
+        message=f"Optimal strategy deployed with {len(symbols)} symbols{rejected_note}! "
                 f"Candle backfill started. Paper trading will begin within 5 minutes.",
     )

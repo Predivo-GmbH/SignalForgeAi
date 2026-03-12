@@ -451,6 +451,35 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
     if log_entries:
         db.add_all(log_entries)
 
+    # Auto-evict ai_deploy symbols that are universally chaotic across ALL timeframes.
+    # When the pipeline runs post-backfill and finds a symbol is chaotic on every TF,
+    # the symbol will never trade — remove it so the watchlist stays clean.
+    symbol_sources = active_strategy.config.get("symbol_sources", {})
+    if symbol_sources and timeframes and log_entries:
+        # Group log entries by symbol: collect regime results per timeframe
+        from collections import defaultdict
+        regime_by_symbol: dict[str, list[str]] = defaultdict(list)
+        for entry in log_entries:
+            if entry.regime:
+                regime_by_symbol[entry.symbol].append(entry.regime)
+
+        to_evict = [
+            sym for sym in symbols
+            if symbol_sources.get(sym) == "ai_deploy"
+            and sym in regime_by_symbol
+            and len(regime_by_symbol[sym]) == len(timeframes)  # all timeframes evaluated
+            and all(r == "chaotic" for r in regime_by_symbol[sym])
+        ]
+        if to_evict:
+            from app.advisor.symbol_rotation import SymbolRotationManager
+            mgr = SymbolRotationManager()
+            removed = await mgr.remove_symbols(active_strategy, to_evict, db)
+            if removed:
+                logger.info(
+                    "Auto-evicted %d chaotic ai_deploy symbols from '%s': %s",
+                    len(removed), active_strategy.name, removed,
+                )
+
 
 async def _ai_enrich_signal(signal, signal_row, db, df):
     """Run AI enrichment on a BUY/SELL signal.
