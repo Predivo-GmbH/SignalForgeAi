@@ -17,7 +17,7 @@ def manage_positions(self):
 
     from app.tasks.task_utils import task_lock
 
-    with task_lock("manage_positions", timeout=1800) as acquired:
+    with task_lock("manage_positions", timeout=120) as acquired:
         if not acquired:
             return
         try:

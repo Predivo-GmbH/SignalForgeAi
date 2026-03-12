@@ -46,6 +46,9 @@ class CCXTAdapter(BrokerAdapter):
             config["password"] = password
         if testnet:
             config["sandbox"] = True
+        # MEXC (and some others) have strict timestamp windows — auto-correct clock drift
+        if exchange_id in ("mexc", "cryptocom", "kucoin"):
+            config["options"] = {"adjustForTimeDifference": True}
         self._exchange = exchange_class(config)
         self._exchange_id = exchange_id
 

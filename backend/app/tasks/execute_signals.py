@@ -18,7 +18,7 @@ def execute_pending_signals(self):
 
     from app.tasks.task_utils import task_lock
 
-    with task_lock("execute_signals", timeout=1800) as acquired:
+    with task_lock("execute_signals", timeout=90) as acquired:
         if not acquired:
             return
         try:

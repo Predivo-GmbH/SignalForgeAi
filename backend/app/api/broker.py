@@ -162,6 +162,10 @@ class BrokerHealthResponse(BaseModel):
     broker: str
     ok: bool
     error: str | None = None
+    # Last result from the background portfolio sync task (worker container)
+    # None if the sync has never run or the status has expired (>1h old)
+    sync_ok: bool | None = None
+    sync_error: str | None = None
 
 
 @router.get("/{connection_id}/health", response_model=BrokerHealthResponse)
@@ -172,7 +176,12 @@ async def check_broker_health(
     user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Test a broker connection by fetching the account balance."""
+    """Test a broker connection by fetching the account balance.
+
+    Returns both a live check (from the API server) and the last result from
+    the background sync task (from the Celery worker). These can differ if the
+    worker runs in a different network context (e.g. different IP / IP whitelist).
+    """
     result = await db.execute(
         select(BrokerConnection).where(
             BrokerConnection.id == uuid.UUID(connection_id),
@@ -182,6 +191,28 @@ async def check_broker_health(
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=404, detail="Broker connection not found")
+
+    # Read last sync task result from Redis (written by worker, expires after 1h)
+    sync_ok: bool | None = None
+    sync_error: str | None = None
+    if not conn.is_paper:
+        try:
+            import json
+
+            import redis as redis_lib
+
+            from app.config import settings as _settings
+            from app.tasks.sync_portfolio_symbols import _SYNC_STATUS_KEY_PREFIX
+
+            r = redis_lib.from_url(_settings.redis_url)
+            raw = r.get(f"{_SYNC_STATUS_KEY_PREFIX}{conn.id}")
+            r.close()
+            if raw:
+                data = json.loads(raw)
+                sync_ok = data.get("ok")
+                sync_error = data.get("error")
+        except Exception:
+            pass
 
     if conn.is_paper:
         return BrokerHealthResponse(id=str(conn.id), broker=conn.broker, ok=True)
@@ -199,7 +230,10 @@ async def check_broker_health(
         )
         try:
             await adapter.get_full_balance()
-            return BrokerHealthResponse(id=str(conn.id), broker=conn.broker, ok=True)
+            return BrokerHealthResponse(
+                id=str(conn.id), broker=conn.broker, ok=True,
+                sync_ok=sync_ok, sync_error=sync_error,
+            )
         finally:
             await adapter.close()
     except Exception as exc:
@@ -207,4 +241,5 @@ async def check_broker_health(
         return BrokerHealthResponse(
             id=str(conn.id), broker=conn.broker, ok=False,
             error="Connection check failed. Verify API credentials and try again.",
+            sync_ok=sync_ok, sync_error=sync_error,
         )

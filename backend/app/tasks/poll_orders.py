@@ -14,7 +14,7 @@ def poll_order_status(self):
 
     from app.tasks.task_utils import task_lock
 
-    with task_lock("poll_orders", timeout=300) as acquired:
+    with task_lock("poll_orders", timeout=60) as acquired:
         if not acquired:
             return
         try:
