@@ -11,6 +11,7 @@ import {
   BarChart3,
   Wallet,
   Repeat2,
+  Eye,
 } from "lucide-react";
 import { useStrategies } from "@/hooks/useStrategies";
 import {
@@ -26,10 +27,11 @@ import { PortfolioEquitySection } from "@/components/portfolio/PortfolioEquitySe
 import { SystemHealthBanner } from "@/components/dashboard/SystemHealthBanner";
 import { SimulationPortfolio } from "@/components/dashboard/SimulationPortfolio";
 import { UsdtReserveWidget } from "@/components/dashboard/UsdtReserveWidget";
+import { WatchlistTab } from "@/components/dashboard/WatchlistTab";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtUsd, pnlColor } from "@/lib/format";
 
-type Tab = "holdings" | "bh" | "paper";
+type Tab = "holdings" | "bh" | "paper" | "watchlist";
 
 export function PortfolioPage() {
   const navigate = useNavigate();
@@ -102,6 +104,14 @@ export function PortfolioPage() {
               icon={<Wallet className="w-3.5 h-3.5" />}
               label="Holdings"
             />
+            {hasActiveStrategy && (
+              <TabButton
+                active={activeTab === "watchlist"}
+                onClick={() => setActiveTab("watchlist")}
+                icon={<Eye className="w-3.5 h-3.5" />}
+                label="Watchlist"
+              />
+            )}
             {hasSimulation && (
               <>
                 <TabButton
@@ -144,6 +154,8 @@ export function PortfolioPage() {
         {/* Tab content */}
         <div className="p-4 sm:p-5">
           {activeTab === "holdings" && <HoldingsCard overrideTotal={snapshot?.balance} />}
+
+          {activeTab === "watchlist" && <WatchlistTab />}
 
           {activeTab === "bh" && hasSimulation && (
             portfolioLoading ? (

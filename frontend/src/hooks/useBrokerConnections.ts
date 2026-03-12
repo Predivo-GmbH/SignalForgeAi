@@ -50,6 +50,9 @@ export interface BrokerHealth {
   broker: string;
   ok: boolean;
   error: string | null;
+  /** Last result from the background portfolio sync task (worker container). null if never run. */
+  sync_ok: boolean | null;
+  sync_error: string | null;
 }
 
 export function useBrokerHealth(connectionId: string | null) {

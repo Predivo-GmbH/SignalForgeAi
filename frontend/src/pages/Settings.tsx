@@ -437,6 +437,21 @@ function ConnectionCard({
         </div>
       )}
 
+      {!isChecking && isHealthy && health.data?.sync_ok === false && (
+        <div className="flex items-start gap-2 bg-amber-500/10 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="text-xs font-medium text-amber-400">Portfolio sync failing from worker</p>
+            <p className="text-xs text-(--color-text-secondary)">
+              The API connection works, but the background sync task cannot reach this exchange — likely an IP whitelist issue. Add the worker's outgoing IP to your API key's allowed IPs.
+            </p>
+            {health.data.sync_error && (
+              <p className="text-xs text-(--color-text-secondary) font-mono mt-1 opacity-70 break-all">{health.data.sync_error}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {meta?.keyExpiryDays && createdAt && (
         <KeyExpiryBadge createdAt={createdAt} expiryDays={meta.keyExpiryDays} />
       )}
