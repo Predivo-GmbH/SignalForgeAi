@@ -27,7 +27,7 @@ from app.core.rate_limit import limiter
 from app.models.position import Position
 from app.models.signal import Signal
 from app.models.simulation import PaperSimulation, SimulationSnapshot
-from app.models.strategy import BrokerConnection, Strategy
+from app.models.strategy import Strategy
 from app.models.trade import Trade
 
 logger = logging.getLogger(__name__)
@@ -461,7 +461,10 @@ async def _get_combined_portfolio(
             "value_usd": round(value, 2),
             "initial_value_usd": round(initial_value, 2),
             "pnl_usd": round(value - initial_value, 2),
-            "pnl_pct": round((value - initial_value) / initial_value * 100, 2) if initial_value > 0 else 0,
+            "pnl_pct": (
+                round((value - initial_value) / initial_value * 100, 2)
+                if initial_value > 0 else 0
+            ),
             "change_24h_pct": info.get("change_24h_pct"),
             "image_url": info.get("image_url"),
             "market_cap": info.get("market_cap"),
@@ -526,7 +529,10 @@ async def _get_combined_portfolio(
             "value_usd": round(value, 2),
             "initial_value_usd": round(initial_value, 2),
             "pnl_usd": round(value - initial_value, 2),
-            "pnl_pct": round((value - initial_value) / initial_value * 100, 2) if initial_value > 0 else 0,
+            "pnl_pct": (
+                round((value - initial_value) / initial_value * 100, 2)
+                if initial_value > 0 else 0
+            ),
             "change_24h_pct": info.get("change_24h_pct"),
             "image_url": info.get("image_url"),
             "market_cap": info.get("market_cap"),
@@ -560,7 +566,10 @@ async def _get_combined_portfolio(
             "total_value_usd": round(paper_total, 2),
             "initial_value_usd": initial,
             "total_pnl_usd": round(paper_total - initial, 2),
-            "total_pnl_pct": round((paper_total - initial) / initial * 100, 2) if initial > 0 else 0,
+            "total_pnl_pct": (
+                round((paper_total - initial) / initial * 100, 2)
+                if initial > 0 else 0
+            ),
             "holdings": paper_holdings,
             "usdt_balance": round(usdt_balance, 2),
             "usdt_reserve_pct": sim.usdt_reserve_pct,

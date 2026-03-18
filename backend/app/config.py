@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     universe_max_candidates: int = 1000      # max symbols in candidate pool
     universe_max_per_strategy: int = 500     # effectively no cap — volume filter is the real gate
     universe_promotion_lookback_candles: int = 300  # candles needed before pipeline evaluates
-    universe_min_signal_confluence: int = 25  # min confluence on quality-check pass before promotion
-    portfolio_sync_min_candles: int = 100    # min candles required to add a portfolio symbol to watchlist
+    universe_min_signal_confluence: int = 25  # min confluence before promotion
+    portfolio_sync_min_candles: int = 100  # min candles to add portfolio symbol
 
     # Sentry
     sentry_dsn: str = ""

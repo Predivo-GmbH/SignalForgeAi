@@ -256,7 +256,10 @@ async def _expand_universe_async():
                     )
 
                     # Record source exchange per approved symbol
-                    ticker_exchange = {t["symbol"]: t.get("_exchange", settings.default_exchange) for t in volume_filtered}
+                    ticker_exchange = {
+                        t["symbol"]: t.get("_exchange", settings.default_exchange)
+                        for t in volume_filtered
+                    }
                     for sym in approved_symbols:
                         exchange_map[sym] = ticker_exchange.get(sym, settings.default_exchange)
 
@@ -264,7 +267,9 @@ async def _expand_universe_async():
                     candidate_pool.update(approved_symbols)
 
                     # Backfill per source exchange, then trigger immediate promotion check
-                    primary_timeframes = primary_strategy.config.get("timeframes", ["1h", "4h", "1d"])
+                    primary_timeframes = primary_strategy.config.get(
+                        "timeframes", ["1h", "4h", "1d"],
+                    )
                     by_exchange: dict[str, list[str]] = defaultdict(list)
                     for sym in approved_symbols:
                         by_exchange[exchange_map[sym]].append(sym)

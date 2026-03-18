@@ -390,8 +390,8 @@ async def _run_strategy_pipeline(db, active_strategy, pending_publishes: list[di
                             "AI gate missing for %s %s %s — rejecting signal "
                             "(ai_signal_quality_enabled=%s, ai_multi_timeframe_enabled=%s)",
                             signal.action, symbol, timeframe,
-                            settings.ai_signal_quality_enabled,
-                            settings.ai_multi_timeframe_enabled,
+                            _settings.ai_signal_quality_enabled,
+                            _settings.ai_multi_timeframe_enabled,
                         )
 
                     # Honor AI reject in live mode
@@ -528,7 +528,8 @@ async def _ai_enrich_signal(signal, signal_row, db, df):
             if mtf_data.get("recommendation") == "reject":
                 signal_row.ai_recommendation = "reject"
                 signal_row.ai_reasoning = (
-                    f"MTF analysis rejected: {mtf_data.get('reasoning', 'no higher-timeframe alignment')}"
+                    "MTF analysis rejected: "
+                    f"{mtf_data.get('reasoning', 'no higher-timeframe alignment')}"
                 )
                 signal_row.ai_quality_score = 0
                 return

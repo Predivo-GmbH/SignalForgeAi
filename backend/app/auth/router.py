@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +20,6 @@ from app.auth.schemas import (
     MessageResponse,
     ProfileResponse,
     RefreshRequest,
-    RegisterRequest,
     TokenResponse,
     TwoFactorDisableRequest,
     TwoFactorEnableResponse,

@@ -100,6 +100,7 @@ async def _snapshot_async():
 
                 # Positions value (from open positions for this strategy)
                 from sqlalchemy import func
+
                 from app.models.position import Position
 
                 pos_value_result = await db.execute(

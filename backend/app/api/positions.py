@@ -194,7 +194,6 @@ async def dashboard_snapshot(
         enriched, portfolio_value = _enrich_holdings(list(all_holdings), prices)
     else:
         prices = {}
-        enriched = []
         portfolio_value = 0.0
 
     # --- 2. Trades: realized PnL + daily PnL ---
@@ -272,8 +271,14 @@ async def dashboard_snapshot(
             "initial_value_usd": initial,
             "bh_value": round(bh_value, 2),
             "paper_value": round(paper_value, 2),
-            "bh_return_pct": round((bh_value - initial) / initial * 100, 2) if initial > 0 else 0,
-            "paper_return_pct": round((paper_value - initial) / initial * 100, 2) if initial > 0 else 0,
+            "bh_return_pct": (
+                round((bh_value - initial) / initial * 100, 2)
+                if initial > 0 else 0
+            ),
+            "paper_return_pct": (
+                round((paper_value - initial) / initial * 100, 2)
+                if initial > 0 else 0
+            ),
         }
 
     return {

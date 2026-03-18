@@ -243,11 +243,10 @@ async def deploy_plan(
     import pandas as pd
 
     from app.config import settings as _settings
-    from app.engine.pipeline import SignalPipeline
     from app.data.storage import CandleStorage
+    from app.engine.pipeline import SignalPipeline
 
     primary_timeframe = timeframes[0]
-    min_signal_confluence = _settings.universe_min_signal_confluence
     min_candles_needed = _settings.universe_promotion_lookback_candles
 
     pipeline = SignalPipeline(
@@ -264,7 +263,10 @@ async def deploy_plan(
             )
             if len(candles_data) < 100:
                 quality_rejected.append((sym, f"only {len(candles_data)} candles"))
-                logger.info("deploy quality gate: %s rejected — only %d candles", sym, len(candles_data))
+                logger.info(
+                    "deploy quality gate: %s rejected — only %d candles",
+                    sym, len(candles_data),
+                )
                 continue
             df = pd.DataFrame(candles_data)
             result = pipeline.process(sym, primary_timeframe, df)
@@ -281,7 +283,10 @@ async def deploy_plan(
             )
             quality_passed.append(sym)
         except Exception:
-            logger.warning("deploy quality gate: check failed for %s — including anyway", sym, exc_info=True)
+            logger.warning(
+                "deploy quality gate: check failed for %s — including anyway",
+                sym, exc_info=True,
+            )
             quality_passed.append(sym)
 
     if len(quality_passed) >= 3:
@@ -326,7 +331,7 @@ async def deploy_plan(
     uid = uuid.UUID(user_id)
 
     # Deactivate any previously active strategies before creating the new one
-    from sqlalchemy import select as sa_select, update as sa_update
+    from sqlalchemy import update as sa_update
 
     await db.execute(
         sa_update(Strategy).where(Strategy.is_active == True).values(is_active=False)  # noqa: E712

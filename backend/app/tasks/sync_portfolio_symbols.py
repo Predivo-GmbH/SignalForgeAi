@@ -21,6 +21,8 @@ import logging
 from dataclasses import dataclass
 
 from app.config import settings
+from app.core.encryption import decrypt_value
+from app.execution.adapters.ccxt_adapter import CCXTAdapter
 from app.worker import celery_app
 
 logger = logging.getLogger(__name__)
@@ -224,10 +226,6 @@ def sync_portfolio_symbols(self):
             logger.exception("Unexpected error in sync_portfolio_symbols")
 
 
-from app.core.encryption import decrypt_value
-from app.execution.adapters.ccxt_adapter import CCXTAdapter
-
-
 async def _fetch_all_exchange_holdings(db) -> list[_ExchangeHolding]:
     """Fetch live balances from all non-paper read-only broker connections."""
     from sqlalchemy import select
@@ -309,17 +307,9 @@ async def _sync_portfolio_async():
         logger.info("Portfolio symbol sync disabled via feature flag")
         return
 
-    import json
 
     import redis as redis_lib
 
-    from sqlalchemy import select
-
-    from app.advisor.symbol_rotation import SymbolRotationManager
-    from app.core.database import task_session
-    from app.models.holding import ManualHolding
-    from app.models.position import Position
-    from app.models.strategy import Strategy
     from app.tasks.expand_symbol_universe import _PROMOTED_KEY
     from app.tasks.ingest_candles import backfill_symbols
 
@@ -362,14 +352,17 @@ async def _sync_portfolio_async():
         except Exception:
             pass
 
-        to_add_raw, to_remove = _build_sync_ops(holdings, strategies, open_position_symbols, universe_symbols)
+        to_add_raw, to_remove = _build_sync_ops(
+            holdings, strategies, open_position_symbols, universe_symbols,
+        )
 
         # Quality gate: only add symbols that have enough candle data for the pipeline to evaluate.
         # Symbols without data are held assets we still track via synthetic positions, but they
         # must not pollute the active watchlist until the pipeline can actually analyse them.
         to_add: list[str] = []
         if to_add_raw:
-            from sqlalchemy import func, select as sa_select
+            from sqlalchemy import func
+            from sqlalchemy import select as sa_select
 
             from app.models.candle import Candle as CandleModel
 

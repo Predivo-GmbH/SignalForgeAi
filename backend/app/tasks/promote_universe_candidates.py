@@ -64,7 +64,9 @@ async def _promote_async(symbols: list[str] | None):
         try:
             raw_map = redis_client.hgetall(_EXCHANGE_MAP_KEY)
             exchange_map: dict[str, str] = {
-                (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
+                (k.decode() if isinstance(k, bytes) else k): (
+                    v.decode() if isinstance(v, bytes) else v
+                )
                 for k, v in raw_map.items()
             }
         except Exception:
@@ -132,8 +134,8 @@ async def _promote_async(symbols: list[str] | None):
             # having candle history is necessary but not sufficient for a useful watchlist entry.
             import pandas as pd
 
-            from app.engine.pipeline import SignalPipeline
             from app.data.storage import CandleStorage
+            from app.engine.pipeline import SignalPipeline
 
             pipeline = SignalPipeline(
                 min_confluence=primary_strategy.config.get("min_confluence", 70),
@@ -209,7 +211,10 @@ async def _promote_async(symbols: list[str] | None):
 
             for strategy in strategies:
                 for exc_id, syms in by_exchange.items():
-                    added = await rotation.add_symbols(strategy, syms, db, exchange=exc_id, source="universe_discovery")
+                    added = await rotation.add_symbols(
+                        strategy, syms, db,
+                        exchange=exc_id, source="universe_discovery",
+                    )
                     all_added.extend(added)
 
             if all_added:

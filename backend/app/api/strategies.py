@@ -62,7 +62,10 @@ class StrategyConfig(BaseModel):
     # -- Exchange routing per symbol --
     exchange_map: dict[str, str] = Field(
         default_factory=dict,
-        description="Maps trading pair to exchange, e.g. {'BTC/USDT': 'binance', 'ETH/USDT': 'kraken'}",
+        description=(
+            "Maps trading pair to exchange, e.g."
+            " {'BTC/USDT': 'binance', 'ETH/USDT': 'kraken'}"
+        ),
     )
 
 
@@ -644,7 +647,10 @@ async def trigger_discovery(
     from app.tasks.expand_symbol_universe import expand_symbol_universe
 
     expand_symbol_universe.delay()
-    return {"queued": True, "message": "Discovery scan queued. Results appear in the watchlist within minutes."}
+    return {
+        "queued": True,
+        "message": "Discovery scan queued. Results appear in the watchlist within minutes.",
+    }
 
 
 # ---------- Strategy by ID ----------
