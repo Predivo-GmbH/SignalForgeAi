@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
+import { invokeFunction } from "@/lib/api";
 
 export interface Trade {
   id: string;
@@ -43,10 +44,21 @@ export interface TradeStats {
 export function useTrades(limit = 20, offset = 0, strategyId?: string) {
   return useQuery({
     queryKey: ["trades", limit, offset, strategyId],
-    queryFn: () => {
-      let url = `/trades?limit=${limit}&offset=${offset}`;
-      if (strategyId) url += `&strategy_id=${strategyId}`;
-      return api.get<{ trades: Trade[]; total: number }>(url);
+    queryFn: async () => {
+      let query = supabase
+        .from("trades")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (strategyId) query = query.eq("strategy_id", strategyId);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return {
+        trades: (data ?? []) as Trade[],
+        total: count ?? 0,
+      };
     },
     refetchInterval: 60_000,
   });
@@ -55,11 +67,11 @@ export function useTrades(limit = 20, offset = 0, strategyId?: string) {
 export function useTradeStats(strategyId?: string) {
   return useQuery({
     queryKey: ["trades", "stats", strategyId],
-    queryFn: () => {
-      let url = "/trades/stats";
-      if (strategyId) url += `?strategy_id=${strategyId}`;
-      return api.get<TradeStats>(url);
-    },
+    queryFn: () =>
+      invokeFunction<TradeStats>("analytics", {
+        action: "trade-stats",
+        strategy_id: strategyId,
+      }),
     refetchInterval: 60_000,
   });
 }

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export interface HoldingItem {
   id?: string;
@@ -33,7 +33,20 @@ export interface ManualHoldingRequest {
 export function useHoldings() {
   return useQuery({
     queryKey: ["holdings"],
-    queryFn: () => api.get<HoldingsResponse>("/holdings"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("manual_holdings")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      // Wrap in HoldingsResponse shape for backward compatibility
+      const holdings = (data ?? []) as HoldingItem[];
+      const total_value_usd = holdings.reduce(
+        (sum, h) => sum + (h.value_usd ?? 0),
+        0,
+      );
+      return { holdings, total_value_usd } as HoldingsResponse;
+    },
     refetchInterval: 60_000,
   });
 }
@@ -41,8 +54,21 @@ export function useHoldings() {
 export function useAddHolding() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: ManualHoldingRequest) =>
-      api.post("/holdings/manual", data),
+    mutationFn: async (data: ManualHoldingRequest) => {
+      const { data: row, error } = await supabase
+        .from("manual_holdings")
+        .insert({
+          symbol: data.symbol,
+          quantity: data.quantity,
+          avg_price: data.purchase_price ?? null,
+          notes: data.notes ?? null,
+          source: "manual",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return row;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
 }
@@ -50,8 +76,21 @@ export function useAddHolding() {
 export function useUpdateHolding() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: ManualHoldingRequest & { id: string }) =>
-      api.put(`/holdings/manual/${id}`, data),
+    mutationFn: async ({ id, ...data }: ManualHoldingRequest & { id: string }) => {
+      const { data: row, error } = await supabase
+        .from("manual_holdings")
+        .update({
+          symbol: data.symbol,
+          quantity: data.quantity,
+          avg_price: data.purchase_price ?? null,
+          notes: data.notes ?? null,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return row;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
 }
@@ -59,7 +98,13 @@ export function useUpdateHolding() {
 export function useDeleteHolding() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/holdings/manual/${id}`),
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("manual_holdings")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
 }
@@ -72,8 +117,26 @@ export interface BulkImportRequest {
 export function useBulkImportHoldings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: BulkImportRequest) =>
-      api.post("/holdings/manual/bulk", data),
+    mutationFn: async (data: BulkImportRequest) => {
+      if (data.clear_existing) {
+        const { error: delErr } = await supabase
+          .from("manual_holdings")
+          .delete()
+          .neq("id", "00000000-0000-0000-0000-000000000000"); // delete all rows
+        if (delErr) throw delErr;
+      }
+      const rows = data.holdings.map((h) => ({
+        symbol: h.symbol,
+        quantity: h.quantity,
+        avg_price: h.purchase_price ?? null,
+        notes: h.notes ?? null,
+        source: "manual",
+      }));
+      const { error } = await supabase
+        .from("manual_holdings")
+        .insert(rows);
+      if (error) throw error;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["holdings"] }),
   });
 }

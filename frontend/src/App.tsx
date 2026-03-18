@@ -1,12 +1,17 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { PasswordGate } from "./components/PasswordGate";
+import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/layout/AppLayout";
 import { queryClient } from "./lib/query";
 
-const LoginPage = lazy(() => import("./pages/Login").then(m => ({ default: m.LoginPage })));
+const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
+const SignUpPage = lazy(() => import("./pages/auth/SignUpPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
+const AuthVerifyPage = lazy(() => import("./pages/auth/AuthVerifyPage"));
+const AuthCallbackPage = lazy(() => import("./pages/auth/AuthCallbackPage"));
 const PortfolioPage = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.PortfolioPage })));
 const TradesPage = lazy(() => import("./pages/Trades").then(m => ({ default: m.TradesPage })));
 const AnalyticsPage = lazy(() => import("./pages/Analytics").then(m => ({ default: m.AnalyticsPage })));
@@ -99,10 +104,15 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <PasswordGate>
+        <AuthProvider>
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/auth/verify" element={<AuthVerifyPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route index element={<PortfolioPage />} />
@@ -125,7 +135,7 @@ function App() {
               </Route>
             </Routes>
           </Suspense>
-        </PasswordGate>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

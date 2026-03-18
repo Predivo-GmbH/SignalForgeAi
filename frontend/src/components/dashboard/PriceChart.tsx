@@ -9,7 +9,7 @@ import {
   ColorType,
 } from "lightweight-charts";
 import { cn } from "@/lib/cn";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
 
@@ -109,8 +109,7 @@ export function PriceChart() {
     setLoading(true);
     setError(null);
 
-    api
-      .get<CandleResponse>(`/market/candles/${urlSymbol}/${timeframe}?limit=500`)
+    invokeFunction<CandleResponse>("market", { action: "candles", symbol: urlSymbol.replace("-", "/"), timeframe, limit: 500 })
       .then((data) => {
         if (cancelled) return;
         if (data.candles.length === 0) {

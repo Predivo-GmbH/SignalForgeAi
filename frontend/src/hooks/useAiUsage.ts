@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface UsageSummary {
   total_cost_usd: number;
@@ -57,7 +57,11 @@ export interface AiUsageResponse {
 export function useAiUsage(days = 30) {
   return useQuery({
     queryKey: ["ai-usage", days],
-    queryFn: () => api.get<AiUsageResponse>(`/ai-usage?days=${days}`),
+    queryFn: () =>
+      invokeFunction<AiUsageResponse>("ai-usage", {
+        action: "summary",
+        days,
+      }),
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
@@ -67,7 +71,10 @@ export function useUpdateCredit() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (prepaid_usd: number) =>
-      api.put<{ prepaid_usd: number }>("/ai-usage/credit", { prepaid_usd }),
+      invokeFunction<{ prepaid_usd: number }>("ai-usage", {
+        action: "update-credit",
+        prepaid_usd,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-usage"] }),
   });
 }

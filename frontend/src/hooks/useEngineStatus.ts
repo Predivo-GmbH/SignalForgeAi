@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface EngineStatus {
   active: boolean;
@@ -11,6 +11,7 @@ export interface EngineStatus {
 export function useEngineStatus() {
   return useQuery({
     queryKey: ["engine", "status"],
-    queryFn: () => api.get<EngineStatus>("/engine/status"),
+    queryFn: () =>
+      invokeFunction<EngineStatus>("engine-monitor", { action: "status" }),
   });
 }

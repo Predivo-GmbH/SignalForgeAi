@@ -14,10 +14,7 @@ import {
   Mail,
   Calendar,
   CheckCircle2,
-  KeyRound,
   LogOut,
-  Eye,
-  EyeOff,
   Pencil,
   Clock,
   AlertTriangle,
@@ -38,8 +35,8 @@ import { useStrategies, useUpdateStrategy, useExchangeAvailability } from "@/hoo
 import { useHoldings } from "@/hooks/useHoldings";
 import { AiUsageTab } from "@/components/settings/AiUsageTab";
 import { TwoFactorSetup } from "@/components/settings/TwoFactorSetup";
-import { useProfile, useChangePassword, useChangeEmail } from "@/hooks/useProfile";
-import { useAuth } from "@/lib/auth";
+import { useProfile, useChangeEmail } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Tab = "profile" | "connections" | "exchanges" | "ai-usage";
 
@@ -554,140 +551,29 @@ function ConnectionsTab() {
 
 /* ---- Profile Tab ---- */
 
-function ChangePasswordForm() {
-  const mutation = useChangePassword();
-  const [currentPw, setCurrentPw] = useState("");
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-
-  const mismatch = confirmPw.length > 0 && newPw !== confirmPw;
-  const tooShort = newPw.length > 0 && newPw.length < 8;
-  const canSubmit = currentPw && newPw.length >= 8 && newPw === confirmPw && !mutation.isPending;
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    mutation.mutate(
-      { current_password: currentPw, new_password: newPw },
-      {
-        onSuccess: () => {
-          setCurrentPw("");
-          setNewPw("");
-          setConfirmPw("");
-        },
-      },
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Current Password
-        </label>
-        <div className="relative">
-          <input
-            type={showCurrent ? "text" : "password"}
-            value={currentPw}
-            onChange={(e) => setCurrentPw(e.target.value)}
-            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 pr-10 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowCurrent(!showCurrent)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary) hover:text-(--color-text-primary)"
-            aria-label={showCurrent ? "Hide current password" : "Show current password"}
-          >
-            {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          New Password
-        </label>
-        <div className="relative">
-          <input
-            type={showNew ? "text" : "password"}
-            value={newPw}
-            onChange={(e) => setNewPw(e.target.value)}
-            className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 pr-10 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-          />
-          <button
-            type="button"
-            onClick={() => setShowNew(!showNew)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary) hover:text-(--color-text-primary)"
-            aria-label={showNew ? "Hide new password" : "Show new password"}
-          >
-            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-        {tooShort && (
-          <p className="text-xs text-(--color-warning)">Must be at least 8 characters</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Confirm New Password
-        </label>
-        <input
-          type="password"
-          value={confirmPw}
-          onChange={(e) => setConfirmPw(e.target.value)}
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-        />
-        {mismatch && (
-          <p className="text-xs text-(--color-negative)">Passwords do not match</p>
-        )}
-      </div>
-
-      {mutation.isError && (
-        <p className="text-xs text-(--color-negative)">
-          {mutation.error instanceof Error ? mutation.error.message : "Failed to change password"}
-        </p>
-      )}
-      {mutation.isSuccess && (
-        <p className="text-xs text-(--color-positive)">Password changed successfully.</p>
-      )}
-
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {mutation.isPending ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <KeyRound className="w-4 h-4" />
-        )}
-        {mutation.isPending ? "Updating..." : "Update Password"}
-      </button>
-    </form>
-  );
-}
-
 function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
-  const mutation = useChangeEmail();
+  const emailChanger = useChangeEmail();
   const [newEmail, setNewEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const canSubmit =
-    newEmail && newEmail !== currentEmail && password && !mutation.isPending;
+  const canSubmit = newEmail && newEmail !== currentEmail && !loading;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    mutation.mutate(
-      { new_email: newEmail, password },
-      {
-        onSuccess: () => {
-          setNewEmail("");
-          setPassword("");
-        },
-      },
-    );
+    setError("");
+    setSuccess(false);
+    setLoading(true);
+    try {
+      await emailChanger.mutateAsync({ new_email: newEmail });
+      setNewEmail("");
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to change email");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -705,26 +591,11 @@ function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
-          Current Password
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Confirm with your password"
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
-        />
-      </div>
-
-      {mutation.isError && (
-        <p className="text-xs text-(--color-negative)">
-          {mutation.error instanceof Error ? mutation.error.message : "Failed to change email"}
-        </p>
+      {error && (
+        <p className="text-xs text-(--color-negative)">{error}</p>
       )}
-      {mutation.isSuccess && (
-        <p className="text-xs text-(--color-positive)">Email updated successfully.</p>
+      {success && (
+        <p className="text-xs text-(--color-positive)">Confirmation email sent. Check your inbox.</p>
       )}
 
       <button
@@ -732,12 +603,12 @@ function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
         disabled={!canSubmit}
         className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {mutation.isPending ? (
+        {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />
         ) : (
           <Mail className="w-4 h-4" />
         )}
-        {mutation.isPending ? "Updating..." : "Update Email"}
+        {loading ? "Updating..." : "Update Email"}
       </button>
     </form>
   );
@@ -745,9 +616,8 @@ function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
 
 function ProfileTab() {
   const { data: profile, isLoading } = useProfile();
-  const logout = useAuth((s) => s.logout);
+  const { signOut } = useAuth();
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   if (isLoading) {
     return (
@@ -856,41 +726,13 @@ function ProfileTab() {
         )}
       </div>
 
-      {/* Change Password */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
-              <KeyRound className="w-4 h-4 text-(--color-text-secondary)" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-(--color-text-primary)">Password</p>
-              <p className="text-xs text-(--color-text-secondary)">Last changed: unknown</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowPasswordForm(!showPasswordForm)}
-            className="flex items-center gap-1.5 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            {showPasswordForm ? "Cancel" : "Change"}
-          </button>
-        </div>
-        {showPasswordForm && (
-          <>
-            <div className="border-t border-(--color-border)" />
-            <ChangePasswordForm />
-          </>
-        )}
-      </div>
-
       {/* Two-Factor Authentication */}
       <TwoFactorSetup />
 
       {/* Logout */}
       <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5">
         <button
-          onClick={logout}
+          onClick={() => signOut()}
           className="flex items-center gap-2 text-sm font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors"
         >
           <LogOut className="w-4 h-4" />

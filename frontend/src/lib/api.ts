@@ -1,8 +1,11 @@
-import { useAuth } from "./auth";
+/**
+ * API helper — wraps Supabase client for direct table access
+ * and Edge Function invocations.
+ *
+ * Replaces the old fetch-based api module.
+ */
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-
-/* ---- Typed API Error ---- */
+import { supabase } from "@/lib/supabase";
 
 export class ApiError extends Error {
   status: number;
@@ -16,106 +19,96 @@ export class ApiError extends Error {
   }
 }
 
-const STATUS_MESSAGES: Record<number, { message: string; code: string }> = {
-  403: { message: "You don't have permission for this action.", code: "FORBIDDEN" },
-  404: { message: "Resource not found.", code: "NOT_FOUND" },
-  422: { message: "Invalid input. Please check your data.", code: "VALIDATION_ERROR" },
-  429: { message: "Too many requests. Please try again shortly.", code: "RATE_LIMITED" },
-  500: { message: "Server error. Please try again later.", code: "SERVER_ERROR" },
-};
-
-let isRefreshing = false;
-let refreshQueue: Array<{
-  resolve: (value: boolean) => void;
-  reject: (reason?: unknown) => void;
-}> = [];
-
-function processQueue(success: boolean): void {
-  refreshQueue.forEach(({ resolve }) => resolve(success));
-  refreshQueue = [];
+/** Invoke a Supabase Edge Function */
+export async function invokeFunction<T>(
+  name: string,
+  body?: Record<string, unknown>,
+  method: "POST" | "GET" | "PUT" | "DELETE" = "POST",
+): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(name, {
+    body: body ?? {},
+    method,
+  });
+  if (error) {
+    throw new ApiError(500, error.message ?? "Edge function error", "FUNCTION_ERROR");
+  }
+  return data as T;
 }
 
-async function refreshAccessToken(): Promise<boolean> {
-  const { refreshToken, setTokens, logout } = useAuth.getState();
-  if (!refreshToken) {
-    logout();
-    return false;
+/** Query a Supabase table with RLS-enforced access */
+export async function queryTable<T>(
+  table: string,
+  options?: {
+    select?: string;
+    filters?: Array<{ column: string; op: string; value: unknown }>;
+    order?: { column: string; ascending?: boolean };
+    limit?: number;
+    offset?: number;
+    single?: boolean;
+  },
+): Promise<T> {
+  let query = supabase.from(table).select(options?.select ?? "*", {
+    count: options?.limit ? "exact" : undefined,
+  });
+
+  if (options?.filters) {
+    for (const f of options.filters) {
+      query = query.filter(f.column, f.op, f.value);
+    }
   }
 
-  // If already refreshing, queue this request and wait for the result
-  if (isRefreshing) {
-    return new Promise<boolean>((resolve, reject) => {
-      refreshQueue.push({ resolve, reject });
+  if (options?.order) {
+    query = query.order(options.order.column, {
+      ascending: options.order.ascending ?? false,
     });
   }
 
-  isRefreshing = true;
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    if (!res.ok) {
-      processQueue(false);
-      logout();
-      return false;
-    }
-    const data = await res.json();
-    setTokens(data.access_token, data.refresh_token ?? refreshToken);
-    processQueue(true);
-    return true;
-  } catch {
-    processQueue(false);
-    useAuth.getState().logout();
-    return false;
-  } finally {
-    isRefreshing = false;
+  if (options?.limit) query = query.limit(options.limit);
+  if (options?.offset) query = query.range(options.offset, options.offset + (options.limit ?? 20) - 1);
+
+  if (options?.single) {
+    const { data, error } = await query.single();
+    if (error) throw new ApiError(error.code === "PGRST116" ? 404 : 500, error.message, error.code);
+    return data as T;
   }
+
+  const { data, error } = await query;
+  if (error) throw new ApiError(500, error.message, error.code);
+  return data as T;
 }
 
-async function request<T>(path: string, options: RequestInit = {}, _retry = false): Promise<T> {
-  const { accessToken } = useAuth.getState();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) || {}),
-  };
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (res.status === 401 && !_retry) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      return request<T>(path, options, true);
-    }
-    throw new ApiError(401, "Session expired. Please log in again.", "UNAUTHORIZED");
-  }
-  if (res.status === 401) {
-    useAuth.getState().logout();
-    throw new ApiError(401, "Session expired. Please log in again.", "UNAUTHORIZED");
-  }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const fallback = STATUS_MESSAGES[res.status];
-    const message = body.detail || body.error || fallback?.message || `Request failed: ${res.status}`;
-    const code = fallback?.code || "UNKNOWN";
-    throw new ApiError(res.status, message, code);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json();
+/** Insert into a Supabase table */
+export async function insertRow<T>(
+  table: string,
+  row: Record<string, unknown>,
+): Promise<T> {
+  const { data, error } = await supabase.from(table).insert(row).select().single();
+  if (error) throw new ApiError(500, error.message, error.code);
+  return data as T;
 }
 
+/** Update a row in a Supabase table */
+export async function updateRow<T>(
+  table: string,
+  id: string,
+  updates: Record<string, unknown>,
+): Promise<T> {
+  const { data, error } = await supabase.from(table).update(updates).eq("id", id).select().single();
+  if (error) throw new ApiError(500, error.message, error.code);
+  return data as T;
+}
+
+/** Delete a row from a Supabase table */
+export async function deleteRow(table: string, id: string): Promise<void> {
+  const { error } = await supabase.from(table).delete().eq("id", id);
+  if (error) throw new ApiError(500, error.message, error.code);
+}
+
+// Legacy api object for backward compatibility during migration
 export const api = {
-  get: <T>(path: string, opts?: { signal?: AbortSignal }) =>
-    request<T>(path, opts),
-  post: <T>(path: string, body?: unknown, opts?: { signal?: AbortSignal }) =>
-    request<T>(path, {
-      method: "POST",
-      body: body ? JSON.stringify(body) : undefined,
-      ...opts,
-    }),
-  put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  get: queryTable,
+  invoke: invokeFunction,
+  insert: insertRow,
+  update: updateRow,
+  delete: deleteRow,
 };

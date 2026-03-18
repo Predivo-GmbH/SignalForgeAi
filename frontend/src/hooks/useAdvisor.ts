@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface ScoredCrypto {
   symbol: string;
@@ -57,13 +57,20 @@ export function useGeneratePlan() {
     mutationFn: (data: {
       amount: number;
       scan_results?: ScoredCrypto[];
-    }) => api.post<InvestmentPlan>("/advisor/plan", data),
+    }) =>
+      invokeFunction<InvestmentPlan>("advisor", {
+        action: "plan",
+        ...data,
+      }),
   });
 }
 
 export function useDeployPlan() {
   return useMutation({
     mutationFn: (plan: InvestmentPlan) =>
-      api.post<DeployResponse>("/advisor/deploy", { plan }),
+      invokeFunction<DeployResponse>("advisor", {
+        action: "deploy",
+        plan,
+      }),
   });
 }

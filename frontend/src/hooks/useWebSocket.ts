@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { wsManager } from "@/lib/ws";
-import { useAuth } from "@/lib/auth";
+import { subscribeBroadcast, subscribeTable } from "@/lib/ws";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface SignalMessage {
   symbol: string;
@@ -28,38 +28,41 @@ export interface TradeMessage {
 }
 
 export function useSignalStream(onSignal: (signal: SignalMessage) => void) {
-  const token = useAuth((s) => s.accessToken);
+  const { user } = useAuth();
   const callbackRef = useRef(onSignal);
   useEffect(() => {
     callbackRef.current = onSignal;
   });
 
   useEffect(() => {
-    if (!token) return;
-    wsManager.connect("signals", token);
-    const unsub = wsManager.subscribe("signals", (data) =>
-      callbackRef.current(data as SignalMessage),
+    if (!user) return;
+
+    const unsub = subscribeTable(
+      "signal-stream",
+      "signals",
+      "INSERT",
+      user.id,
+      (payload) => callbackRef.current(payload as SignalMessage),
     );
-    return () => {
-      unsub();
-      wsManager.disconnect("signals");
-    };
-  }, [token]);
+
+    return unsub;
+  }, [user]);
 }
 
 export function usePriceStream() {
   const [prices, setPrices] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    wsManager.connect("prices");
-    const unsub = wsManager.subscribe("prices", (data: unknown) => {
-      const { symbol, price } = data as PriceMessage;
-      setPrices((prev) => ({ ...prev, [symbol]: price }));
-    });
-    return () => {
-      unsub();
-      wsManager.disconnect("prices");
-    };
+    const unsub = subscribeBroadcast(
+      "price-stream",
+      "price-update",
+      (data: unknown) => {
+        const { symbol, price } = data as PriceMessage;
+        setPrices((prev) => ({ ...prev, [symbol]: price }));
+      },
+    );
+
+    return unsub;
   }, []);
 
   return prices;

@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 interface WFORequest {
   symbol: string;
@@ -26,6 +26,9 @@ export type { WFORequest, WFOResult };
 export function useRunWalkForward() {
   return useMutation({
     mutationFn: (req: WFORequest) =>
-      api.post<WFOResult>("/backtests/optimize", req),
+      invokeFunction<WFOResult>("backtests", {
+        action: "walk-forward",
+        ...req,
+      }),
   });
 }

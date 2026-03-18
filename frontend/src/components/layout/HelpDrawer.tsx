@@ -1,9 +1,34 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { X, Loader2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { X } from "lucide-react";
+
+const GUIDE_CONTENT = `# SignalForgeAI User Guide
+
+## Getting Started
+1. **AI Advisor** — Scan the market, generate a strategy, and deploy it in 3 clicks
+2. **Strategies** — View and manage your deployed trading strategies
+3. **Trades** — Track all executed trades and performance metrics
+4. **Analytics** — Equity curves, Sharpe ratios, and symbol correlation
+
+## Signal Pipeline
+Every minute, the engine evaluates your active strategies through 6 layers:
+- **Regime** — Is the market trending or chaotic?
+- **Trend** — EMA alignment and direction
+- **Zones** — Fibonacci retracements and support/resistance
+- **Confluence** — 14-factor weighted scoring
+- **Triggers** — MACD cross, RSI, Stochastic, engulfing patterns
+- **Risk** — ATR-based stops and position sizing
+
+## AI Features
+- **Signal Quality** — Claude evaluates every signal before execution
+- **Risk Tuning** — Daily adjustment of risk parameters based on trade results
+- **Feedback Rules** — Learned patterns from losing trades (30-day expiry)
+- **Pattern Analysis** — Deep trade history analysis for recurring patterns
+
+## Paper Trading
+Start a simulation from Settings to compare your strategy vs Buy & Hold without risking real money.
+`;
 
 interface HelpDrawerProps {
   open: boolean;
@@ -11,12 +36,6 @@ interface HelpDrawerProps {
 }
 
 export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["guide"],
-    queryFn: () => api.get<{ content: string }>("/guide"),
-    staleTime: 5 * 60 * 1000,
-    enabled: open,
-  });
 
   // Close on Escape key
   useEffect(() => {
@@ -60,24 +79,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
-          {isLoading && (
-            <div className="flex items-center justify-center min-h-[200px]">
-              <Loader2 className="w-5 h-5 animate-spin text-(--color-accent)" />
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-lg border border-(--color-negative)/30 bg-(--color-negative)/10 px-4 py-3 space-y-1">
-              <p className="text-sm font-semibold text-(--color-negative)">
-                Failed to load guide
-              </p>
-              <p className="text-xs text-(--color-text-secondary)">
-                The guide file could not be found on the server.
-              </p>
-            </div>
-          )}
-
-          {data?.content && (
+          {(
             <div className="prose prose-invert prose-sm max-w-none
               [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-(--color-text-primary) [&_h1]:mb-3 [&_h1]:mt-6 [&_h1]:first:mt-0
               [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-(--color-text-primary) [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:pt-3 [&_h2]:border-t [&_h2]:border-(--color-border)
@@ -98,7 +100,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               [&_blockquote]:border-l-2 [&_blockquote]:border-(--color-accent) [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-(--color-text-secondary)
             ">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {data.content}
+                {GUIDE_CONTENT}
               </ReactMarkdown>
             </div>
           )}

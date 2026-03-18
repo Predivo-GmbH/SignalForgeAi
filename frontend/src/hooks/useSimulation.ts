@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface SimulationHolding {
   symbol: string;
@@ -92,7 +92,8 @@ export interface PaperPortfolioData {
 export function useSimulation() {
   return useQuery({
     queryKey: ["simulation", "active"],
-    queryFn: () => api.get<SimulationData | null>("/simulation/active"),
+    queryFn: () =>
+      invokeFunction<SimulationData | null>("simulation", { action: "get" }),
     refetchInterval: 60_000,
   });
 }
@@ -100,14 +101,16 @@ export function useSimulation() {
 export function useLatestSimulation() {
   return useQuery({
     queryKey: ["simulation", "latest"],
-    queryFn: () => api.get<SimulationData | null>("/simulation/latest"),
+    queryFn: () =>
+      invokeFunction<SimulationData | null>("simulation", { action: "latest" }),
   });
 }
 
 export function useStartSimulation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post<{ id: string }>("/simulation/start"),
+    mutationFn: () =>
+      invokeFunction<{ id: string }>("simulation", { action: "start" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulation"] });
     },
@@ -118,7 +121,10 @@ export function useStopSimulation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (simId: string) =>
-      api.post<SimulationData>(`/simulation/${simId}/stop`),
+      invokeFunction<SimulationData>("simulation", {
+        action: "stop",
+        id: simId,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulation"] });
     },
@@ -134,7 +140,11 @@ interface CombinedPortfolio {
 export function useCombinedPortfolio(simId: string | undefined) {
   return useQuery({
     queryKey: ["simulation", simId, "portfolio"],
-    queryFn: () => api.get<CombinedPortfolio>(`/simulation/${simId}/portfolio`),
+    queryFn: () =>
+      invokeFunction<CombinedPortfolio>("simulation", {
+        action: "portfolio",
+        id: simId,
+      }),
     enabled: !!simId,
     refetchInterval: 60_000,
   });
@@ -164,7 +174,12 @@ export function useUpdateReserve() {
       usdt_reserve_pct: number;
       mode: string;
     }) =>
-      api.put(`/simulation/${simId}/reserve`, { usdt_reserve_pct, mode }),
+      invokeFunction("simulation", {
+        action: "reserve",
+        id: simId,
+        usdt_reserve_pct,
+        mode,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulation"] });
     },

@@ -1,20 +1,17 @@
-import { WebSocketManager } from "../ws";
+/**
+ * WebSocket/Realtime tests — now uses Supabase Realtime.
+ */
+import { disconnectAll } from "../ws";
 
-describe("WebSocketManager", () => {
-  test("constructs correct URL for signals channel", () => {
-    const mgr = new WebSocketManager("ws://localhost:8000");
-    expect(mgr.getUrl("signals")).toBe("ws://localhost:8000/ws/signals");
+describe("Realtime module", () => {
+  test("exports subscribeTable and subscribeBroadcast", async () => {
+    const mod = await import("../ws");
+    expect(mod.subscribeTable).toBeDefined();
+    expect(mod.subscribeBroadcast).toBeDefined();
+    expect(mod.disconnectAll).toBeDefined();
   });
 
-  test("constructs correct URL for prices channel", () => {
-    const mgr = new WebSocketManager("ws://localhost:8000");
-    expect(mgr.getUrl("prices")).toBe("ws://localhost:8000/ws/prices");
-  });
-
-  test("appends token as query param for signals", () => {
-    const mgr = new WebSocketManager("ws://localhost:8000");
-    expect(mgr.getUrl("signals", "tok123")).toBe(
-      "ws://localhost:8000/ws/signals?token=tok123",
-    );
+  test("disconnectAll runs without error", () => {
+    expect(() => disconnectAll()).not.toThrow();
   });
 });

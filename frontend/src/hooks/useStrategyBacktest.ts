@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface StrategyBacktestRequest {
   strategy_id?: string;
@@ -50,6 +50,9 @@ export interface StrategyBacktestResult {
 export function useRunStrategyBacktest() {
   return useMutation({
     mutationFn: (req: StrategyBacktestRequest) =>
-      api.post<StrategyBacktestResult>("/backtests/strategy", req),
+      invokeFunction<StrategyBacktestResult>("backtests", {
+        action: "run",
+        ...req,
+      }),
   });
 }

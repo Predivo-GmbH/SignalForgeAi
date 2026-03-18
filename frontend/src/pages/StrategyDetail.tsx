@@ -15,8 +15,6 @@ import {
 import { useStrategy, useToggleStrategy, useDeleteStrategy } from "@/hooks/useStrategies";
 import { useSignals } from "@/hooks/useSignals";
 import { useTradeStats } from "@/hooks/useTrades";
-import { useBrokerConnections } from "@/hooks/useBrokerConnections";
-import { useProfile } from "@/hooks/useProfile";
 import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Badge } from "@/components/ui/Badge";
@@ -252,18 +250,14 @@ export function StrategyDetailPage() {
     sortDir,
   });
   const { data: stats } = useTradeStats(id);
-  const { data: connections } = useBrokerConnections();
-  const { data: profile } = useProfile();
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
   const [showTwoFa, setShowTwoFa] = useState(false);
   const [twoFaError, setTwoFaError] = useState("");
 
-  const hasLiveConnections = connections?.some((c) => !c.is_paper) ?? false;
-
   const handleToggle = () => {
     if (!strategy) return;
-    if (!strategy.is_active && hasLiveConnections && profile?.totp_enabled) {
+    if (false) { /* OTP auth replaces 2FA gate */
       setShowTwoFa(true);
       setTwoFaError("");
       return;

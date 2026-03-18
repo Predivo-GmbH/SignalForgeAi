@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsPage } from "../Settings";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -11,7 +12,9 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
       })
     }
   >
-    <MemoryRouter>{children}</MemoryRouter>
+    <AuthProvider>
+      <MemoryRouter>{children}</MemoryRouter>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

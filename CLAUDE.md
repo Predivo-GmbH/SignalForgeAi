@@ -22,119 +22,111 @@ Before delivering ANY change (code, UI, bug fix, feature, refactor):
 
 ---
 
-## Status
+## Stack
 
-**Phases 1–7 complete.** All committed and pushed (238+ commits). **AI self-learning loop active.**
-
-- 238+ commits on `main`
-- Backend: 16 API routers, ~58 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 12 Celery Beat tasks, 17 Alembic migrations
-- Frontend: 8 pages + Strategy Detail + Backtest, 29 hooks, dark/light theme, full mobile responsiveness
-- 55 backend test files (~450+ tests), import smoke test (161 parametrized), all 16 routers have smoke tests
-- Self-learning loop: FeedbackFilter → AI reject in live → Pattern Analysis → Risk Tuner → Feedback Synthesis
-- AI credit tracking: Redis primary + DB fallback, prepaid credit system
-- See `/home/roger/.claude/projects/-home-roger/memory/signalforge-state.md` for full state
+- **Frontend**: React 19 + Vite 7 + TypeScript + Tailwind CSS 4, deployed to Metanet via FTP
+- **Backend**: Supabase (PostgreSQL + Edge Functions + Auth + Realtime + Vault)
+- **State**: Zustand + TanStack React Query
+- **Auth**: Supabase Email OTP (6-digit, 600s expiry)
+- **Realtime**: Supabase Realtime (postgres_changes + broadcast)
+- **Cron**: pg_cron + pg_net invoking Edge Functions
+- **AI**: Claude API via `npm:@anthropic-ai/sdk`
+- **Exchange**: CCXT via `npm:ccxt`
+- **Indicators**: `npm:technicalindicators` + custom VWAP/Fibonacci
+- **CI/CD**: GitHub Actions → lint → test → build → FTP deploy
 
 ## Project Structure
-- `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0 (~100 source files, ~50 test files)
 - `/frontend` — React 19 + Vite 7 + TypeScript + Tailwind 4
-- `/docs/PROJECT-STATUS.md` — **Full project documentation (read this first)**
-- `/docs/SESSION-CHANGELOG-2026-03-02.md` — Detailed session changelog
-- `/docs/plans/` — Implementation plans
+- `/supabase/migrations/` — 8 SQL migration files (schema, RLS, pg_cron, RPCs)
+- `/supabase/functions/` — 19 Edge Functions + `_shared/` utilities
+- `/supabase/functions/_shared/engine/` — 6-layer signal pipeline (9 TypeScript modules)
+- `/supabase/functions/_shared/advisor/` — AI advisor system (9 TypeScript modules)
+- `/supabase/config.toml` — Supabase project configuration
+- `/.github/workflows/deploy.yml` — CI/CD pipeline
 
 ## Commands
 ```bash
-# Development (Docker — starts all 5 services: db, redis, api, worker, beat)
-cd backend && docker.exe compose up -d
-cd backend && docker.exe compose logs worker --tail=30  # Check pipeline/ingestion
-cd backend && docker.exe compose restart worker beat     # After code changes
+# Frontend development
+cd frontend && npm run dev       # Dev server :5173
+cd frontend && npm run build     # Production build
+cd frontend && npm run lint      # ESLint
+cd frontend && npm test          # Vitest
 
-# Testing & Linting
-cd backend && .venv/Scripts/python.exe -m pytest -q
-cd backend && .venv/Scripts/python.exe -m ruff check .
-
-# Frontend
-cd frontend && npm run dev       # Dev server :5173 (password: signalforge)
-cd frontend && npx vitest run
-cd frontend && npm run lint
-cd frontend && npm run build
-
-# Production Docker
-docker compose -f docker-compose.prod.yml up -d
+# Supabase (requires supabase CLI)
+supabase db push                 # Apply migrations
+supabase functions deploy --all  # Deploy all Edge Functions
+supabase functions serve         # Local Edge Function dev server
 ```
-
-> **Note:** Use `docker.exe` (not `docker`) on WSL2 with Docker Desktop for Windows.
 
 ## Rules
 - NO hardcoded hex values in frontend components — use CSS custom property tokens (e.g. `bg-(--color-accent)`)
 - NO magic px values — use Tailwind classes
 - All components must support dark/light theme via CSS variables in `index.css`
-- Backend: TDD — write failing test first, then implement
-- Backend: All API endpoints need integration tests
 - Frontend: Vitest with `globals: true` — do NOT import from 'vitest' in test files
 - Commit frequently, one logical change per commit
 - Always check existing code before modifying — read first
-- **Questions → TEXT ONLY, NO TOOLS.** When the user's message is a question (contains "?", starts with "is/has/does/what/how/why/are" etc.), respond with TEXT ONLY. NEVER call Edit, Write, Bash, Agent, or any action tools. Reading files to inform the answer is OK, but do NOT modify anything. Describe what you'd do and wait for explicit action instructions.
-  - TRAP: "is everything documented?" = ANSWER with findings, NOT "go fix the docs". "has the workflow been followed?" = ANSWER yes/no. Only imperative sentences ("update the docs", "fix the tests") are action requests.
+- **Questions → TEXT ONLY, NO TOOLS.** When the user's message is a question (contains "?"), respond with TEXT ONLY. NEVER call Edit, Write, Bash, Agent, or any action tools. Reading files to inform the answer is OK, but do NOT modify anything.
 
 ### Strategy Parameter Integrity (CORE PRINCIPLE)
 The AI Advisor chose the strategy parameters for a reason. If the market doesn't match, zero trades is the correct outcome — not a problem to "fix" by loosening things. Specifically:
 - **Never** auto-override, auto-loosen, or "fall back" to weaker parameters just because zero signals/trades are generated.
 - **Pipeline sensitivity params** (`min_trigger_count`, `trigger_lookback_candles`, `ema_slope_threshold`) are strategy identity — set by the AI Advisor at creation, never modified afterward.
-- **RiskTuner** only adjusts risk management params (`min_confluence`, `max_risk_per_trade`, `max_daily_loss`, `atr_sl_multiplier`, `min_risk_reward`) based on actual trade results with 5+ closed trades.
+- **RiskTuner** only adjusts risk management params based on actual trade results with 5+ closed trades.
 - No system component should treat "no trades" as a problem to solve. The strategy is working correctly by staying out when conditions don't match.
 
 ### No AI, No Trading (CORE PRINCIPLE)
-When Claude is unavailable, the system does NOT trade, guess, or fabricate analysis. Every AI-dependent component must abort or reject — never fall back to algorithmic approximations. Specifically:
-- **Planner** returns `None` → API returns HTTP 503.
-- **Signal Quality Evaluator** returns `recommendation="reject"` → signal is blocked.
-- **Multi-Timeframe Analyzer** returns `recommendation="reject"` → signal is blocked.
-- **Risk Tuner** returns empty adjustments → strategy config unchanged.
-- **Feedback Synthesizer** returns empty rules → no rules created.
-- **Pattern Analyzer** returns empty result → nothing stored.
-- **Pipeline AI enrichment** failure → signal is rejected (not let through).
-- No `_algorithmic_fallback()` methods exist anywhere in the advisor module.
+When Claude is unavailable, the system does NOT trade, guess, or fabricate analysis. Every AI-dependent component must abort or reject — never fall back to algorithmic approximations.
 
-## Frontend Pages & Navigation
+## Architecture
+
+### Edge Functions (19 total)
+**CRUD (14):** signals, trades, strategies, broker, market, positions, holdings, analytics, backtests, regime, simulation, ai-usage, engine-monitor, system-status
+
+**Cron (4):**
+- `engine-cron` — every 1min: candle ingestion → signal pipeline → order execution → position management
+- `daily-maintenance` — 02:00 UTC: risk tuning, feedback synthesis, pattern analysis, cleanup
+- `simulation-snapshot` — hourly: B&H vs paper portfolio snapshots
+- `universe-expansion` — every 6h: discover new symbols, backfill candles
+
+**SSE (1):** advisor — scan → plan → deploy with streaming progress
+
+### Signal Pipeline (6 layers)
+```
+Candles → L0: Regime (ADX+ATR) → L1: Trend (EMA alignment)
+       → L2: Zones (Fibonacci+S/R) → L3: Confluence (14-factor scorer)
+       → L4: Triggers (5 types) → L5: Risk (ATR stops + sizing)
+       → Feedback Filter → Output: BUY/SELL/NO_TRADE
+```
+
+### Database (16 tables)
+profiles, strategies, signals, trades, orders, positions, broker_connections, candles, pipeline_logs, ai_insights, feedback_rules, paper_simulations, simulation_snapshots, backtest_results, manual_holdings, cost_basis_overrides
+
+### Frontend Pages
 Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics → Settings
 
 | Route | Page | Key Feature |
 |-------|------|-------------|
 | `/` | Dashboard | PriceChart (6 TFs), StatsCards, PositionsTable |
-| `/advisor` | AI Advisor | 3-step: Scan → Plan → Deploy. Master-detail with scan history sidebar |
+| `/advisor` | AI Advisor | 3-step: Scan → Plan → Deploy with scan history |
 | `/strategies` | Strategies | List deployed strategies with P&L, win rate, Sharpe |
 | `/strategies/:id` | Strategy Detail | Signals tab + Validation/backtest tab |
 | `/backtest` | Backtest | Standalone strategy validation tool |
 | `/trades` | Trades | Execution log + performance metrics |
 | `/analytics` | Analytics | Equity curve, metrics grid, correlation matrix |
+| `/risk` | Risk Management | Drawdown tracking |
+| `/engine` | Signal Engine | Pipeline monitoring |
 | `/settings` | Settings | Connections (broker keys), Alerts (email), AI Usage (cost tracking) |
 
 ## Design Reference
-- **Inspiration**: Kraken Pro trading UI (screenshots in `kraken-reference/`)
 - **Theme**: Dark default (user-toggleable), purple accent `#7B61FF`
 - **Typography**: Inter (UI), JetBrains Mono (prices/numbers)
 - **CSS tokens**: Defined in `frontend/src/index.css` (:root and .dark)
 
 ## Config
-- All backend env vars use `SF_` prefix (e.g. `SF_DATABASE_URL`, `SF_JWT_SECRET`)
-- Frontend uses `VITE_API_URL` (defaults to `http://localhost:8000/api`)
-- AI feature flags: all True — `ai_signal_quality_enabled`, `ai_risk_tuning_enabled`, `ai_feedback_loop_enabled`, etc.
-- `SF_ANTHROPIC_API_KEY` — required for Claude calls (set in `backend/.env`)
-- `SF_ANTHROPIC_ADMIN_API_KEY` — optional, for Anthropic Admin API cost reports (not available on individual plans)
-- See `docs/PROJECT-STATUS.md` for full env var table
-
-## Test Account
-- Email: `roger@signalforge.dev` / Password: `SignalForge2026`
-- Frontend password gate: `signalforge2026`
-
-## Current System State (2026-03-03)
-- 5 Docker services running (db, redis, api, worker, beat)
-- 1 active strategy: "AI Advisor — Conservative Swing" (15 symbols, 4h, min_confluence: 70)
-- All symbols currently blocked (chaotic_regime / no_trend / low_confluence)
-- Candle data: 6 timeframes × 15+ symbols, ingested every 60s
-- Broker connections stored but NOT wired to execution (PaperAdapter always used)
-- `.gitattributes` enforces LF line endings (prevents WSL2/Windows CRLF ghost diffs)
-- JWT token refresh on 401 responses (auto-retry before logout)
-- WebSocket reconnect: exponential backoff (3s–30s cap), max 5 retries per channel
+- Frontend uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- Edge Functions use env vars: `ANTHROPIC_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- AI feature flags: all enabled by default
+- Supabase Vault stores broker API credentials (not in DB columns)
 
 ## Pipeline Checkpoint Rule
 Before declaring any phase/step complete, re-read the plan to verify ALL deliverables are done. If anything is missing, continue working — do not skip ahead.

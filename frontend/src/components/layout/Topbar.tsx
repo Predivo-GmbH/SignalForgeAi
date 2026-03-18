@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Sun, Moon, LogOut, HelpCircle, Menu } from "lucide-react";
 import { useTheme } from "@/lib/theme";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/lib/sidebar";
 import { HelpDrawer } from "./HelpDrawer";
 
@@ -21,7 +21,7 @@ const pageTitles: Record<string, string> = {
 export function Topbar() {
   const location = useLocation();
   const { theme, toggle: toggleTheme } = useTheme();
-  const logout = useAuth((s) => s.logout);
+  const { signOut } = useAuth();
   const setMobileOpen = useSidebar((s) => s.setMobileOpen);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -75,7 +75,7 @@ export function Topbar() {
 
           {/* Logout */}
           <button
-            onClick={logout}
+            onClick={() => signOut()}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-negative)"
             title="Sign out"
             aria-label="Sign out"

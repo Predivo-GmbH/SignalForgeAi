@@ -1,0 +1,435 @@
+{
+  "version": "2.9",
+  "children": [
+    {
+      "type": "frame",
+      "id": "bi8Au",
+      "x": 0,
+      "y": 0,
+      "name": "Frame",
+      "clip": true,
+      "width": 800,
+      "height": 600,
+      "fill": "#FFFFFF",
+      "layout": "none"
+    },
+    {
+      "type": "frame",
+      "id": "Wzoy6",
+      "x": 0,
+      "y": 0,
+      "name": "Logo Generations",
+      "width": 1600,
+      "height": 900,
+      "fill": "#0B0B14",
+      "layout": "vertical",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "text",
+          "id": "KBBF2",
+          "name": "titleText",
+          "fill": "#F0F0F5",
+          "content": "SignalForgeAI — Logo Variations",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "OKvsu",
+          "name": "subtitleText",
+          "fill": "#888888",
+          "content": "Pick your favorite in the editor. AI-generated, 6 variations.",
+          "fontFamily": "Inter",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "xNCOV",
+          "name": "row1",
+          "width": "fill_container",
+          "gap": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "HO1oL",
+              "name": "Option 1",
+              "width": 240,
+              "height": 240,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1773846949071.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H9XwK",
+                  "layoutPosition": "absolute",
+                  "x": 8,
+                  "y": 220,
+                  "name": "lbl1",
+                  "fill": "#888888",
+                  "content": "1. Signal + Neural",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rqsPw",
+              "name": "Option 2",
+              "width": 240,
+              "height": 240,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1773846971830.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Ijhcr",
+                  "layoutPosition": "absolute",
+                  "x": 8,
+                  "y": 220,
+                  "name": "lbl2",
+                  "fill": "#888888",
+                  "content": "2. SF Monogram",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YtkVD",
+              "name": "Option 3",
+              "width": 240,
+              "height": 240,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1773846997667.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vMuF6",
+                  "layoutPosition": "absolute",
+                  "x": 8,
+                  "y": 220,
+                  "name": "lbl3",
+                  "fill": "#888888",
+                  "content": "3. Candle + Brain",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "4N8mU",
+          "name": "row2",
+          "width": "fill_container",
+          "gap": 32,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Ckfsw",
+              "name": "Option 4",
+              "width": 240,
+              "height": 240,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1773847019325.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "16NB9",
+                  "layoutPosition": "absolute",
+                  "x": 8,
+                  "y": 220,
+                  "name": "lbl4",
+                  "fill": "#888888",
+                  "content": "4. Lightning Data",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iOcsI",
+              "name": "Option 5",
+              "width": 240,
+              "height": 240,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1773847051007.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "oqxsu",
+                  "layoutPosition": "absolute",
+                  "x": 8,
+                  "y": 220,
+                  "name": "lbl5",
+                  "fill": "#888888",
+                  "content": "5. Hex Arrow",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XwRsT",
+              "name": "Option 6",
+              "width": 240,
+              "height": 240,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1773847083435.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fapC5",
+                  "layoutPosition": "absolute",
+                  "x": 8,
+                  "y": 220,
+                  "name": "lbl6",
+                  "fill": "#888888",
+                  "content": "6. Forge Pulse",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "kSrsA",
+                  "fill": "#000000",
+                  "content": "The problem is that the logo that is used in the design work doesn't match the logo that is used in the front end. Either we create a new logo",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "VSv3Z",
+      "x": 0,
+      "y": 960,
+      "name": "Logo Components",
+      "width": 1400,
+      "height": 400,
+      "fill": "#0B0B14",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": [
+        32,
+        48
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "byC5w",
+          "name": "header",
+          "fill": "#F0F0F5",
+          "content": "Logo Components",
+          "fontFamily": "Inter",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "hyIm6",
+          "name": "cards",
+          "width": "fill_container",
+          "gap": 40,
+          "children": [
+            {
+              "type": "frame",
+              "id": "lCSAt",
+              "name": "mc",
+              "width": 240,
+              "fill": "#141420",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HCJ6D",
+                  "fill": "#888",
+                  "content": "MARK",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600",
+                  "letterSpacing": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "DL4cn",
+                  "name": "Logo Mark",
+                  "width": 120,
+                  "height": 120,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../../frontend/public/logo-icon.png",
+                    "mode": "fit"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "v1bGf",
+              "name": "dc",
+              "width": 460,
+              "fill": "#141420",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "iv0RY",
+                  "fill": "#888",
+                  "content": "HORIZONTAL (DARK)",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600",
+                  "letterSpacing": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "JxcDx",
+                  "name": "dh",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tF22W",
+                      "width": 48,
+                      "height": 48,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../../frontend/public/logo-icon.png",
+                        "mode": "fit"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "nYmNU",
+                      "fill": "#F0F0F5",
+                      "content": "SignalForgeAI",
+                      "fontFamily": "Inter",
+                      "fontSize": 24,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "l6LXI",
+              "name": "lc",
+              "width": 460,
+              "fill": "#F0F0F5",
+              "cornerRadius": 16,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "7ezCh",
+                  "fill": "#666",
+                  "content": "HORIZONTAL (LIGHT)",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600",
+                  "letterSpacing": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "2d14M",
+                  "name": "lh",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MhgP2",
+                      "width": 48,
+                      "height": 48,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../../frontend/public/logo-icon.png",
+                        "mode": "fit"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "zpJLL",
+                      "fill": "#1A1A2E",
+                      "content": "SignalForgeAI",
+                      "fontFamily": "Inter",
+                      "fontSize": 24,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

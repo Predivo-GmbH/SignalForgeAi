@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
+import { invokeFunction } from "@/lib/api";
 
 export interface Position {
   id: string;
@@ -33,7 +34,15 @@ export interface AccountState {
 export function usePositions() {
   return useQuery({
     queryKey: ["positions"],
-    queryFn: () => api.get<Position[]>("/positions"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("positions")
+        .select("*")
+        .eq("is_open", true)
+        .order("opened_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Position[];
+    },
     refetchInterval: 15_000,
   });
 }
@@ -41,7 +50,8 @@ export function usePositions() {
 export function useAccountState() {
   return useQuery({
     queryKey: ["positions", "account"],
-    queryFn: () => api.get<AccountState>("/positions/account"),
+    queryFn: () =>
+      invokeFunction<AccountState>("simulation", { action: "account" }),
   });
 }
 
@@ -56,7 +66,8 @@ export interface DrawdownState {
 export function useDrawdownState() {
   return useQuery({
     queryKey: ["positions", "drawdown"],
-    queryFn: () => api.get<DrawdownState>("/positions/drawdown"),
+    queryFn: () =>
+      invokeFunction<DrawdownState>("simulation", { action: "drawdown" }),
     refetchInterval: 30_000,
   });
 }
@@ -83,7 +94,10 @@ export interface DashboardSnapshot {
 export function useDashboardSnapshot() {
   return useQuery({
     queryKey: ["dashboard-snapshot"],
-    queryFn: () => api.get<DashboardSnapshot>("/positions/dashboard-snapshot"),
+    queryFn: () =>
+      invokeFunction<DashboardSnapshot>("simulation", {
+        action: "dashboard-snapshot",
+      }),
     refetchInterval: 30_000,
   });
 }
@@ -92,7 +106,12 @@ export function useClosePosition() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ positionId, exitPrice }: { positionId: string; exitPrice: number }) =>
-      api.post(`/positions/${positionId}/close`, { exit_price: exitPrice, reason: "manual" }),
+      invokeFunction("simulation", {
+        action: "close-position",
+        position_id: positionId,
+        exit_price: exitPrice,
+        reason: "manual",
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
       queryClient.invalidateQueries({ queryKey: ["trades"] });

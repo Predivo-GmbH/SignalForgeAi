@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface PipelineRunBlockReason {
   reason: string;
@@ -30,19 +30,18 @@ export interface PipelineRunsParams {
 }
 
 export function usePipelineRuns(params: PipelineRunsParams = {}) {
-  const qs = new URLSearchParams();
-  // Convert page/per_page to limit/offset for backend
   const perPage = params.per_page ?? 20;
   const page = params.page ?? 1;
-  qs.set("limit", String(perPage));
-  qs.set("offset", String((page - 1) * perPage));
-  if (params.since) qs.set("since", params.since);
-  const query = qs.toString();
 
   return useQuery({
     queryKey: ["engine", "log", "runs", params],
     queryFn: () =>
-      api.get<PipelineRunsResponse>(`/engine/log/runs${query ? `?${query}` : ""}`),
+      invokeFunction<PipelineRunsResponse>("engine-monitor", {
+        action: "runs",
+        limit: perPage,
+        offset: (page - 1) * perPage,
+        since: params.since,
+      }),
     refetchInterval: 300_000,
   });
 }

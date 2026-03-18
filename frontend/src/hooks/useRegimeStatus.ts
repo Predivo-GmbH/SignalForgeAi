@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface RegimeStatus {
   regime_allocator_enabled: boolean;
@@ -15,7 +15,8 @@ export interface RegimeStatus {
 export function useRegimeStatus() {
   return useQuery({
     queryKey: ["regime", "status"],
-    queryFn: () => api.get<RegimeStatus>("/regime/status"),
+    queryFn: () =>
+      invokeFunction<RegimeStatus>("regime", { action: "status" }),
     refetchInterval: 30_000,
   });
 }

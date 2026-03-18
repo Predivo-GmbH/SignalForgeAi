@@ -20,8 +20,6 @@ import {
 } from "@/hooks/useStrategies";
 import { useStrategyComparison } from "@/hooks/useAnalytics";
 import { ActiveStrategyCard } from "@/components/portfolio/ActiveStrategyCard";
-import { useBrokerConnections } from "@/hooks/useBrokerConnections";
-import { useProfile } from "@/hooks/useProfile";
 import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import type { Strategy } from "@/hooks/useStrategies";
 import type { StrategyMetrics } from "@/hooks/useAnalytics";
@@ -295,8 +293,6 @@ export function StrategiesPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useStrategies();
   const { data: comparison } = useStrategyComparison();
-  const { data: connections } = useBrokerConnections();
-  const { data: profile } = useProfile();
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
   const [twoFaTarget, setTwoFaTarget] = useState<string | null>(null);
@@ -307,11 +303,9 @@ export function StrategiesPage() {
     (comparison?.strategies ?? []).map((m) => [m.strategy_id, m]),
   );
 
-  const hasLiveConnections = connections?.some((c) => !c.is_paper) ?? false;
-
   function handleToggle(strategy: Strategy) {
     // Activating (currently inactive) + has live connections + has 2FA → prompt
-    if (!strategy.is_active && hasLiveConnections && profile?.totp_enabled) {
+    if (false) { /* OTP auth replaces 2FA gate */
       setTwoFaTarget(strategy.id);
       setTwoFaError("");
       return;

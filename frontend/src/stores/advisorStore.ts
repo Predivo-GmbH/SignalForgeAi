@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 import type { ScoredCrypto, MarketProfile, InvestmentPlan } from "@/hooks/useAdvisor";
 
 export interface ScanHistoryEntry {
@@ -65,14 +65,13 @@ export const useAdvisorStore = create<AdvisorState>()(
         const controller = new AbortController();
         _abortController = controller;
 
-        api
-          .post<{
-            pairs_scanned: number;
-            pairs_scored: number;
-            results: ScoredCrypto[];
-            market_profile?: MarketProfile;
-          }>("/advisor/scan", { top_n: topN }, { signal: controller.signal })
-          .then((data) => {
+        invokeFunction<{
+          pairs_scanned: number;
+          pairs_scored: number;
+          results: ScoredCrypto[];
+          market_profile?: MarketProfile;
+        }>("advisor", { action: "scan", limit: topN })
+          .then((data: { pairs_scanned: number; pairs_scored: number; results: ScoredCrypto[]; market_profile?: MarketProfile }) => {
             set((s) => ({
               activeScanId: null,
               scanHistory: s.scanHistory.map((h) =>
@@ -90,7 +89,7 @@ export const useAdvisorStore = create<AdvisorState>()(
             }));
             _abortController = null;
           })
-          .catch((err) => {
+          .catch((err: Error) => {
             if (err.name === "AbortError") {
               set((s) => ({
                 activeScanId: null,

@@ -5,26 +5,27 @@ AI-powered cryptocurrency trading platform with automated signal generation, por
 ## Features
 
 - **AI Advisor** -- Claude-powered market analysis and strategy recommendations
-- **Signal Engine** -- 6-layer technical analysis pipeline (trend, zones, triggers, confluence, regime, risk)
-- **Portfolio Management** -- CoinGecko-style dashboard with real-time holdings tracking
+- **Signal Engine** -- 6-layer technical analysis pipeline (regime, trend, zones, confluence, triggers, risk)
+- **Portfolio Management** -- Real-time holdings tracking with exchange integrations
 - **Backtesting** -- Historical strategy validation with detailed performance metrics
-- **Risk Management** -- Kelly Criterion, CPPI, HMM regime detection, correlation monitoring
+- **Risk Management** -- ATR-based stops, position sizing, drawdown monitoring
 - **Paper Trading** -- Simulated trading with buy-and-hold comparison
-- **Live Trading** -- Automated order execution via Binance (with 2FA protection)
+- **Live Trading** -- Automated order execution via CCXT (Binance, KuCoin, Kraken, MEXC)
 
 ## Tech Stack
 
-- **Backend:** Python 3.12, FastAPI, Celery, SQLAlchemy (async), TimescaleDB, Redis
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, TanStack Query
-- **AI:** Anthropic Claude API
-- **Infrastructure:** Docker, GitHub Actions CI, Caddy reverse proxy
+- **Frontend:** React 19, TypeScript, Vite 7, Tailwind CSS 4, Zustand, TanStack Query
+- **Backend:** Supabase (PostgreSQL, Edge Functions, Auth, Realtime, Vault)
+- **AI:** Anthropic Claude API (Haiku/Sonnet/Opus tiers)
+- **Exchange:** CCXT (TypeScript)
+- **Indicators:** technicalindicators + custom VWAP/Fibonacci
+- **Deploy:** GitHub Actions CI/CD → Metanet FTP
 
 ## Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+
-- Python 3.12+
+- Node.js 22+
+- Supabase CLI (`npm i -g supabase`)
 
 ### Development Setup
 
@@ -32,14 +33,13 @@ AI-powered cryptocurrency trading platform with automated signal generation, por
    ```bash
    git clone https://github.com/Arivioo/SignalForgeAI.git
    cd SignalForgeAI
-   cp backend/.env.example backend/.env
-   # Edit backend/.env with your settings
    ```
 
-2. **Start backend services:**
+2. **Set up Supabase:**
    ```bash
-   cd backend
-   docker compose up -d
+   supabase init
+   supabase db push          # Apply migrations
+   supabase functions serve  # Start local Edge Functions
    ```
 
 3. **Start frontend:**
@@ -49,49 +49,51 @@ AI-powered cryptocurrency trading platform with automated signal generation, por
    npm run dev
    ```
 
-4. **Access the app:**
-   - Frontend: http://localhost:5173
-   - API docs: http://localhost:8000/docs (debug mode)
-
-## Documentation
-
-- [Setup Guide](docs/SETUP-GUIDE.md)
-- [User Guide](docs/USER-GUIDE.md)
-- [Deployment Guide](docs/DEPLOYMENT-GUIDE.md)
-- [Project Status](docs/PROJECT-STATUS.md)
-- [Trading System Deep Dive](docs/TRADING-SYSTEM-DEEP-DIVE.md)
-- [Privacy Policy](docs/PRIVACY-POLICY.md)
-- [Terms of Service](docs/TERMS-OF-SERVICE.md)
+4. **Access the app:** http://localhost:5173
 
 ## Architecture
 
 ```
-backend/
-  app/
-    api/          # 18 FastAPI routers (66+ endpoints)
-    auth/         # JWT + TOTP 2FA authentication
-    advisor/      # AI-powered market analysis
-    engine/       # 6-layer signal pipeline
-    execution/    # Order execution & position management
-    tasks/        # 14 Celery background tasks
-    models/       # SQLAlchemy ORM models
-    core/         # Database, Redis, encryption, logging
 frontend/
   src/
-    pages/        # 8 main pages + detail views
+    pages/        # 11 pages (Dashboard, Advisor, Strategies, etc.)
     components/   # Reusable UI components
-    hooks/        # 29 custom React hooks
-    lib/          # API client, auth, WebSocket, utilities
+    hooks/        # 22 custom React hooks (Supabase queries)
+    contexts/     # AuthContext (Supabase OTP)
+    lib/          # Supabase client, API helpers, Realtime
+supabase/
+  migrations/     # 8 SQL migrations (schema, RLS, pg_cron, RPCs)
+  functions/
+    _shared/      # 25 shared TypeScript modules
+      engine/     # 6-layer signal pipeline (9 modules)
+      advisor/    # AI advisor system (9 modules)
+    19 Edge Functions (CRUD, cron, SSE)
 ```
+
+### Signal Pipeline
+
+```
+Candles → Regime (ADX+ATR) → Trend (EMA alignment)
+       → Zones (Fibonacci+S/R) → Confluence (14-factor scorer)
+       → Triggers (5 types) → Risk (ATR stops + sizing)
+       → Feedback Filter → Output: BUY/SELL/NO_TRADE
+```
+
+### Edge Functions
+
+| Function | Schedule | Purpose |
+|----------|----------|---------|
+| `engine-cron` | Every 1min | Candle ingestion → pipeline → execution → position management |
+| `daily-maintenance` | 02:00 UTC | Risk tuning, feedback synthesis, pattern analysis, cleanup |
+| `simulation-snapshot` | Hourly | B&H vs paper portfolio snapshots |
+| `universe-expansion` | Every 6h | Discover new symbols, backfill candles |
 
 ## Testing
 
 ```bash
-# Backend tests (351 passing)
-cd backend && pytest -v
-
-# Frontend tests (34 passing)
-cd frontend && npm test
+cd frontend && npm test      # Vitest
+cd frontend && npm run lint  # ESLint
+cd frontend && npm run build # Production build
 ```
 
 ## License

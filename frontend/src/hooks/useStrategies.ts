@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
+import { invokeFunction } from "@/lib/api";
 
 export interface Strategy {
   id: string;
@@ -24,15 +25,32 @@ export interface PresetsResponse {
 export function useStrategies() {
   return useQuery({
     queryKey: ["strategies"],
-    queryFn: () =>
-      api.get<{ strategies: Strategy[]; total: number }>("/strategies"),
+    queryFn: async () => {
+      const { data, error, count } = await supabase
+        .from("strategies")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return {
+        strategies: (data ?? []) as Strategy[],
+        total: count ?? 0,
+      };
+    },
   });
 }
 
 export function useStrategy(id: string) {
   return useQuery({
     queryKey: ["strategies", id],
-    queryFn: () => api.get<Strategy>(`/strategies/${id}`),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("strategies")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data as Strategy;
+    },
     enabled: !!id,
   });
 }
@@ -40,7 +58,8 @@ export function useStrategy(id: string) {
 export function useStrategyPresets() {
   return useQuery({
     queryKey: ["strategy-presets"],
-    queryFn: () => api.get<PresetsResponse>("/strategies/presets"),
+    queryFn: () =>
+      invokeFunction<PresetsResponse>("strategies", { action: "presets" }),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -49,7 +68,7 @@ export function useCreateStrategy() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { name: string; config?: Record<string, unknown>; preset?: string }) =>
-      api.post<Strategy>("/strategies", data),
+      invokeFunction<Strategy>("strategies", { action: "create", ...data }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });
 }
@@ -57,14 +76,23 @@ export function useCreateStrategy() {
 export function useUpdateStrategy() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
       ...data
     }: {
       id: string;
       name?: string;
       config?: Record<string, unknown>;
-    }) => api.put<Strategy>(`/strategies/${id}`, data),
+    }) => {
+      const { data: row, error } = await supabase
+        .from("strategies")
+        .update(data)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return row as Strategy;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });
 }
@@ -72,8 +100,8 @@ export function useUpdateStrategy() {
 export function useToggleStrategy() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, totp_code }: { id: string; totp_code?: string }) =>
-      api.post<Strategy>(`/strategies/${id}/activate`, totp_code ? { totp_code } : {}),
+    mutationFn: ({ id }: { id: string; totp_code?: string }) =>
+      invokeFunction<Strategy>("strategies", { action: "toggle", id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });
 }
@@ -81,7 +109,13 @@ export function useToggleStrategy() {
 export function useDeleteStrategy() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete(`/strategies/${id}`),
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("strategies")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });
 }
@@ -96,9 +130,10 @@ export function useExchangeAvailability(symbols: string[]) {
   return useQuery({
     queryKey: ["exchange-availability", joined],
     queryFn: () =>
-      api.get<ExchangeAvailability>(
-        `/strategies/exchange-availability?symbols=${encodeURIComponent(joined)}`,
-      ),
+      invokeFunction<ExchangeAvailability>("strategies", {
+        action: "exchange-availability",
+        symbols,
+      }),
     enabled: symbols.length > 0,
     staleTime: 60 * 60 * 1000, // 1 hour — markets don't change often
   });

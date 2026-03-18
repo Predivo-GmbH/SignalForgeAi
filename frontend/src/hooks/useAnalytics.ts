@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface EquityPoint {
   date: string;
@@ -27,7 +27,8 @@ export interface CorrelationResult {
 export function useEquityHistory() {
   return useQuery({
     queryKey: ["analytics", "equity"],
-    queryFn: () => api.get<EquityHistory>("/analytics/equity"),
+    queryFn: () =>
+      invokeFunction<EquityHistory>("analytics", { action: "equity" }),
   });
 }
 
@@ -35,9 +36,11 @@ export function useCorrelation(symbolA: string, symbolB: string) {
   return useQuery({
     queryKey: ["analytics", "correlation", symbolA, symbolB],
     queryFn: () =>
-      api.get<CorrelationResult>(
-        `/analytics/correlation?symbol_a=${encodeURIComponent(symbolA)}&symbol_b=${encodeURIComponent(symbolB)}`
-      ),
+      invokeFunction<CorrelationResult>("analytics", {
+        action: "correlation",
+        symbol_a: symbolA,
+        symbol_b: symbolB,
+      }),
     enabled: !!symbolA && !!symbolB && symbolA !== symbolB,
   });
 }
@@ -68,6 +71,7 @@ export interface StrategyComparison {
 export function useStrategyComparison() {
   return useQuery({
     queryKey: ["analytics", "compare"],
-    queryFn: () => api.get<StrategyComparison>("/analytics/compare"),
+    queryFn: () =>
+      invokeFunction<StrategyComparison>("analytics", { action: "compare" }),
   });
 }

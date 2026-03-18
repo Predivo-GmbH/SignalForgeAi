@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export interface PipelineLogEntry {
   id: string;
@@ -44,22 +44,34 @@ export interface PipelineLogParams {
 }
 
 export function usePipelineLog(params: PipelineLogParams = {}) {
-  const qs = new URLSearchParams();
-  // Convert page/per_page to limit/offset for backend
   const perPage = params.per_page ?? 50;
   const page = params.page ?? 1;
-  qs.set("limit", String(perPage));
-  qs.set("offset", String((page - 1) * perPage));
-  if (params.symbol) qs.set("symbol", params.symbol);
-  if (params.block_reason) qs.set("block_reason", params.block_reason);
-  if (params.action) qs.set("action", params.action);
-  if (params.since) qs.set("since", params.since);
-  if (params.until) qs.set("until", params.until);
-  const query = qs.toString();
+  const offset = (page - 1) * perPage;
 
   return useQuery({
     queryKey: ["engine", "log", params],
-    queryFn: () => api.get<PipelineLogResponse>(`/engine/log${query ? `?${query}` : ""}`),
+    queryFn: async () => {
+      let query = supabase
+        .from("pipeline_logs")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(offset, offset + perPage - 1);
+
+      if (params.symbol) query = query.eq("symbol", params.symbol);
+      if (params.block_reason) query = query.eq("block_reason", params.block_reason);
+      if (params.action) query = query.eq("action", params.action);
+      if (params.since) query = query.gte("created_at", params.since);
+      if (params.until) query = query.lte("created_at", params.until);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return {
+        items: (data ?? []) as PipelineLogEntry[],
+        total: count ?? 0,
+        limit: perPage,
+        offset,
+      } as PipelineLogResponse;
+    },
     refetchInterval: 300_000,
   });
 }
@@ -67,7 +79,39 @@ export function usePipelineLog(params: PipelineLogParams = {}) {
 export function usePipelineSummary() {
   return useQuery({
     queryKey: ["engine", "log", "summary"],
-    queryFn: () => api.get<PipelineLogSummary>("/engine/log/summary"),
+    queryFn: async () => {
+      // Fetch recent pipeline logs and compute summary client-side
+      const { data, error } = await supabase
+        .from("pipeline_logs")
+        .select("action, block_reason, symbol, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+
+      const rows = data ?? [];
+      const total_evaluations = rows.length;
+      const passed = rows.filter((r) => r.action !== "NO_TRADE").length;
+      const blocked = rows.filter((r) => r.action === "NO_TRADE").length;
+      const block_reasons: Record<string, number> = {};
+      for (const r of rows) {
+        if (r.block_reason) {
+          block_reasons[r.block_reason] = (block_reasons[r.block_reason] ?? 0) + 1;
+        }
+      }
+      const symbols_evaluated = new Set(rows.map((r) => r.symbol)).size;
+      const last_run_at = rows.length > 0 ? rows[0].created_at : null;
+      const period_start = rows.length > 0 ? rows[rows.length - 1].created_at : new Date().toISOString();
+
+      return {
+        total_evaluations,
+        passed,
+        blocked,
+        block_reasons,
+        symbols_evaluated,
+        last_run_at,
+        period_start,
+      } as PipelineLogSummary;
+    },
     refetchInterval: 300_000,
   });
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 
 export interface ServiceStatus {
   status: "ok" | "down" | "error" | "stale" | "unknown";
@@ -40,7 +40,8 @@ export function useSystemStatus() {
 
   const query = useQuery({
     queryKey: ["system", "status"],
-    queryFn: () => api.get<SystemStatus>("/system/status"),
+    queryFn: () =>
+      invokeFunction<SystemStatus>("system-status", { action: "health" }),
     refetchInterval: rapidPoll ? 3_000 : 30_000,
   });
 
@@ -64,7 +65,10 @@ export function useRestartWorker() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const mutation = useMutation({
-    mutationFn: () => api.post<{ status: string; detail: string }>("/system/restart"),
+    mutationFn: () =>
+      invokeFunction<{ status: string; detail: string }>("system-status", {
+        action: "restart",
+      }),
     onMutate: () => {
       setPhase("requesting");
     },

@@ -12,7 +12,7 @@ import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { pnlColor, formatPrice, fmtUsd } from "@/lib/format";
 import { CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
-import { api } from "@/lib/api";
+import { invokeFunction } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import type { HoldingItem } from "@/hooks/useHoldings";
 
@@ -136,12 +136,10 @@ function AssetPriceChart({ symbol }: { symbol: string }) {
     if (!series || !chart) return;
 
     let cancelled = false;
-    const urlSymbol = `${symbol}-USDT`;
     setLoading(true);
     setError(null);
 
-    api
-      .get<CandleResponse>(`/market/candles/${urlSymbol}/${timeframe}?limit=500`)
+    invokeFunction<CandleResponse>("market", { action: "candles", symbol: `${symbol}/USDT`, timeframe, limit: 500 })
       .then((data) => {
         if (cancelled) return;
         if (data.candles.length === 0) {

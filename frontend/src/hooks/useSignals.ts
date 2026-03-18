@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export interface Signal {
   id: string;
@@ -56,17 +56,31 @@ export function useSignals(params: SignalQueryParams = {}) {
 
   return useQuery({
     queryKey: ["signals", limit, offset, strategyId, symbol, direction, status, sortBy, sortDir],
-    queryFn: () => {
-      const p = new URLSearchParams();
-      p.set("limit", String(limit));
-      p.set("offset", String(offset));
-      if (strategyId) p.set("strategy_id", strategyId);
-      if (symbol) p.set("symbol", symbol);
-      if (direction) p.set("direction", direction);
-      if (status) p.set("status", status);
-      if (sortBy) p.set("sort_by", sortBy);
-      if (sortDir) p.set("sort_dir", sortDir);
-      return api.get<SignalListResponse>(`/signals?${p.toString()}`);
+    queryFn: async () => {
+      let query = supabase
+        .from("signals")
+        .select("*", { count: "exact" })
+        .range(offset, offset + limit - 1);
+
+      if (strategyId) query = query.eq("strategy_id", strategyId);
+      if (symbol) query = query.eq("symbol", symbol);
+      if (direction) query = query.eq("direction", direction);
+      if (status) query = query.eq("status", status);
+
+      if (sortBy) {
+        query = query.order(sortBy, { ascending: sortDir === "asc" });
+      } else {
+        query = query.order("created_at", { ascending: false });
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return {
+        signals: (data ?? []) as Signal[],
+        total: count ?? 0,
+        limit,
+        offset,
+      } as SignalListResponse;
     },
     refetchInterval: 30_000,
   });
