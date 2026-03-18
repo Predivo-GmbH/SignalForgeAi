@@ -67,7 +67,7 @@ export function Sidebar() {
               SF
             </div>
             <span className={cn("ml-3 text-sm font-semibold text-(--color-text-primary)", collapsed && "lg:hidden")}>
-              SignalForge
+              SignalForgeAI
             </span>
           </div>
           {/* Mobile close button */}

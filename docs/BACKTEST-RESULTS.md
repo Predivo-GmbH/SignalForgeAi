@@ -1,4 +1,4 @@
-# SignalForge Comprehensive Backtest Results (v3)
+# SignalForgeAI Comprehensive Backtest Results (v3)
 
 > Generated on 2026-03-04 | Runtime: 1398s
 > Engine: Full 6-layer SignalPipeline with indicator caching

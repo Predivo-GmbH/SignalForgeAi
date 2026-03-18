@@ -1,4 +1,4 @@
-# SignalForge — Project Status (Phases 1–7 Complete)
+# SignalForgeAI — Project Status (Phases 1–7 Complete)
 
 > **For Claude:** Use this document as the single source of truth for the project.
 
@@ -38,10 +38,10 @@
 
 ---
 
-## Project Root: `C:\Business\Internal Projects\day-trading`
+## Project Root: `C:\Business\Internal Projects\SignalForgeAI`
 
 ```
-day-trading/
+SignalForgeAI/
 ├── .github/workflows/ci.yml     # Backend lint+test, frontend build
 ├── backend/
 │   ├── app/                     # FastAPI application (~100 .py files)
@@ -98,7 +98,7 @@ day-trading/
 │   └── plans/                   # Implementation plans
 ├── docker-compose.prod.yml      # Production Docker Compose (5 services)
 ├── CLAUDE.md                    # Project rules
-└── SignalForge-Technical-Plan.md # Original design spec
+└── SignalForgeAI-Technical-Plan.md # Original design spec
 ```
 
 ---
@@ -480,7 +480,7 @@ All backend env vars use `SF_` prefix. Set in `.env` file at `backend/.env`.
 | `SF_ANTHROPIC_ADMIN_API_KEY` | `` | Anthropic Admin API (cost tracking) |
 | `SF_RESEND_API_KEY` | `` | Resend email API key |
 | `SF_RESEND_DOMAIN` | `signalforge.dev` | Email sender domain |
-| `SF_APP_NAME` | `SignalForge` | App display name |
+| `SF_APP_NAME` | `SignalForgeAI` | App display name |
 | `SF_DEBUG` | `True` | Debug mode |
 | `SF_ENCRYPTION_KEY` | `` | Fernet key for broker credential encryption |
 | `SF_CORS_ORIGINS` | `["http://localhost:5173"]` | CORS allowed origins |

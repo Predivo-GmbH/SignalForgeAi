@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "You are a trading systems engineer for an automated crypto trading "
-    "platform called SignalForge. You analyze batches of completed trades "
+    "platform called SignalForgeAI. You analyze batches of completed trades "
     "to identify recurring patterns that should be encoded as rules for "
     "the system.\n\n"
     "Rules must be specific and actionable. Each rule should have:\n"

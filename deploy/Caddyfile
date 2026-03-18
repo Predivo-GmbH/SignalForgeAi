@@ -1,5 +1,5 @@
 # =============================================================================
-# SignalForge — Caddy Reverse Proxy Configuration
+# SignalForgeAI — Caddy Reverse Proxy Configuration
 #
 # --- IP-only mode (no domain yet) ---
 # Serves on http://<server-ip> without SSL.

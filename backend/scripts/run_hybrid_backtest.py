@@ -5,7 +5,7 @@ Architecture:
   - Core Bucket (60-80%): Regime-managed buy-and-hold.
     HMM detects macro regime, adjusts invested % (100% in bull → 0% in crash).
     Captures most B&H upside while limiting drawdown.
-  - Active Bucket (20-40%): SignalForge signal engine with various param configs.
+  - Active Bucket (20-40%): SignalForgeAI signal engine with various param configs.
     Generates small returns especially during bear/sideways markets.
   - Combined: total_equity = core_equity + active_equity per bar.
 
@@ -829,7 +829,7 @@ def simulate_hybrid(
         signals, macro_regimes, alloc_table, core_capital, smoothing_bars,
     )
 
-    # Active bucket: SignalForge replay
+    # Active bucket: SignalForgeAI replay
     active_trades, active_eq = replay_active(
         signals, active_params, active_capital, macro_regimes,
     )

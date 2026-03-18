@@ -1,15 +1,15 @@
-# SignalForge — Design Document
+# SignalForgeAI — Design Document
 
 **Date**: 2026-02-28
 **Status**: Approved
-**Reference**: `SignalForge-Technical-Plan.md`
+**Reference**: `SignalForgeAI-Technical-Plan.md`
 **Inspiration**: Kraken web UI (284 screenshots in `kraken-reference/`)
 
 ---
 
 ## 1. Product Summary
 
-SignalForge is a web-based automated trading platform using a multi-layer confluence scoring system. It combines market regime detection, Fibonacci confluence zones, volume analysis, and dynamic risk management into a unified signal engine — backed by rigorous backtesting.
+SignalForgeAI is a web-based automated trading platform using a multi-layer confluence scoring system. It combines market regime detection, Fibonacci confluence zones, volume analysis, and dynamic risk management into a unified signal engine — backed by rigorous backtesting.
 
 **Target Markets**: Forex (EUR/USD, GBP/USD, USD/JPY), Crypto (BTC/USDT, ETH/USDT, SOL/USDT), US Stocks/ETFs (via Alpaca).
 

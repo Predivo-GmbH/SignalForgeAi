@@ -1,17 +1,38 @@
-# SignalForge
+# SignalForgeAI
 
 Multi-layer automated trading platform with AI-powered confluence scoring and adaptive risk management.
 
+## MANDATORY DELIVERY GATE — BEFORE EVERY DELIVERY
+
+**This is not optional. Skipping this = wasting Roger's time.**
+
+Before delivering ANY change (code, UI, bug fix, feature, refactor):
+
+1. **DESIGN FIRST** — Read all relevant files. Plan the full architecture BEFORE coding. For UI: know the DOM structure, coordinate systems, positioning. Write the verification test FIRST.
+2. **BUILD COMPLETELY** — Implement the complete solution in one pass. Not incremental patches. `npm run build` must pass.
+3. **TEST THOROUGHLY** — Kill and restart dev server. If UI change: run Puppeteer at 1920x1080 (standard) AND deviceScaleFactor=2 (retina). Measure alignment programmatically — don't eyeball. ALL tests must pass.
+4. **DELIVER WITH EVIDENCE** — Show test output proving it works. 1 feature = 1 commit. Tell user to hard-refresh.
+
+**If ANY gate fails: STOP. Fix. Re-test. Do NOT deliver.**
+
+### Communication Rules
+- **Results, not explanations.** Fix it and show it works.
+- **Evidence, not promises.** Show test output, not "it should work now."
+- **No "probably" or "should be"** — either verified or not delivered.
+
+---
+
 ## Status
 
-**Phases 1–7 complete.** All committed and pushed. **AI self-learning loop active.**
+**Phases 1–7 complete.** All committed and pushed (238+ commits). **AI self-learning loop active.**
 
-- 127 commits on `main`
-- Backend: 12 API routers (journal removed), ~40 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 13 Celery Beat tasks, 11 DB models
-- Frontend: 8 pages, 16 hooks, ~21 components, dark/light theme
-- Phase 7 added: AI Advisor (autonomous planner, signal quality, risk tuner, feedback loop), 8 configurable risk management features, portfolio backtester, frontend restructure
-- Self-learning loop: FeedbackFilter wired → AI reject in live mode → Pattern Analysis → Risk Tuner → Feedback Synthesis (all daily, automated)
-- AI cost tracking: Local token-based cost computation, Anthropic Admin API integration (dormant until admin key available)
+- 238+ commits on `main`
+- Backend: 16 API routers, ~58 endpoints, 3 WebSocket routes, 6-layer signal pipeline, AI advisor module, 12 Celery Beat tasks, 17 Alembic migrations
+- Frontend: 8 pages + Strategy Detail + Backtest, 29 hooks, dark/light theme, full mobile responsiveness
+- 55 backend test files (~450+ tests), import smoke test (161 parametrized), all 16 routers have smoke tests
+- Self-learning loop: FeedbackFilter → AI reject in live → Pattern Analysis → Risk Tuner → Feedback Synthesis
+- AI credit tracking: Redis primary + DB fallback, prepaid credit system
+- See `/home/roger/.claude/projects/-home-roger/memory/signalforge-state.md` for full state
 
 ## Project Structure
 - `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0 (~100 source files, ~50 test files)
@@ -103,7 +124,7 @@ Sidebar order: Dashboard → AI Advisor → Strategies → Trades → Analytics 
 
 ## Test Account
 - Email: `roger@signalforge.dev` / Password: `SignalForge2026`
-- Frontend password gate: `signalforge`
+- Frontend password gate: `signalforge2026`
 
 ## Current System State (2026-03-03)
 - 5 Docker services running (db, redis, api, worker, beat)

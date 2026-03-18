@@ -1,4 +1,4 @@
-# Production deployment for SignalForge
+# Production deployment for SignalForgeAI
 x-logging: &default-logging
   driver: json-file
   options:

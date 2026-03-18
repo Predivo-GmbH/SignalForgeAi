@@ -1,4 +1,4 @@
-# SignalForge
+# SignalForgeAI
 
 AI-powered cryptocurrency trading platform with automated signal generation, portfolio management, and risk analysis.
 
@@ -30,8 +30,8 @@ AI-powered cryptocurrency trading platform with automated signal generation, por
 
 1. **Clone and configure:**
    ```bash
-   git clone https://github.com/Arivioo/SignalForgeAi.git
-   cd SignalForgeAi
+   git clone https://github.com/Arivioo/SignalForgeAI.git
+   cd SignalForgeAI
    cp backend/.env.example backend/.env
    # Edit backend/.env with your settings
    ```

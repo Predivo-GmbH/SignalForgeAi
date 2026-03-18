@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
 
     # App
-    app_name: str = "SignalForge"
+    app_name: str = "SignalForgeAI"
     debug: bool = True
     cors_origins: list[str] = ["http://localhost:5173"]
 

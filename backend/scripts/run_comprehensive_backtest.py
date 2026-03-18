@@ -1,5 +1,5 @@
 """
-Comprehensive backtest of SignalForge on real data (v3 — enhanced).
+Comprehensive backtest of SignalForgeAI on real data (v3 — enhanced).
 
 Architecture:
   1. Indicator caching: pre-compute all indicators once per pair (eliminates O(N²))
@@ -818,7 +818,7 @@ def generate_report(
     pair_names = all_data["pair_names"]
     pairs_info = all_data["pairs_info"]
 
-    L.append("# SignalForge Comprehensive Backtest Results (v3)\n")
+    L.append("# SignalForgeAI Comprehensive Backtest Results (v3)\n")
     L.append(f"> Generated on 2026-03-04 | Runtime: {all_data['elapsed']:.0f}s")
     L.append("> Engine: Full 6-layer SignalPipeline with indicator caching")
     L.append(f"> Transaction costs: {FEE_RATE*100:.3f}% per side ({FEE_RATE*2*100:.3f}% round trip)")
@@ -1100,7 +1100,7 @@ def main():
     overall_start = time.time()
 
     print("=" * 70)
-    print("  SignalForge Comprehensive Backtest v3 (enhanced)")
+    print("  SignalForgeAI Comprehensive Backtest v3 (enhanced)")
     print("=" * 70)
 
     # ── Discover and load data ──

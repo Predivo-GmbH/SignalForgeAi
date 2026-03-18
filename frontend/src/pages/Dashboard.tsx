@@ -220,7 +220,7 @@ export function PortfolioPage() {
         <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="w-4 h-4 text-[var(--color-accent)]" />
-            <Tooltip text="Comparison of Buy & Hold vs SignalForge paper trading performance over time.">
+            <Tooltip text="Comparison of Buy & Hold vs SignalForgeAI paper trading performance over time.">
               <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
                 Performance Comparison
               </h3>
@@ -412,7 +412,7 @@ function ComparisonBar({ sim, snapshot }: {
       {/* SF value */}
       <div className="text-right">
         <span className="text-[10px] text-[var(--color-text-secondary)] uppercase tracking-wider">
-          SignalForge
+          SignalForgeAI
         </span>
         <p className="text-sm font-semibold text-[var(--color-text-primary)]">
           {fmtUsd(sfValue)}

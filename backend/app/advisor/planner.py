@@ -16,7 +16,7 @@ from app.advisor.claude_client import ModelTier, claude_client
 logger = logging.getLogger(__name__)
 
 PLANNER_SYSTEM_PROMPT = """\
-You are the autonomous AI trading advisor for SignalForge.
+You are the autonomous AI trading advisor for SignalForgeAI.
 You analyze market conditions and determine the OPTIMAL strategy parameters.
 There are no presets — you decide everything based on your analysis.
 

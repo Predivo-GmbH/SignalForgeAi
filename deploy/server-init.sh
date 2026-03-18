@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SignalForge — Server Initialization Script
+# SignalForgeAI — Server Initialization Script
 # Run this ONCE on a fresh Hetzner CX33 (Ubuntu 24.04)
 #
 # Usage:
@@ -15,7 +15,7 @@ DEPLOY_USER="deploy"
 SSH_PORT=22  # Change to a non-standard port if desired (e.g. 2222)
 
 echo "============================================"
-echo "  SignalForge — Server Init"
+echo "  SignalForgeAI — Server Init"
 echo "============================================"
 
 # --- 1. System updates -------------------------------------------------------

@@ -29,7 +29,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
         className="w-full max-w-sm rounded-xl bg-(--color-bg-surface) p-8 shadow-lg border border-(--color-border)"
       >
         <h1 className="mb-2 text-xl font-bold text-(--color-text-primary)">
-          SignalForge
+          SignalForgeAI
         </h1>
         <p className="mb-6 text-sm text-(--color-text-secondary)">
           Enter password to continue

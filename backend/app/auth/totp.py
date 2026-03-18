@@ -11,7 +11,7 @@ import qrcode  # type: ignore[import-untyped]
 
 from app.core.encryption import decrypt_value, encrypt_value
 
-APP_NAME = "SignalForge"
+APP_NAME = "SignalForgeAI"
 
 
 def generate_totp_secret() -> str:

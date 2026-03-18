@@ -1,11 +1,11 @@
-# SignalForge — Multi-Layer Automated Trading Platform
+# SignalForgeAI — Multi-Layer Automated Trading Platform
 ## Technical Implementation Plan v1.0
 
 ---
 
 ## 1. Product Vision
 
-**SignalForge** is a web-based automated trading platform that uses a multi-layer confluence scoring system to identify high-probability trade setups and execute orders automatically. Unlike simple indicator-based bots, SignalForge combines market regime detection, Fibonacci confluence zones, volume analysis, and dynamic risk management into a unified signal engine — backed by rigorous backtesting.
+**SignalForgeAI** is a web-based automated trading platform that uses a multi-layer confluence scoring system to identify high-probability trade setups and execute orders automatically. Unlike simple indicator-based bots, SignalForgeAI combines market regime detection, Fibonacci confluence zones, volume analysis, and dynamic risk management into a unified signal engine — backed by rigorous backtesting.
 
 ### Core Principles
 - **Fibonacci as confluence, not standalone** — Research shows Fibonacci alone has a ~37% accuracy rate; combined with volume + multi-timeframe analysis, accuracy reaches 68%+
@@ -854,7 +854,7 @@ class OrderExecutor:
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│  📊 SignalForge Dashboard                              [⚙️]   │
+│  📊 SignalForgeAI Dashboard                              [⚙️]   │
 ├───────┬───────────────────────────────────────────────────────┤
 │       │                                                       │
 │ NAV   │  ┌─────────────────────────────────────────────────┐  │

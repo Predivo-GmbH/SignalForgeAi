@@ -16,7 +16,7 @@ from app.models.trade import Trade
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
-You are a risk management specialist for SignalForge, an automated crypto
+You are a risk management specialist for SignalForgeAI, an automated crypto
 trading platform. You analyze recent trading performance and recommend
 risk parameter adjustments to optimize the strategy.
 

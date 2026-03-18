@@ -1,4 +1,4 @@
-# SignalForge vs Buy-and-Hold: Equity Comparison
+# SignalForgeAI vs Buy-and-Hold: Equity Comparison
 
 > Generated on 2026-03-04 | Runtime: 571s
 > Timeframe: 4h candles (Jan 2021 – Mar 2026, ~5 years)
@@ -363,7 +363,7 @@ On average across all 8 pairs, assets spend their time at these levels relative 
 
 ---
 
-## Part 3: When to Use SignalForge vs Buy-and-Hold
+## Part 3: When to Use SignalForgeAI vs Buy-and-Hold
 
 ### Decision Framework
 
@@ -371,7 +371,7 @@ On average across all 8 pairs, assets spend their time at these levels relative 
 Is the asset in a confirmed strong uptrend?
   (Price above 200 EMA, 200 EMA slope positive, ATH within last 60 days)
 
-  YES --> Use BUY-AND-HOLD with a trailing stop (not SignalForge)
+  YES --> Use BUY-AND-HOLD with a trailing stop (not SignalForgeAI)
           The system cannot compete with a 50-100% sustained rally.
 
   NO --> Is the market in a correction or downtrend?
@@ -386,7 +386,7 @@ Is the asset in a confirmed strong uptrend?
 
 ### Concrete Rules
 
-**USE SignalForge when:**
+**USE SignalForgeAI when:**
 1. Asset is >20% below its ATH (83.9% of the time on average)
 2. 200 EMA slope is flat or negative
 3. Market regime is "ranging" or "trending down"
@@ -513,7 +513,7 @@ Position size should be based on CURRENT equity, not initial capital. After a wi
 
 ## Part 5: Regime Detection -- How to Know When to Activate
 
-The system already has regime detection (ADX-based: trending/ranging/transitioning/chaotic). But it needs a HIGHER-LEVEL regime classifier that determines whether to use SignalForge at all.
+The system already has regime detection (ADX-based: trending/ranging/transitioning/chaotic). But it needs a HIGHER-LEVEL regime classifier that determines whether to use SignalForgeAI at all.
 
 ### Proposed Macro Regime Indicator
 
@@ -532,11 +532,11 @@ Calculate these on a rolling basis (daily close, 200-bar lookback):
 | Regime | Conditions | Strategy | Position Size |
 |--------|-----------|----------|--------------|
 | **STRONG BULL** | Price > 200 EMA, slope positive, < 10% from ATH | B&H with trailing stop OR trend-follow mode | 2-3% risk, long only |
-| **BULL CORRECTION** | Price > 200 EMA but > 10% from ATH, slope positive | SignalForge swing trading | 1-2% risk, long bias |
-| **RANGING** | ADX < 20, price near 200 EMA, flat slope | SignalForge with high confluence (70+) | 1% risk, both directions |
-| **BEAR TRENDING** | Price < 200 EMA, slope negative, > 30% from ATH | SignalForge actively | 1-2% risk, short bias |
+| **BULL CORRECTION** | Price > 200 EMA but > 10% from ATH, slope positive | SignalForgeAI swing trading | 1-2% risk, long bias |
+| **RANGING** | ADX < 20, price near 200 EMA, flat slope | SignalForgeAI with high confluence (70+) | 1% risk, both directions |
+| **BEAR TRENDING** | Price < 200 EMA, slope negative, > 30% from ATH | SignalForgeAI actively | 1-2% risk, short bias |
 | **CAPITULATION** | Price < 200 EMA, > 50% from ATH, extreme volume | Reduce exposure, wait for reversal signals | 0.5% risk or cash |
-| **RECOVERY** | Price crossing above 200 EMA, death cross reversing | Transition from SignalForge to trend-follow | 1-2% risk, long only |
+| **RECOVERY** | Price crossing above 200 EMA, death cross reversing | Transition from SignalForgeAI to trend-follow | 1-2% risk, long only |
 
 ### Implementation: Macro Regime Detector
 
@@ -545,9 +545,9 @@ File: backend/app/engine/layers/macro_regime.py
 
 class MacroRegime:
     STRONG_BULL = "strong_bull"       # B&H / trend-follow
-    BULL_CORRECTION = "bull_correction"  # SignalForge active
-    RANGING = "ranging"              # SignalForge selective
-    BEAR_TRENDING = "bear_trending"  # SignalForge active
+    BULL_CORRECTION = "bull_correction"  # SignalForgeAI active
+    RANGING = "ranging"              # SignalForgeAI selective
+    BEAR_TRENDING = "bear_trending"  # SignalForgeAI active
     CAPITULATION = "capitulation"    # Reduce exposure
     RECOVERY = "recovery"           # Transition to trend-follow
 
@@ -587,14 +587,14 @@ File: backend/app/tasks/run_pipeline.py
 macro = detect_macro_regime(candles)
 
 if macro == MacroRegime.STRONG_BULL:
-    # Option A: Skip SignalForge, recommend B&H
+    # Option A: Skip SignalForgeAI, recommend B&H
     # Option B: Use trend-follow mode (trailing stop, long only)
     config["direction_filter"] = "long_only"
     config["exit_mode"] = "trailing"
     config["max_risk_per_trade"] = 0.02
 
 elif macro in (MacroRegime.BULL_CORRECTION, MacroRegime.BEAR_TRENDING):
-    # SignalForge active, normal mode
+    # SignalForgeAI active, normal mode
     config["exit_mode"] = "fixed"
 
 elif macro == MacroRegime.RANGING:
@@ -610,11 +610,11 @@ elif macro == MacroRegime.CAPITULATION:
 
 ## Part 6: The Hybrid Strategy -- Combining B&H and Active Trading
 
-Based on all evidence, the optimal approach is NOT "SignalForge OR Buy-and-Hold" but a hybrid that uses each where it's strongest.
+Based on all evidence, the optimal approach is NOT "SignalForgeAI OR Buy-and-Hold" but a hybrid that uses each where it's strongest.
 
 ### Capital Allocation Model
 
-| Macro Regime | B&H Allocation | SignalForge Allocation | Cash |
+| Macro Regime | B&H Allocation | SignalForgeAI Allocation | Cash |
 |-------------|---------------|----------------------|------|
 | STRONG BULL | 70% | 20% (trend-follow) | 10% |
 | BULL CORRECTION | 30% | 60% (swing trade) | 10% |
@@ -642,7 +642,7 @@ The hybrid would capture the bull market rallies through B&H allocation while pr
 
 Over the full 5-year period on BTC:
 - **Pure B&H:** +89.7% (but with -77% max drawdown)
-- **Pure SignalForge:** +6.9% (but with -2.1% max drawdown)
+- **Pure SignalForgeAI:** +6.9% (but with -2.1% max drawdown)
 - **Estimated Hybrid:** +50-70% (with ~-20% max drawdown)
 
 The hybrid won't beat pure B&H in a bull market, but it dramatically reduces drawdown risk while capturing a significant portion of the upside.

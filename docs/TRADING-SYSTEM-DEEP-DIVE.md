@@ -1,7 +1,7 @@
-# SignalForge Trading System — Complete Deep Dive
+# SignalForgeAI Trading System — Complete Deep Dive
 
 > **Purpose:** This document provides a comprehensive, plain-language explanation of everything
-> the SignalForge trading system does — how it decides to buy, how it decides to sell, what
+> the SignalForgeAI trading system does — how it decides to buy, how it decides to sell, what
 > signals it uses, how they combine, how risk is managed, and where improvements can be made.
 >
 > **Last updated:** 2026-03-04
@@ -25,7 +25,7 @@
 7. [What Triggers a SELL — Complete Checklist](#7-what-triggers-a-sell--complete-checklist)
 8. [Stop Losses Explained](#8-stop-losses-explained)
    - 8.1 [What Is a Stop Loss?](#81-what-is-a-stop-loss)
-   - 8.2 [How SignalForge Calculates Stop Losses](#82-how-signalforge-calculates-stop-losses)
+   - 8.2 [How SignalForgeAI Calculates Stop Losses](#82-how-signalforge-calculates-stop-losses)
    - 8.3 [When Stop Losses Trigger](#83-when-stop-losses-trigger)
    - 8.4 [Why a Stop Loss Can Cause a Bigger Loss Than Expected](#84-why-a-stop-loss-can-cause-a-bigger-loss-than-expected)
 9. [Take Profit Logic](#9-take-profit-logic)
@@ -50,7 +50,7 @@
 
 ## 1. Executive Summary
 
-SignalForge is a **fully automated crypto day trading system** that uses a 6-layer signal
+SignalForgeAI is a **fully automated crypto day trading system** that uses a 6-layer signal
 pipeline, 14 technical indicators, AI-powered quality control (Claude), regime-aware
 allocation, cooldown protection, and a live paper simulation system to generate, execute,
 and benchmark trades.
@@ -479,9 +479,9 @@ $58,800, the system automatically sells to limit your loss to $1,200 per unit.
 Without a stop loss, a trade could lose your entire position value if the market moves
 against you indefinitely.
 
-### 8.2 How SignalForge Calculates Stop Losses
+### 8.2 How SignalForgeAI Calculates Stop Losses
 
-SignalForge uses **ATR-based stop losses**, which means the stop distance adapts to current
+SignalForgeAI uses **ATR-based stop losses**, which means the stop distance adapts to current
 market volatility:
 
 ```
@@ -513,7 +513,7 @@ It fetches the latest candle close price and compares:
 
 ### 8.4 Why a Stop Loss Can Cause a Bigger Loss Than Expected
 
-**Important limitation: Stop losses in SignalForge are NOT real-time.** They are checked
+**Important limitation: Stop losses in SignalForgeAI are NOT real-time.** They are checked
 periodically (every ~60 seconds) using the latest candle close price. This means:
 
 1. **Gap risk:** If the price drops sharply between checks (e.g., a flash crash), the
@@ -563,7 +563,7 @@ A **trailing stop** is a stop loss that follows the price as it moves in your fa
 "trails" behind the price by a fixed distance. When the price reverses, the stop stays
 where it is — it never moves backward. This locks in profits as the trade goes well.
 
-### How SignalForge Implements Trailing Stops
+### How SignalForgeAI Implements Trailing Stops
 
 **Status: IMPLEMENTED but DISABLED by default** (`trailing_stop_enabled = False`)
 
@@ -610,7 +610,7 @@ A **break-even stop** moves your stop loss to your entry price once the trade re
 certain profit threshold. This means that once activated, the worst-case scenario is
 breaking even (no profit, no loss) instead of a loss.
 
-### How SignalForge Implements Break-Even Stops
+### How SignalForgeAI Implements Break-Even Stops
 
 **Status: IMPLEMENTED but DISABLED by default** (`break_even_enabled = False`)
 
@@ -655,7 +655,7 @@ If Current Profit >= Initial Risk × break_even_r_multiple (default 1.0):
 A **time-based stop** force-closes positions that have been open too long. This prevents
 capital from being tied up in stale, directionless trades.
 
-### How SignalForge Implements Time Stops
+### How SignalForgeAI Implements Time Stops
 
 **Always active.** Default `max_hold_hours = 24`.
 
@@ -764,7 +764,7 @@ from this sequence — particularly **0.382 (38.2%)**, **0.500 (50%)**, and **0.
 **The core idea:** After a significant price move (up or down), the price tends to retrace
 (pull back) to one of these Fibonacci levels before continuing in the original direction.
 
-### How Fibonacci Is Used in SignalForge
+### How Fibonacci Is Used in SignalForgeAI
 
 Fibonacci is **deeply integrated** at three critical points in the system:
 
@@ -1158,13 +1158,13 @@ Setting `cooldown_hours: 0` disables the cooldown entirely (default).
 
 ### What Is the Paper Simulation?
 
-The **Live Paper Simulation** is a system that lets you compare SignalForge's active trading
+The **Live Paper Simulation** is a system that lets you compare SignalForgeAI's active trading
 performance against a simple **buy-and-hold** strategy, starting from your actual portfolio.
 
 Think of it as a science experiment:
 - **Control group (Buy & Hold):** Take your current holdings, do nothing, just track their
   market value over time
-- **Test group (SignalForge):** Start with the same portfolio value, but let SignalForge
+- **Test group (SignalForgeAI):** Start with the same portfolio value, but let SignalForgeAI
   actively trade using its full pipeline with all features enabled
 
 After running for days or weeks, you can see which approach performed better.
@@ -1192,7 +1192,7 @@ After running for days or weeks, you can see which approach performed better.
 
 When a simulation is running:
 - **Buy & Hold value and return %** — how your portfolio would have performed doing nothing
-- **SignalForge value and return %** — how the active trading strategy performed
+- **SignalForgeAI value and return %** — how the active trading strategy performed
 - **Difference badge** — "SF ahead by $X,XXX (+X.X%)" or "SF behind by $X,XXX (-X.X%)",
   color-coded green/red
 - **Trade stats** — number of trades, win rate, open positions
@@ -1734,6 +1734,6 @@ Complete list of all configurable parameters:
 
 ---
 
-*This document was generated from a complete code review of the SignalForge backend. All
+*This document was generated from a complete code review of the SignalForgeAI backend. All
 file references, thresholds, defaults, and logic flows were verified against the actual
 codebase.*

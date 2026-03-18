@@ -27,7 +27,7 @@ export function Topbar() {
 
   const pageTitle =
     pageTitles[location.pathname] ||
-    (location.pathname.startsWith("/strategies/") ? "Strategy Detail" : "SignalForge");
+    (location.pathname.startsWith("/strategies/") ? "Strategy Detail" : "SignalForgeAI");
 
   return (
     <>

@@ -1,4 +1,4 @@
-# SignalForge Phase 1 — Foundation Implementation Plan
+# SignalForgeAI Phase 1 — Foundation Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, FastAPI, SQLAlchemy 2.0, Alembic, ta-lib, pandas, numpy, ccxt, vectorbt, pytest | React 18, Vite, TypeScript, Tailwind 4, shadcn/ui, TanStack Query, Zustand, Vitest
 
-**Project Root:** `C:\Business\Internal Projects\day-trading`
+**Project Root:** `C:\Business\Internal Projects\SignalForgeAI`
 
 ---
 
@@ -24,7 +24,7 @@
 **Step 1: Initialize git repo**
 
 ```bash
-cd "C:/Business/Internal Projects/day-trading"
+cd "C:/Business/Internal Projects/SignalForgeAI"
 git init
 ```
 
@@ -73,7 +73,7 @@ kraken-reference/
 **Step 3: Create CLAUDE.md**
 
 ```markdown
-# SignalForge
+# SignalForgeAI
 
 ## Project Structure
 - `/backend` — Python 3.12 + FastAPI + SQLAlchemy 2.0
@@ -185,7 +185,7 @@ class Settings(BaseSettings):
     jwt_refresh_expiry_days: int = 7
 
     # App
-    app_name: str = "SignalForge"
+    app_name: str = "SignalForgeAI"
     debug: bool = True
     cors_origins: list[str] = ["http://localhost:5173"]
 
@@ -256,7 +256,7 @@ async def test_health_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["service"] == "SignalForge"
+    assert data["service"] == "SignalForgeAI"
 ```
 
 **Step 7: Install deps and run test**
@@ -2024,7 +2024,7 @@ def cmd_backtest(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SignalForge CLI")
+    parser = argparse.ArgumentParser(description="SignalForgeAI CLI")
     subparsers = parser.add_subparsers()
 
     bt = subparsers.add_parser("backtest", help="Run a backtest")
@@ -2090,7 +2090,7 @@ git commit -m "feat(backend): basic backtest engine + CLI tool for running backt
 **Step 1: Scaffold Vite project**
 
 ```bash
-cd "C:/Business/Internal Projects/day-trading"
+cd "C:/Business/Internal Projects/SignalForgeAI"
 npm create vite@latest frontend -- --template react-ts
 cd frontend
 npm install
@@ -2244,7 +2244,7 @@ import "@testing-library/jest-dom";
 **Step 7: Commit**
 
 ```bash
-cd "C:/Business/Internal Projects/day-trading"
+cd "C:/Business/Internal Projects/SignalForgeAI"
 git add frontend/
 git commit -m "feat(frontend): Vite + React + TypeScript + Tailwind 4 scaffold with theme tokens"
 ```
@@ -2360,7 +2360,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
         className="w-full max-w-sm rounded-xl bg-(--color-bg-surface) p-8 shadow-lg border border-(--color-border)"
       >
         <h1 className="mb-2 text-xl font-bold text-(--color-text-primary)">
-          SignalForge
+          SignalForgeAI
         </h1>
         <p className="mb-6 text-sm text-(--color-text-secondary)">
           Enter password to continue

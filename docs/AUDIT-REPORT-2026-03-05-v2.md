@@ -1,4 +1,4 @@
-# SignalForge Comprehensive Audit Report v2
+# SignalForgeAI Comprehensive Audit Report v2
 
 **Date:** 2026-03-05
 **Scope:** Full system — Backend, Frontend, Database, DevOps, Compliance, Documentation

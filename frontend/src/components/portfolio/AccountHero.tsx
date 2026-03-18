@@ -33,7 +33,7 @@ export function AccountHero({ equity, dailyPnl, openPositions, maxPositions }: A
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Left: Equity + Daily PnL + Positions */}
         <div className="space-y-1.5">
-          <Tooltip text="Your trading account balance tracked by the SignalForge engine, including daily P&L from automated trades.">
+          <Tooltip text="Your trading account balance tracked by the SignalForgeAI engine, including daily P&L from automated trades.">
             <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-help">
               Account Equity
             </p>

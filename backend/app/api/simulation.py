@@ -1,4 +1,4 @@
-"""Paper simulation API — start, monitor, and stop B&H vs SignalForge tests.
+"""Paper simulation API — start, monitor, and stop B&H vs SignalForgeAI tests.
 
 Simulation Model
 ================

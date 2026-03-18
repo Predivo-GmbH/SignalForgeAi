@@ -235,7 +235,7 @@ export function AnalyticsPage() {
         </div>
       )}
 
-      {/* B&H vs SignalForge Simulation */}
+      {/* B&H vs SignalForgeAI Simulation */}
       <SimulationCard />
 
       {/* Performance Summary */}

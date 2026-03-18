@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "You are a senior quantitative trader evaluating automated "
-    "signals from a crypto trading system called SignalForge. "
+    "signals from a crypto trading system called SignalForgeAI. "
     "Your job is to assess the overall quality of each signal "
     "by weighing BOTH the strengths and the weaknesses.\n\n"
     "You receive 14 confluence factors with hit/miss status, "

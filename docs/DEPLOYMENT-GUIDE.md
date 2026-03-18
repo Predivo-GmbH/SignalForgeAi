@@ -1,6 +1,6 @@
-# SignalForge — Hetzner Deployment Guide
+# SignalForgeAI — Hetzner Deployment Guide
 
-Deploy SignalForge to a Hetzner CX33 cloud server running Ubuntu 24.04.
+Deploy SignalForgeAI to a Hetzner CX33 cloud server running Ubuntu 24.04.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Deploy SignalForge to a Hetzner CX33 cloud server running Ubuntu 24.04.
 ## Step 1: Order the Server
 
 1. Log into [Hetzner Cloud Console](https://console.hetzner.com)
-2. **New Project** → name it "SignalForge"
+2. **New Project** → name it "SignalForgeAI"
 3. **Add Server** with these settings:
 
 | Setting | Value |
@@ -33,7 +33,7 @@ Deploy SignalForge to a Hetzner CX33 cloud server running Ubuntu 24.04.
 Upload and run the server init script:
 
 ```bash
-# From your local machine (in the day-trading project directory)
+# From your local machine (in the SignalForgeAI project directory)
 scp deploy/server-init.sh root@YOUR_SERVER_IP:/root/
 ssh root@YOUR_SERVER_IP "bash /root/server-init.sh"
 ```
@@ -59,7 +59,7 @@ ssh deploy@YOUR_SERVER_IP
 Since you don't have a Git remote set up yet, copy the files manually:
 
 ```bash
-# From your local machine, in the day-trading project directory
+# From your local machine, in the SignalForgeAI project directory
 rsync -avz --exclude 'node_modules' --exclude '.venv' --exclude '__pycache__' \
   --exclude '.git' --exclude 'dist' --exclude '.pytest_cache' \
   ./ deploy@YOUR_SERVER_IP:/opt/signalforge/

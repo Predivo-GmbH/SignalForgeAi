@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SignalForge — Database Backup Script
+# SignalForgeAI — Database Backup Script
 # Runs daily via cron (set up by deploy.sh)
 #
 # Creates compressed PostgreSQL dumps and keeps the last 14 days.

@@ -1,8 +1,8 @@
-# SignalForge User Guide
+# SignalForgeAI User Guide
 
 ## Table of Contents
 
-1. [What is SignalForge?](#1-what-is-signalforge)
+1. [What is SignalForgeAI?](#1-what-is-signalforge)
 2. [Quick Start](#2-quick-start)
 3. [How the Signal Pipeline Works](#3-how-the-signal-pipeline-works)
 4. [The AI Investment Advisor](#4-the-ai-investment-advisor)
@@ -15,11 +15,11 @@
 
 ---
 
-## 1. What is SignalForge?
+## 1. What is SignalForgeAI?
 
-SignalForge is a **multi-layer automated trading system** that uses technical analysis to generate, execute, and manage cryptocurrency trades. It is designed around three core principles:
+SignalForgeAI is a **multi-layer automated trading system** that uses technical analysis to generate, execute, and manage cryptocurrency trades. It is designed around three core principles:
 
-- **Fibonacci as confluence, not standalone** — Fibonacci levels alone have ~37% accuracy. Combined with volume analysis, multi-timeframe confirmation, and momentum indicators, accuracy rises to 68%+. SignalForge uses Fibonacci as one of 9 scoring factors.
+- **Fibonacci as confluence, not standalone** — Fibonacci levels alone have ~37% accuracy. Combined with volume analysis, multi-timeframe confirmation, and momentum indicators, accuracy rises to 68%+. SignalForgeAI uses Fibonacci as one of 9 scoring factors.
 - **Regime-aware trading** — The system detects market conditions (trending, ranging, chaotic) and blocks trading during chaotic regimes to avoid losses from unpredictable volatility.
 - **Risk-first architecture** — Every trade is sized based on account equity and ATR-based stop-losses. Maximum risk per trade is capped (default 2%), and position size scales with signal confidence.
 
@@ -196,7 +196,7 @@ Calculates position sizing, stop-loss, and take-profit levels:
 
 ## 4. The AI Investment Advisor
 
-The AI Advisor is SignalForge's flagship feature for new users. It automates the entire process of:
+The AI Advisor is SignalForgeAI's flagship feature for new users. It automates the entire process of:
 
 1. **Scanning** up to 100+ cryptocurrencies on Binance that have sufficient trading volume (>$1M/day)
 2. **Analyzing** each one through the signal pipeline layers (regime, trend, momentum, volatility)
@@ -231,7 +231,7 @@ The AI Advisor is fully autonomous — it determines ALL optimal parameters base
 
 ### How Allocation Works
 
-SignalForge doesn't allocate fixed amounts per coin (e.g., "$3K to BTC"). Instead:
+SignalForgeAI doesn't allocate fixed amounts per coin (e.g., "$3K to BTC"). Instead:
 - The system monitors **all selected symbols** continuously
 - When the 6-layer pipeline confirms a signal for any symbol, it calculates **position size as a percentage of total equity**
 - With 2% risk per trade and a 65% confluence score: risk = $10,000 × 0.02 × 0.65 = **$130 at risk per trade**

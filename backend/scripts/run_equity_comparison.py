@@ -1,5 +1,5 @@
 """
-Equity Curve Comparison: SignalForge vs Buy-and-Hold.
+Equity Curve Comparison: SignalForgeAI vs Buy-and-Hold.
 
 Runs the best configs from backtest v3 on 4h data (Jan 2021 - Mar 2026)
 and produces a month-by-month equity comparison showing when the system
@@ -547,7 +547,7 @@ def generate_report(
 ) -> str:
     L = []
 
-    L.append("# SignalForge vs Buy-and-Hold: Equity Comparison\n")
+    L.append("# SignalForgeAI vs Buy-and-Hold: Equity Comparison\n")
     L.append(f"> Generated on 2026-03-04 | Runtime: {elapsed:.0f}s")
     L.append(f"> Timeframe: 4h candles (Jan 2021 – Mar 2026, ~5 years)")
     L.append(f"> Transaction costs: {FEE_RATE*100:.3f}% per side ({FEE_RATE*2*100:.3f}% round trip)")
@@ -794,7 +794,7 @@ def main():
     overall_start = time.time()
 
     print("=" * 70)
-    print("  SignalForge vs Buy-and-Hold: Equity Comparison")
+    print("  SignalForgeAI vs Buy-and-Hold: Equity Comparison")
     print("=" * 70)
 
     # ── Discover 4h data ──

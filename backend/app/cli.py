@@ -49,7 +49,7 @@ def cmd_backtest(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SignalForge CLI")
+    parser = argparse.ArgumentParser(description="SignalForgeAI CLI")
     subparsers = parser.add_subparsers()
 
     bt = subparsers.add_parser("backtest", help="Run a backtest")

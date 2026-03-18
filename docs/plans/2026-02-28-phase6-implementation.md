@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Wire the existing SignalForge backend to real brokers (Alpaca + Binance/CCXT), persist all execution state to the database, schedule automated trading via Celery Beat, add circuit breakers / rate limiting / structured logging, and produce a production Docker Compose.
+**Goal:** Wire the existing SignalForgeAI backend to real brokers (Alpaca + Binance/CCXT), persist all execution state to the database, schedule automated trading via Celery Beat, add circuit breakers / rate limiting / structured logging, and produce a production Docker Compose.
 
 **Architecture:** Monolithic scheduler — all periodic logic runs as Celery Beat tasks within the existing FastAPI + Celery backend. Two broker adapters (Alpaca, CCXT/Binance) behind a unified `BrokerAdapter` ABC with a `BrokerRouter` that dispatches by symbol class.
 

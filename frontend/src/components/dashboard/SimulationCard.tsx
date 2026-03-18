@@ -36,7 +36,7 @@ export function SimulationCard() {
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-3">
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
-          <Tooltip text="Compares Buy & Hold vs SignalForge performance using your real portfolio with simulated trades.">
+          <Tooltip text="Compares Buy & Hold vs SignalForgeAI performance using your real portfolio with simulated trades.">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
           </Tooltip>
         </div>
@@ -87,7 +87,7 @@ export function SimulationCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
-          <Tooltip text="Compares Buy & Hold vs SignalForge performance using your real portfolio with simulated trades.">
+          <Tooltip text="Compares Buy & Hold vs SignalForgeAI performance using your real portfolio with simulated trades.">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
           </Tooltip>
         </div>
@@ -127,7 +127,7 @@ export function SimulationCard() {
         </div>
         <div className="bg-[var(--color-bg-elevated)]/50 rounded-lg p-3">
           <span className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-wider">
-            SignalForge
+            SignalForgeAI
           </span>
           <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-1">
             ${sim.latest_sf_value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}

@@ -9,13 +9,13 @@
 
 
 
-SignalForge - Read Only
+SignalForgeAI - Read Only
 Binance
 API Key: 8LJnNzMntg6IJixoR9RU14jB3Eytc0bbcdAQUu1vJQslM7Xtx56Hmv5KaR2gwFn3
 Secret: Nj4kLmcRJKgMwlF1kYzwM3eUBg5QGD9cXbov1Npauk6emSeVCALBH2ry3Z9suvfr
 
 Kucoin
-Passphrase: SignalForge
+Passphrase: SignalForgeAI
 Api Key: 69a8309c802426000157b2d7
 Secret: 0e981bed-6393-4dc4-a236-7ad9238c4fc2
 

@@ -7,7 +7,7 @@ async def test_health_endpoint(client):
     assert response.status_code in (200, 503)
     data = response.json()
     assert data["status"] in ("ok", "degraded")
-    assert data["service"] == "SignalForge"
+    assert data["service"] == "SignalForgeAI"
     # Enhanced health check always includes component statuses
     assert "db" in data
     assert "redis" in data

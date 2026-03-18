@@ -1,4 +1,4 @@
-"""Paper simulation models — B&H vs SignalForge live comparison.
+"""Paper simulation models — B&H vs SignalForgeAI live comparison.
 
 Two portfolios tracked:
   - initial_holdings  (frozen B&H snapshot — never changes)

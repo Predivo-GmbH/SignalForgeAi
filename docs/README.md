@@ -1,4 +1,4 @@
-# SignalForge Documentation
+# SignalForgeAI Documentation
 
 ## Getting Started
 - [Setup Guide](SETUP-GUIDE.md) -- Local development environment setup

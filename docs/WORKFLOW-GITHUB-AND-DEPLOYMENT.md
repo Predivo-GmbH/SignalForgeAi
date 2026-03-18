@@ -1,4 +1,4 @@
-# SignalForge — GitHub & Deployment Workflow
+# SignalForgeAI — GitHub & Deployment Workflow
 
 Step-by-step workflow for publishing to GitHub and later deploying to Hetzner.
 
@@ -20,7 +20,7 @@ gh auth login
 ### 1.2 Create the GitHub repository
 
 ```bash
-cd "/mnt/c/Business/Internal Projects/day-trading"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI"
 
 # Create a private repo on GitHub and set it as origin
 gh repo create signalforge --private --source=. --remote=origin
@@ -85,7 +85,7 @@ Follow these steps when the application is finished and you're ready to go live.
 ### 2.2 Order the server
 
 1. Log into [console.hetzner.com](https://console.hetzner.com)
-2. Create project "SignalForge"
+2. Create project "SignalForgeAI"
 3. Add Server:
    - **Location:** Falkenstein or Nuremberg
    - **Image:** Ubuntu 24.04

@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add HMM regime detection, AI-powered trade journal, walk-forward UI, analytics dashboard, correlation checks, and email alerts — the intelligence layer that elevates SignalForge from a basic trading tool to a professional-grade platform.
+**Goal:** Add HMM regime detection, AI-powered trade journal, walk-forward UI, analytics dashboard, correlation checks, and email alerts — the intelligence layer that elevates SignalForgeAI from a basic trading tool to a professional-grade platform.
 
 **Architecture:** HMM model stored as pickle in Redis, retrained weekly via Celery task. Claude Haiku for journal AI analysis. Resend for email alerts. Analytics page with equity curve + risk-adjusted metrics. Sortino/Calmar added to backtest engine. Walk-forward visualization in Backtest Lab. Correlation matrix via pandas on price data.
 
@@ -659,7 +659,7 @@ def build_signal_email(
         <tr><td style="padding: 8px; color: #8B8BA0;">Stop Loss</td><td style="padding: 8px; font-family: monospace;">${stop_loss:,.2f}</td></tr>
         <tr><td style="padding: 8px; color: #8B8BA0;">Take Profit</td><td style="padding: 8px; font-family: monospace;">${take_profit:,.2f}</td></tr>
       </table>
-      <p style="color: #8B8BA0; font-size: 12px; margin-top: 16px;">— SignalForge</p>
+      <p style="color: #8B8BA0; font-size: 12px; margin-top: 16px;">— SignalForgeAI</p>
     </div>"""
 
 
@@ -676,7 +676,7 @@ def build_daily_summary_email(
         <tr><td style="padding: 8px; color: #8B8BA0;">Win Rate</td><td style="padding: 8px;">{win_rate:.1f}%</td></tr>
         <tr><td style="padding: 8px; color: #8B8BA0;">Open Positions</td><td style="padding: 8px;">{open_positions}</td></tr>
       </table>
-      <p style="color: #8B8BA0; font-size: 12px; margin-top: 16px;">— SignalForge</p>
+      <p style="color: #8B8BA0; font-size: 12px; margin-top: 16px;">— SignalForgeAI</p>
     </div>"""
 
 
@@ -688,7 +688,7 @@ async def send_email(to: str, subject: str, html: str) -> bool:
     resend.api_key = settings.resend_api_key
     try:
         resend.Emails.send({
-            "from": f"SignalForge <alerts@{settings.resend_domain}>",
+            "from": f"SignalForgeAI <alerts@{settings.resend_domain}>",
             "to": [to],
             "subject": subject,
             "html": html,

@@ -1,4 +1,4 @@
-# SignalForge — Session Changelog (2026-03-02)
+# SignalForgeAI — Session Changelog (2026-03-02)
 
 > **Purpose:** Complete record of all changes made during the March 2 development session.
 > All changes committed and pushed to `main` (commits `033faa0` through `17c5b28`).
@@ -608,7 +608,7 @@ Removed `journal_router` import and `app.include_router()` call. Journal API end
 
 ### Context
 
-SignalForge trades crypto exclusively (15 USDT pairs). Alpaca is primarily a US stock/equities broker with limited crypto support. The system already had a fully built CCXT adapter that supports Binance and 100+ crypto exchanges. Alpaca had no practical use — removed entirely.
+SignalForgeAI trades crypto exclusively (15 USDT pairs). Alpaca is primarily a US stock/equities broker with limited crypto support. The system already had a fully built CCXT adapter that supports Binance and 100+ crypto exchanges. Alpaca had no practical use — removed entirely.
 
 ### What Changed
 
@@ -744,7 +744,7 @@ All E501, I001, F401, E741 errors resolved. `ruff check app/` passes with zero e
 
 ```bash
 # 1. Navigate to project
-cd "/mnt/c/Business/Internal Projects/day-trading"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI"
 
 # 2. Check services are running
 cd backend && docker.exe compose ps

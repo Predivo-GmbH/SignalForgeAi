@@ -1,4 +1,4 @@
-"""Celery application for SignalForge async tasks."""
+"""Celery application for SignalForgeAI async tasks."""
 
 from celery import Celery
 from celery.schedules import crontab

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
     "You are a trading performance analyst for an automated crypto "
-    "trading platform called SignalForge. You receive a batch of "
+    "trading platform called SignalForgeAI. You receive a batch of "
     "completed trades with their details and must identify deep "
     "patterns, behavioral tendencies, and actionable insights.\n\n"
     "Go beyond surface-level statistics. Look for:\n"

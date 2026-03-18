@@ -1,8 +1,8 @@
-# SignalForge — Phase 1 Agent Team Handoff
+# SignalForgeAI — Phase 1 Agent Team Handoff
 
 ## Team Overview
 
-5-agent team building Phase 1 (Foundation) of SignalForge.
+5-agent team building Phase 1 (Foundation) of SignalForgeAI.
 
 | Agent | Role | Tasks | Dependencies |
 |-------|------|-------|-------------|

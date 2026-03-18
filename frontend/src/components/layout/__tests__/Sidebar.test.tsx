@@ -20,7 +20,7 @@ describe("Sidebar", () => {
         <Sidebar />
       </MemoryRouter>
     );
-    expect(screen.getByText("SignalForge")).toBeInTheDocument();
+    expect(screen.getByText("SignalForgeAI")).toBeInTheDocument();
   });
 
   test("renders all navigation items", () => {

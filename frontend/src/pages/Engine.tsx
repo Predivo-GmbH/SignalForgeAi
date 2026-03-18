@@ -511,7 +511,7 @@ function SimulationStatusCard() {
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5">
         <div className="flex items-center gap-2 mb-2">
           <FlaskConical className="h-5 w-5 text-[var(--color-accent)]" />
-          <Tooltip text="Buy & Hold vs SignalForge comparison running on your real portfolio data.">
+          <Tooltip text="Buy & Hold vs SignalForgeAI comparison running on your real portfolio data.">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
               Paper Simulation
             </h3>
@@ -533,7 +533,7 @@ function SimulationStatusCard() {
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-2">
         <FlaskConical className="h-5 w-5 text-[var(--color-accent)]" />
-        <Tooltip text="Buy & Hold vs SignalForge comparison running on your real portfolio data.">
+        <Tooltip text="Buy & Hold vs SignalForgeAI comparison running on your real portfolio data.">
           <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
             Paper Simulation
           </h3>
@@ -555,7 +555,7 @@ function SimulationStatusCard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatBox label="Initial Value" value={`$${(sim.initial_value_usd ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
         <StatBox label="Buy & Hold" value={`${bhReturn >= 0 ? "+" : ""}${bhReturn.toFixed(2)}%`} color={bhReturn >= 0 ? "var(--color-positive)" : "var(--color-negative)"} />
-        <StatBox label="SignalForge" value={`${sfReturn >= 0 ? "+" : ""}${sfReturn.toFixed(2)}%`} color={sfReturn >= 0 ? "var(--color-positive)" : "var(--color-negative)"} />
+        <StatBox label="SignalForgeAI" value={`${sfReturn >= 0 ? "+" : ""}${sfReturn.toFixed(2)}%`} color={sfReturn >= 0 ? "var(--color-positive)" : "var(--color-negative)"} />
         <StatBox
           label="SF vs B&H"
           value={`${diff >= 0 ? "+" : ""}${diff.toFixed(2)}%`}

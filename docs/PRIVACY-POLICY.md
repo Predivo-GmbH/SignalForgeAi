@@ -2,15 +2,15 @@
 
 **Last Updated:** March 5, 2026
 
-This Privacy Policy describes how SignalForge ("we", "us", "our") collects, uses, stores, and protects your personal information when you use our AI-powered cryptocurrency trading platform ("the Service").
+This Privacy Policy describes how SignalForgeAI ("we", "us", "our") collects, uses, stores, and protects your personal information when you use our AI-powered cryptocurrency trading platform ("the Service").
 
-SignalForge is a personal trading tool designed for automated signal generation, portfolio management, and performance tracking.
+SignalForgeAI is a personal trading tool designed for automated signal generation, portfolio management, and performance tracking.
 
 ---
 
 ## 1. Data Controller
 
-SignalForge operates as a self-hosted trading platform. The data controller is the individual or organization operating the SignalForge instance.
+SignalForgeAI operates as a self-hosted trading platform. The data controller is the individual or organization operating the SignalForgeAI instance.
 
 **Contact:** support@signalforge.dev
 
@@ -92,7 +92,7 @@ We use the data we collect exclusively for the following purposes:
 
 ## 6. Cookies and Tracking
 
-SignalForge does **not** use cookies for tracking or analytics. The only client-side storage used is:
+SignalForgeAI does **not** use cookies for tracking or analytics. The only client-side storage used is:
 
 - **JWT authentication tokens** stored in browser memory for session management
 - **Local storage** for UI preferences (theme, language settings)
@@ -154,7 +154,7 @@ We process your data based on the following legal grounds:
 
 ## 10. International Data Transfers
 
-SignalForge is a self-hosted application. Your data is stored on the server where your instance is deployed. No data is transferred to other jurisdictions unless:
+SignalForgeAI is a self-hosted application. Your data is stored on the server where your instance is deployed. No data is transferred to other jurisdictions unless:
 
 - You connect to a cryptocurrency exchange API hosted in another country (necessary for trading functionality)
 - The AI Advisor sends market data to Anthropic's API for analysis (no personal data is included in these requests)
@@ -173,7 +173,7 @@ In the event of a data breach that affects your personal information, we will:
 
 ## 12. Children's Privacy
 
-SignalForge is not intended for use by individuals under the age of 18. We do not knowingly collect data from minors. If you believe a minor has created an account, please contact us immediately.
+SignalForgeAI is not intended for use by individuals under the age of 18. We do not knowingly collect data from minors. If you believe a minor has created an account, please contact us immediately.
 
 ---
 
@@ -195,4 +195,4 @@ If you have questions about this Privacy Policy or wish to exercise your data pr
 
 ---
 
-*This Privacy Policy applies to the SignalForge trading platform. By using the Service, you acknowledge that you have read and understood this policy.*
+*This Privacy Policy applies to the SignalForgeAI trading platform. By using the Service, you acknowledge that you have read and understood this policy.*

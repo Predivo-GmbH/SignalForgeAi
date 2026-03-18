@@ -1,4 +1,4 @@
-# SignalForge Phase 3 — API & Paper Trading
+# SignalForgeAI Phase 3 — API & Paper Trading
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

@@ -1,7 +1,7 @@
 # Trading Risk Management & Protection Mechanisms
 ## Research Plan for AI Advisor Software Integration
 
-**Prepared for:** Predivo / SignalForge  
+**Prepared for:** Predivo / SignalForgeAI  
 **Date:** March 2, 2026  
 **Scope:** Comprehensive inventory of available mechanisms to increase profits and decrease losses
 
@@ -142,7 +142,7 @@ These are sophisticated mechanisms that dynamically protect capital while mainta
   - **Drawdown-based CPPI** — updates the floor at new highs (locks in gains)
   - **Dynamic Multiplier CPPI** — adjusts the multiplier based on volatility
   - **TIPP (Time Invariant Portfolio Protection)** — similar but with continuously updated floor
-- **AI Integration Potential:** VERY HIGH. This is essentially a systematic, rule-based insurance strategy that is perfectly suited for AI automation. The AI can optimize the multiplier dynamically, manage rebalancing frequency to minimize transaction costs, and detect gap risk before it materializes. CPPI naturally fits into the SignalForge architecture.
+- **AI Integration Potential:** VERY HIGH. This is essentially a systematic, rule-based insurance strategy that is perfectly suited for AI automation. The AI can optimize the multiplier dynamically, manage rebalancing frequency to minimize transaction costs, and detect gap risk before it materializes. CPPI naturally fits into the SignalForgeAI architecture.
 - **Key advantage:** No derivatives required — works purely with allocation between risky/safe assets.
 
 ### 5.2 Options-Based Hedging
@@ -193,7 +193,7 @@ These are risk management capabilities that only become possible with AI.
 
 ### 6.5 Sentiment-Driven Risk Adjustment
 - **What it does:** Analyzes news, social media, and market sentiment to adjust risk exposure. Extreme fear/greed signals trigger defensive/aggressive posture changes.
-- **AI Integration Potential:** Integrates with the SignalForge signal pipeline for additional confluence.
+- **AI Integration Potential:** Integrates with the SignalForgeAI signal pipeline for additional confluence.
 
 ### 6.6 Stress Testing & Scenario Simulation
 - **What it does:** AI simulates extreme scenarios (rate shocks, crashes, sector rotations) to evaluate portfolio resilience and adjust allocations proactively.

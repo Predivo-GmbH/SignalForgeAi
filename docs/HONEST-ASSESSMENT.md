@@ -1,4 +1,4 @@
-# Honest Assessment: Can We Improve SignalForge?
+# Honest Assessment: Can We Improve SignalForgeAI?
 
 > Written 2026-03-04 after testing everything we could think of.
 > We tested 8 different strategies on 8 crypto coins over 5 years of data.
@@ -16,7 +16,7 @@ Think of this like a race. We entered 8 different cars (strategies) and measured
 | Strategy | What It Does | Final Result | Worst Dip | How Many Trades |
 |----------|-------------|-------------|-----------|-----------------|
 | **Just Buy & Hold** | Buy once, never sell | **$10,000 → $31,480** | Lost up to 96% at one point | 1 |
-| **SignalForge (current)** | Our AI picks entry/exit | **$10,000 → $10,600** | Lost up to 7.8% at worst | 28-95 |
+| **SignalForgeAI (current)** | Our AI picks entry/exit | **$10,000 → $10,600** | Lost up to 7.8% at worst | 28-95 |
 | Regime HMM | AI detects "market mood" | **$10,000 → $9,520** | Lost up to 22.5% | 28-62 |
 | Regime+ (safe) | Mood detection + extra checks | **$10,000 → $9,590** | Lost up to 13.7% | 18-46 |
 | Regime+ (2.5x borrowed) | Same but with borrowed money | **$10,000 → $8,910** | Lost up to 31.0% | 18-46 |
@@ -74,19 +74,19 @@ That's exactly what happened:
 
 ---
 
-## 4. Why SignalForge Underperforms (The Root Causes)
+## 4. Why SignalForgeAI Underperforms (The Root Causes)
 
-SignalForge was designed to be extremely safe. That safety is exactly what limits its returns. Here are the 5 reasons in plain language:
+SignalForgeAI was designed to be extremely safe. That safety is exactly what limits its returns. Here are the 5 reasons in plain language:
 
 ### 4.1 It only trades when there's a clear trend (and that's only 30% of the time)
 
-The system waits for the market to show a strong directional move before trading. But markets only trend strongly about 30-35% of the time. The other 65-70%, the market drifts sideways, and SignalForge sits on the sideline doing nothing. Meanwhile, buy-and-hold is quietly accumulating gains during those sideways periods too.
+The system waits for the market to show a strong directional move before trading. But markets only trend strongly about 30-35% of the time. The other 65-70%, the market drifts sideways, and SignalForgeAI sits on the sideline doing nothing. Meanwhile, buy-and-hold is quietly accumulating gains during those sideways periods too.
 
 **Analogy:** It's like a taxi driver who only picks up passengers when it's raining. They avoid bad weather accidents, but they miss 70% of potential fares.
 
 ### 4.2 It demands too many indicators to agree at once
 
-SignalForge checks 14 different technical indicators and requires them to score at least 50 out of 100 together. That's like requiring 14 weather forecasters to all agree it will rain before you bring an umbrella. They rarely all agree, so you rarely bring one. This rejects 70-80% of potential trades.
+SignalForgeAI checks 14 different technical indicators and requires them to score at least 50 out of 100 together. That's like requiring 14 weather forecasters to all agree it will rain before you bring an umbrella. They rarely all agree, so you rarely bring one. This rejects 70-80% of potential trades.
 
 ### 4.3 Entry signals must happen within a single 4-hour candle
 
@@ -94,7 +94,7 @@ The system needs at least 2 out of 5 buy/sell triggers to fire within the same 4
 
 ### 4.4 It can only follow the trend, never go against it
 
-SignalForge can only buy when the market is already going up, and sell when it's already going down. It cannot:
+SignalForgeAI can only buy when the market is already going up, and sell when it's already going down. It cannot:
 - Buy cheap during a dip in a sideways market
 - Sell high when the market is temporarily overheated
 - Catch a trend reversal before it's fully confirmed
@@ -134,7 +134,7 @@ This approach could have reduced the worst loss from -77% to about -30%, while s
 
 The 48-hour cooldown (waiting period after closing a trade before opening a new one) is genuinely useful. The data shows that jumping right back in after a losing trade usually leads to another loss. It's like the advice "don't make important decisions when you're emotional."
 
-**Recommendation:** Add this to SignalForge. Even a 24-hour cooldown would help prevent clustered losses.
+**Recommendation:** Add this to SignalForgeAI. Even a 24-hour cooldown would help prevent clustered losses.
 
 ### MAYBE: Emergency Exit on Mood Change
 
@@ -144,7 +144,7 @@ Automatically closing a trade when the market mood shifts from bullish to bearis
 
 ### NO: The 8-Confirmation Voting System
 
-This is redundant. SignalForge already checks 14 indicators. Adding 8 more checks using many of the same indicators (RSI, MACD, Volume, etc.) doesn't add new information. It's like asking the same person the same question twice — you don't learn anything new.
+This is redundant. SignalForgeAI already checks 14 indicators. Adding 8 more checks using many of the same indicators (RSI, MACD, Volume, etc.) doesn't add new information. It's like asking the same person the same question twice — you don't learn anything new.
 
 ### NO: Borrowed Money (Leverage)
 
@@ -175,22 +175,22 @@ The concept (using AI to read market moods) is real science. Jim Simons' hedge f
 
 4. **The YouTube video shows results from a hand-picked time window** that happened to be profitable. We tested across a full market cycle and got very different results.
 
-### About SignalForge's Future
+### About SignalForgeAI's Future
 
 After testing 6,240+ combinations across 8 strategies and 5 years of data, the conclusion is clear:
 
-**SignalForge cannot beat buy-and-hold in a market that keeps going up long-term** (which is what crypto has done for its entire existence).
+**SignalForgeAI cannot beat buy-and-hold in a market that keeps going up long-term** (which is what crypto has done for its entire existence).
 
-But SignalForge does something buy-and-hold can't: **it protects you from devastating losses.**
+But SignalForgeAI does something buy-and-hold can't: **it protects you from devastating losses.**
 
 - Buy-and-hold: You could watch $10,000 drop to $400 (a 96% loss) before it recovers
-- SignalForge: The worst you'd experience is a 7.8% dip
+- SignalForgeAI: The worst you'd experience is a 7.8% dip
 
 For coins that didn't do well over this period:
-- ADA: SignalForge made +8.4%, buy-and-hold lost -37.7%
-- LINK: SignalForge made +9.3%, buy-and-hold lost -64.3%
+- ADA: SignalForgeAI made +8.4%, buy-and-hold lost -37.7%
+- LINK: SignalForgeAI made +9.3%, buy-and-hold lost -64.3%
 
-**SignalForge shines when the market is falling.**
+**SignalForgeAI shines when the market is falling.**
 
 ---
 
@@ -228,18 +228,18 @@ For coins that didn't do well over this period:
 
 ## 8. The Bottom Line
 
-**SignalForge is not a money-making machine. It's a money-protection machine.**
+**SignalForgeAI is not a money-making machine. It's a money-protection machine.**
 
 Over 5 years:
-- **SignalForge:** $10,000 becomes $10,600. Worst dip: 7.8%. You sleep well at night.
+- **SignalForgeAI:** $10,000 becomes $10,600. Worst dip: 7.8%. You sleep well at night.
 - **Buy & Hold:** $10,000 becomes $31,480. But at one point it dropped to $400 before recovering. Most people would have panic-sold and lost everything.
 
 The real question isn't "which makes more money?" — it's "can you stomach watching 96% of your money disappear and do nothing?" Most people honestly can't.
 
-The AI market mood detection from the YouTube video is real, working technology. But bolting it onto SignalForge doesn't help because the bottleneck isn't about reading the market mood — it's that SignalForge is too picky about which trades to take, and the trades it does take are barely profitable after fees.
+The AI market mood detection from the YouTube video is real, working technology. But bolting it onto SignalForgeAI doesn't help because the bottleneck isn't about reading the market mood — it's that SignalForgeAI is too picky about which trades to take, and the trades it does take are barely profitable after fees.
 
 **Going forward, there are two honest paths:**
 
-1. **Accept what SignalForge is** — a tool that protects your money in bad times, even if it doesn't maximize gains in good times. Market it that way.
+1. **Accept what SignalForgeAI is** — a tool that protects your money in bad times, even if it doesn't maximize gains in good times. Market it that way.
 
 2. **Rebuild the trading engine from scratch** — make it less picky about trade setups, let it trade in more market conditions, add the ability to buy dips, and use market mood to decide how much to invest rather than whether to trade. But that's essentially building a new product.

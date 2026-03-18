@@ -80,7 +80,7 @@ export function LoginPage() {
           <p className="mt-1 text-sm text-(--color-text-secondary)">
             {twoFaStep
               ? "Enter the code from your authenticator app"
-              : "Sign in to your SignalForge account"}
+              : "Sign in to your SignalForgeAI account"}
           </p>
         </div>
 

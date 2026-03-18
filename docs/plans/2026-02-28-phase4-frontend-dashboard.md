@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build the complete SignalForge frontend — auth flow, layout shell, 7 pages (Dashboard, Signals, Trades, Backtest Lab, Strategy Config, API Keys, Trade Journal), WebSocket integration, and API client layer.
+**Goal:** Build the complete SignalForgeAI frontend — auth flow, layout shell, 7 pages (Dashboard, Signals, Trades, Backtest Lab, Strategy Config, API Keys, Trade Journal), WebSocket integration, and API client layer.
 
 **Architecture:** React 19 SPA with TanStack Query for server state, Zustand for client state, react-router-dom for routing, lightweight-charts for TradingView-style candlestick charts, and native WebSocket for real-time price/signal streams. Kraken Pro-inspired dark-first design using the existing CSS custom property token system.
 
@@ -432,7 +432,7 @@ export const useSidebar = create<SidebarStore>()(
 `frontend/src/components/layout/Sidebar.tsx`:
 - Left sidebar, fixed height `h-screen`, `w-60` expanded / `w-16` collapsed
 - Transition on width change (`transition-all duration-200`)
-- Logo at top: "SF" when collapsed, "SignalForge" when expanded
+- Logo at top: "SF" when collapsed, "SignalForgeAI" when expanded
 - Navigation items with lucide-react icons:
   - Dashboard (`LayoutDashboard`, `/`)
   - Signals (`Zap`, `/signals`)

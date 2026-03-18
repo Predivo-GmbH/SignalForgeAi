@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SignalForge — Deployment Script
+# SignalForgeAI — Deployment Script
 # Run as the 'deploy' user on the Hetzner server.
 #
 # Usage:
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 APP_DIR="/opt/signalforge"
-REPO_URL=""  # Set your Git repo URL here (e.g. git@github.com:youruser/day-trading.git)
+REPO_URL=""  # Set your Git repo URL here (e.g. git@github.com:youruser/SignalForgeAI.git)
 BRANCH="main"
 
 # Images that are built locally (not pulled from registry)
@@ -65,7 +65,7 @@ tag_current_images_as_previous() {
 
 setup() {
   echo "============================================"
-  echo "  SignalForge — First-Time Setup"
+  echo "  SignalForgeAI — First-Time Setup"
   echo "============================================"
 
   # Step 1: Clone or copy repo
@@ -160,7 +160,7 @@ setup() {
 
 update() {
   echo "============================================"
-  echo "  SignalForge — Update Deployment"
+  echo "  SignalForgeAI — Update Deployment"
   echo "============================================"
 
   cd "$APP_DIR"
@@ -212,7 +212,7 @@ update() {
 
 rollback() {
   echo "============================================"
-  echo "  SignalForge — Rollback to Previous Version"
+  echo "  SignalForgeAI — Rollback to Previous Version"
   echo "============================================"
 
   cd "$APP_DIR"

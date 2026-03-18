@@ -1,4 +1,4 @@
-# SignalForge — Local Setup Guide
+# SignalForgeAI — Local Setup Guide
 
 > Goal: Get the app running locally so you can use the Backtest Lab in the browser.
 
@@ -26,7 +26,7 @@
 ## Step 2: Create Backend `.env` File
 
 ```bash
-cd "/mnt/c/Business/Internal Projects/day-trading/backend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/backend"
 cp .env.example .env
 ```
 
@@ -44,7 +44,7 @@ SF_CORS_ORIGINS=["http://localhost:5173"]
 ## Step 3: Start TimescaleDB + Redis
 
 ```bash
-cd "/mnt/c/Business/Internal Projects/day-trading/backend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/backend"
 docker compose up -d
 ```
 
@@ -60,7 +60,7 @@ Both `db` and `redis` should show "healthy".
 ## Step 4: Run Database Migrations
 
 ```bash
-cd "/mnt/c/Business/Internal Projects/day-trading/backend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/backend"
 .venv/Scripts/python.exe -m alembic upgrade head
 ```
 
@@ -71,7 +71,7 @@ If this fails with connection errors, wait a few seconds for PostgreSQL to finis
 ## Step 5: Start the Backend Server
 
 ```bash
-cd "/mnt/c/Business/Internal Projects/day-trading/backend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/backend"
 .venv/Scripts/python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -86,7 +86,7 @@ Leave this terminal running.
 In a **new terminal**:
 
 ```bash
-cd "/mnt/c/Business/Internal Projects/day-trading/frontend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/frontend"
 npm run dev
 ```
 
@@ -119,7 +119,7 @@ Next step after verifying everything works: wire up real historical candle data 
 
 ```bash
 # Terminal 1: Docker services
-cd "/mnt/c/Business/Internal Projects/day-trading/backend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/backend"
 docker compose up -d
 
 # Terminal 1: Migrations (one-time)
@@ -129,7 +129,7 @@ docker compose up -d
 .venv/Scripts/python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Terminal 2: Frontend server
-cd "/mnt/c/Business/Internal Projects/day-trading/frontend"
+cd "/mnt/c/Business/Internal Projects/SignalForgeAI/frontend"
 npm run dev
 ```
 

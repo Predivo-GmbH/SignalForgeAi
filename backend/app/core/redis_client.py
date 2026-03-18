@@ -1,4 +1,4 @@
-"""Redis async client for SignalForge."""
+"""Redis async client for SignalForgeAI."""
 
 import redis.asyncio as aioredis
 
