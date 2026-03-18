@@ -22,7 +22,7 @@ function getClient(): SMTPClient {
   return _client
 }
 
-const FROM = Deno.env.get('SMTP_FROM') || 'noreply@signalforgeai.com'
+const FROM = Deno.env.get('SMTP_FROM') || 'noreply@signalforgeai.predivo.ch'
 
 interface EmailOptions {
   to: string

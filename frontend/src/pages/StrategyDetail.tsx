@@ -15,7 +15,6 @@ import {
 import { useStrategy, useToggleStrategy, useDeleteStrategy } from "@/hooks/useStrategies";
 import { useSignals } from "@/hooks/useSignals";
 import { useTradeStats } from "@/hooks/useTrades";
-import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
@@ -252,25 +251,9 @@ export function StrategyDetailPage() {
   const { data: stats } = useTradeStats(id);
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
-  const [showTwoFa, setShowTwoFa] = useState(false);
-  const [twoFaError, setTwoFaError] = useState("");
-
   const handleToggle = () => {
     if (!strategy) return;
     toggleMutation.mutate({ id: strategy.id });
-  };
-
-  const handleTwoFaSubmit = (code: string) => {
-    if (!strategy) return;
-    toggleMutation.mutate(
-      { id: strategy.id, totp_code: code },
-      {
-        onSuccess: () => setShowTwoFa(false),
-        onError: (err) => {
-          setTwoFaError(err instanceof Error ? err.message : "Invalid code");
-        },
-      },
-    );
   };
 
   const handleSort = (key: SortKey) => {
@@ -579,13 +562,6 @@ export function StrategyDetailPage() {
       )}
 
 
-      <TwoFactorPrompt
-        open={showTwoFa}
-        onClose={() => setShowTwoFa(false)}
-        onSubmit={handleTwoFaSubmit}
-        isPending={toggleMutation.isPending}
-        error={twoFaError}
-      />
     </div>
   );
 }

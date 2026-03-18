@@ -40,11 +40,25 @@ export async function authenticateRequest(req: Request): Promise<AuthResult> {
 
 /** Verify this is a service-role call (for cron jobs) */
 export function verifyServiceRole(req: Request): SupabaseClient {
-  const authHeader = req.headers.get('Authorization')
+  const authHeader = req.headers.get('Authorization') ?? ''
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  if (authHeader !== `Bearer ${serviceKey}`) {
+
+  // Accept service role key via Authorization header OR verify it's a service_role JWT
+  const token = authHeader.replace('Bearer ', '')
+  let isServiceRole = token === serviceKey
+
+  // Also check if the JWT contains role: "service_role"
+  if (!isServiceRole && token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      isServiceRole = payload.role === 'service_role'
+    } catch { /* not a valid JWT */ }
+  }
+
+  if (!isServiceRole) {
     throw new AuthError('Unauthorized: service role required', 403)
   }
+
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
     serviceKey

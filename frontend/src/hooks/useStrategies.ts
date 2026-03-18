@@ -100,7 +100,7 @@ export function useUpdateStrategy() {
 export function useToggleStrategy() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id }: { id: string; totp_code?: string }) =>
+    mutationFn: ({ id }: { id: string }) =>
       invokeFunction<Strategy>("strategies", { action: "toggle", id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["strategies"] }),
   });

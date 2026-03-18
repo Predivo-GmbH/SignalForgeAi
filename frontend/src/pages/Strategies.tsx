@@ -20,7 +20,6 @@ import {
 } from "@/hooks/useStrategies";
 import { useStrategyComparison } from "@/hooks/useAnalytics";
 import { ActiveStrategyCard } from "@/components/portfolio/ActiveStrategyCard";
-import { TwoFactorPrompt } from "@/components/strategies/TwoFactorPrompt";
 import type { Strategy } from "@/hooks/useStrategies";
 import type { StrategyMetrics } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/cn";
@@ -295,9 +294,6 @@ export function StrategiesPage() {
   const { data: comparison } = useStrategyComparison();
   const toggleMutation = useToggleStrategy();
   const deleteMutation = useDeleteStrategy();
-  const [twoFaTarget, setTwoFaTarget] = useState<string | null>(null);
-  const [twoFaError, setTwoFaError] = useState("");
-
   const strategies = data?.strategies ?? [];
   const metricsMap = new Map(
     (comparison?.strategies ?? []).map((m) => [m.strategy_id, m]),
@@ -305,19 +301,6 @@ export function StrategiesPage() {
 
   function handleToggle(strategy: Strategy) {
     toggleMutation.mutate({ id: strategy.id });
-  }
-
-  function handleTwoFaSubmit(code: string) {
-    if (!twoFaTarget) return;
-    toggleMutation.mutate(
-      { id: twoFaTarget, totp_code: code },
-      {
-        onSuccess: () => setTwoFaTarget(null),
-        onError: (err) => {
-          setTwoFaError(err instanceof Error ? err.message : "Invalid code");
-        },
-      },
-    );
   }
 
   return (
@@ -398,13 +381,6 @@ export function StrategiesPage() {
         </div>
       )}
 
-      <TwoFactorPrompt
-        open={twoFaTarget !== null}
-        onClose={() => setTwoFaTarget(null)}
-        onSubmit={handleTwoFaSubmit}
-        isPending={toggleMutation.isPending}
-        error={twoFaError}
-      />
     </div>
   );
 }
