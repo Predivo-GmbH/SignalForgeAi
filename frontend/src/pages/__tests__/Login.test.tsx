@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { LoginPage } from "../Login";
+
+const LoginPage = (await import("../auth/LoginPage")).default;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>
@@ -10,14 +11,13 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("LoginPage", () => {
-  test("renders email field and send code button", () => {
+  test("renders sign in heading", () => {
     render(<LoginPage />, { wrapper });
-    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /send code/i })).toBeInTheDocument();
+    expect(screen.getByText(/sign in to signalforgeai/i)).toBeInTheDocument();
   });
 
-  test("renders welcome text", () => {
+  test("renders sign up link", () => {
     render(<LoginPage />, { wrapper });
-    expect(screen.getByText("Welcome back")).toBeInTheDocument();
+    expect(screen.getByText("Sign up")).toBeInTheDocument();
   });
 });
