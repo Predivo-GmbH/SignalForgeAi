@@ -304,12 +304,6 @@ export function StrategiesPage() {
   );
 
   function handleToggle(strategy: Strategy) {
-    // Activating (currently inactive) + has live connections + has 2FA → prompt
-    if (false) { /* OTP auth replaces 2FA gate */
-      setTwoFaTarget(strategy.id);
-      setTwoFaError("");
-      return;
-    }
     toggleMutation.mutate({ id: strategy.id });
   }
 

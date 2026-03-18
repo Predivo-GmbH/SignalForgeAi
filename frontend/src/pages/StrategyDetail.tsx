@@ -257,11 +257,6 @@ export function StrategyDetailPage() {
 
   const handleToggle = () => {
     if (!strategy) return;
-    if (false) { /* OTP auth replaces 2FA gate */
-      setShowTwoFa(true);
-      setTwoFaError("");
-      return;
-    }
     toggleMutation.mutate({ id: strategy.id });
   };
 
