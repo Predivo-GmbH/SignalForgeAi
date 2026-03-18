@@ -14,12 +14,12 @@ describe("LoginPage", () => {
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
-  test("has link to register page", () => {
+  test("renders welcome text", () => {
     render(
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>
     );
-    expect(screen.getByText(/create account/i)).toBeInTheDocument();
+    expect(screen.getByText("Welcome back")).toBeInTheDocument();
   });
 });

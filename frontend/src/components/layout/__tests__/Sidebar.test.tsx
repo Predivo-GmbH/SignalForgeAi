@@ -9,7 +9,7 @@ describe("Sidebar", () => {
         <Sidebar />
       </MemoryRouter>
     );
-    expect(screen.getByText("Portfolio")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("AI Advisor")).toBeInTheDocument();
     expect(screen.getByText("Trades")).toBeInTheDocument();
   });

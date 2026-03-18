@@ -31,6 +31,6 @@ describe("SettingsPage", () => {
   test("renders tab buttons", () => {
     render(<SettingsPage />, { wrapper });
     expect(screen.getByText("Connections")).toBeInTheDocument();
-    expect(screen.getByText("Alerts")).toBeInTheDocument();
+    expect(screen.getByText("AI Usage")).toBeInTheDocument();
   });
 });

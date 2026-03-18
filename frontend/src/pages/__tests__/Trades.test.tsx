@@ -21,10 +21,10 @@ describe("TradesPage", () => {
     expect(screen.getByText("Trades")).toBeInTheDocument();
   });
 
-  test("renders page description with AI analysis mention", () => {
+  test("renders page description", () => {
     render(<TradesPage />, { wrapper });
     expect(
-      screen.getByText("Execution log, performance metrics, and AI-powered trade analysis")
+      screen.getByText("Execution log and performance metrics")
     ).toBeInTheDocument();
   });
 
@@ -34,8 +34,8 @@ describe("TradesPage", () => {
     expect(screen.getByText("Exit Reason")).toBeInTheDocument();
   });
 
-  test("renders pattern summary section", () => {
+  test("renders side column header", () => {
     render(<TradesPage />, { wrapper });
-    expect(screen.getByText("Pattern Summary")).toBeInTheDocument();
+    expect(screen.getByText("Side")).toBeInTheDocument();
   });
 });

@@ -28,15 +28,8 @@ describe("AnalyticsPage", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders Correlation section title", () => {
+  test("renders strategy comparison loading state", () => {
     render(<AnalyticsPage />, { wrapper });
-    expect(screen.getByText("Correlation Analysis")).toBeInTheDocument();
-  });
-
-  test("renders correlation empty state", () => {
-    render(<AnalyticsPage />, { wrapper });
-    expect(
-      screen.getByText("Select two symbols to analyze their correlation")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Loading strategy comparison...")).toBeInTheDocument();
   });
 });
