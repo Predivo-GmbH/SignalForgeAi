@@ -47,13 +47,13 @@ jobs:
           # Step 1: Upload new hashed assets alongside old ones (no deletion yet)
           lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" <<LFTP_EOF
             $LFTP_SETTINGS
-            mirror --reverse --no-perms --verbose ./frontend/dist/assets/ /SignalForgeAI.predivo.ch/assets/
+            mirror --reverse --no-perms --verbose ./frontend/dist/assets/ /signalforgeai.predivo.ch/assets/
             quit
           LFTP_EOF
 
           # Step 2: Full mirror of everything (HTML, .htaccess, images, etc.)
           lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" <<LFTP_EOF
             $LFTP_SETTINGS
-            mirror --reverse --delete --no-perms --verbose ./frontend/dist/ /SignalForgeAI.predivo.ch/
+            mirror --reverse --delete --no-perms --verbose ./frontend/dist/ /signalforgeai.predivo.ch/
             quit
           LFTP_EOF
