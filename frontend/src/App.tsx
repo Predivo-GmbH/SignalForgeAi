@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/layout/AppLayout";
+import { PasswordGate } from "./components/shared/PasswordGate";
 import { queryClient } from "./lib/query";
 
 const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
@@ -102,6 +103,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 function App() {
   return (
+    <PasswordGate>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
@@ -138,6 +140,7 @@ function App() {
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
+    </PasswordGate>
   );
 }
 
