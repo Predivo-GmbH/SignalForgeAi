@@ -19,13 +19,6 @@ jobs:
             -d '{"email":"keepalive@ping.local","password":"keepalive"}')
           echo "Auth response: $auth_response (400 expected — means DB was queried)"
 
-          echo "=== REST API ping ==="
-          rest_response=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
-          echo "REST API response: $rest_response"
-
           echo "=== Auth health check ==="
           health_response=$(curl -s -o /dev/null -w "%{http_code}" \
             "${{ secrets.SUPABASE_URL }}/auth/v1/health" \
@@ -33,7 +26,7 @@ jobs:
           echo "Auth health response: $health_response"
 
           # Fail only if ALL endpoints are unreachable (000 = network error)
-          if [ "$auth_response" = "000" ] && [ "$rest_response" = "000" ]; then
+          if [ "$auth_response" = "000" ] && [ "$health_response" = "000" ]; then
             echo "::error::Supabase project appears completely unreachable"
             exit 1
           fi
