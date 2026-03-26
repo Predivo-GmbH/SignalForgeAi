@@ -9,17 +9,17 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase (real DB query via PostgREST RPC)
+      - name: Ping Supabase (real DB query via GraphQL)
         run: |
-          echo "=== Real DB query via PostgREST ==="
-          db_response=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/keepalive" \
+          echo "=== GraphQL ping (real DB query via pg_graphql) ==="
+          gql_response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/graphql/v1" \
             -X POST \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Content-Type: application/json" \
-            -d '{}')
-          echo "DB RPC response: $db_response"
+            -d '{"query":"{ __typename }"}')
+          echo "GraphQL response: $gql_response"
 
           echo "=== Auth ping (backup) ==="
           auth_response=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -29,13 +29,13 @@ jobs:
             -d '{"email":"keepalive@ping.local","password":"keepalive"}')
           echo "Auth response: $auth_response"
 
-          if [ "$db_response" = "000" ] && [ "$auth_response" = "000" ]; then
+          if [ "$gql_response" = "000" ] && [ "$auth_response" = "000" ]; then
             echo "::error::Supabase project appears completely unreachable"
             exit 1
           fi
 
-          if [ "$db_response" != "200" ]; then
-            echo "::warning::DB RPC returned $db_response — check that the keepalive function exists"
+          if [ "$gql_response" != "200" ]; then
+            echo "::warning::GraphQL ping returned $gql_response"
           fi
 
           echo "Supabase project pinged successfully — real DB activity registered"
