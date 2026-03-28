@@ -48,10 +48,12 @@ export function Sidebar() {
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setMobileOpen(false)}
+          role="presentation"
         />
       )}
 
       <aside
+        aria-label="Sidebar navigation"
         className={cn(
           "fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-(--color-border) bg-(--color-bg-surface) transition-all duration-200",
           // Mobile: off-screen by default, slide in when open
@@ -73,10 +75,10 @@ export function Sidebar() {
           {/* Mobile close button */}
           <button
             onClick={() => setMobileOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-(--color-text-secondary) hover:bg-(--color-bg-elevated) lg:hidden"
+            className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-(--color-text-secondary) hover:bg-(--color-bg-elevated) lg:hidden"
             aria-label="Close sidebar"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -94,7 +96,7 @@ export function Sidebar() {
                       (to === "/strategies" &&
                         location.pathname.startsWith("/strategies/"));
                     return cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 min-h-[44px] text-sm font-medium transition-colors",
                       collapsed && "lg:justify-center lg:px-0",
                       active
                         ? "bg-(--color-accent-soft) text-(--color-accent)"
@@ -103,7 +105,7 @@ export function Sidebar() {
                   }}
                   title={collapsed ? label : undefined}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
+                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                   <span className={cn(collapsed && "lg:hidden")}>{label}</span>
                 </NavLink>
               </li>
@@ -116,17 +118,17 @@ export function Sidebar() {
           <button
             onClick={toggle}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)",
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 min-h-[44px] text-sm font-medium text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)",
               collapsed && "justify-center px-0"
             )}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
-              <PanelLeftOpen className="h-5 w-5 shrink-0" />
+              <PanelLeftOpen className="h-5 w-5 shrink-0" aria-hidden="true" />
             ) : (
               <>
-                <PanelLeftClose className="h-5 w-5 shrink-0" />
+                <PanelLeftClose className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <span>Collapse</span>
               </>
             )}

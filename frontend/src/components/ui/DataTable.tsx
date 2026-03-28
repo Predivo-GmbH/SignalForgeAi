@@ -20,7 +20,7 @@ function SkeletonRow({ cols }: { cols: number }) {
   return (
     <tr>
       {Array.from({ length: cols }, (_, i) => (
-        <td key={i} className="px-4 py-3">
+        <td key={i} className="px-2 sm:px-4 py-2 sm:py-3">
           <div className="h-4 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
         </td>
       ))}
@@ -43,7 +43,9 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden">
+      <div className="relative">
       <div className="overflow-x-auto">
+
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--color-bg-elevated)]">
@@ -51,7 +53,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]",
+                    "px-2 sm:px-4 py-2 sm:py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]",
                     alignClass(col.align),
                   )}
                 >
@@ -90,7 +92,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     <td
                       key={col.key}
                       className={cn(
-                        "px-4 py-3 text-[var(--color-text-primary)]",
+                        "px-2 sm:px-4 py-2 sm:py-3 text-[var(--color-text-primary)]",
                         alignClass(col.align),
                       )}
                     >
@@ -104,6 +106,8 @@ export function DataTable<T extends Record<string, unknown>>({
             )}
           </tbody>
         </table>
+      </div>
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l from-[var(--color-bg-surface)] to-transparent sm:hidden" />
       </div>
     </div>
   );

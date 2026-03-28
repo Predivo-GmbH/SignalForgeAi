@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import {
   Activity,
   Cpu,
@@ -197,6 +199,8 @@ function formatRunTime(iso: string): string {
 /* ------------------------------------------------------------------ */
 
 export function EnginePage() {
+  usePageTitle("Engine Monitor");
+  useNoIndex();
   return (
     <div className="max-w-[1200px] mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div>
@@ -208,7 +212,7 @@ export function EnginePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <SystemHealthCard />
         <EngineStatusCard />
       </div>
@@ -227,24 +231,25 @@ export function EnginePage() {
 function SystemHealthCard() {
   const { data, isLoading, rapidPoll, startRapidPoll } = useSystemStatus();
   const restart = useRestartWorker();
+  const { phase, markRecovered, mutate: restartMutate } = restart;
   const prevWorkerStatus = useRef<string | null>(null);
 
   // Detect worker recovery during rapid polling
   useEffect(() => {
-    if (restart.phase !== "restarting") return;
+    if (phase !== "restarting") return;
     const workerNow = data?.services?.worker?.status;
     if (!workerNow) return;
 
     // Worker went down then came back, or stayed ok throughout
     if (workerNow === "ok" && prevWorkerStatus.current && prevWorkerStatus.current !== "ok") {
-      restart.markRecovered();
+      markRecovered();
     }
     prevWorkerStatus.current = workerNow;
-  }, [data?.services?.worker?.status, restart.phase, restart.markRecovered]);
+  }, [data?.services?.worker?.status, phase, markRecovered]);
 
   const handleRestart = () => {
     prevWorkerStatus.current = data?.services?.worker?.status ?? null;
-    restart.mutate();
+    restartMutate();
     startRapidPoll();
   };
 
@@ -263,14 +268,14 @@ function SystemHealthCard() {
     overall === "healthy" ? CheckCircle2 : overall === "degraded" ? AlertTriangle : XCircle;
 
   return (
-    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Activity className="h-5 w-5 text-[var(--color-accent)]" />
         <Tooltip text="Live status of all backend services — database, Redis, worker, and scheduler.">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">System Health</h3>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">System Health</h2>
         </Tooltip>
         {rapidPoll && (
-          <span className="ml-auto flex items-center gap-1.5 text-[10px] text-[var(--color-accent)]">
+          <span className="ml-auto flex items-center gap-1.5 text-xs text-[var(--color-accent)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
             Live monitoring
           </span>
@@ -313,7 +318,7 @@ function SystemHealthCard() {
                 <span className="text-xs font-medium text-[var(--color-text-primary)] capitalize">
                   {svc}
                 </span>
-                <span className="ml-auto text-[10px] text-[var(--color-text-secondary)]">
+                <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
                   {isRestarting ? "restarting…" : s.status}
                 </span>
               </div>
@@ -375,7 +380,7 @@ function RestartButton({ phase, onRestart }: { phase: RestartPhase; onRestart: (
       <button
         onClick={onRestart}
         disabled={c.disabled}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-xs font-medium hover:bg-[var(--color-bg-base)] disabled:opacity-60 transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-lg bg-[var(--color-bg-elevated)] text-xs font-medium hover:bg-[var(--color-bg-base)] disabled:opacity-60 transition-colors"
         style={{ color: c.color }}
       >
         {phase === "recovered" ? (
@@ -386,7 +391,7 @@ function RestartButton({ phase, onRestart }: { phase: RestartPhase; onRestart: (
         {c.label}
       </button>
       {phase === "restarting" && (
-        <span className="text-[10px] text-[var(--color-text-secondary)]">
+        <span className="text-xs text-[var(--color-text-secondary)]">
           Polling every 3s…
         </span>
       )}
@@ -415,13 +420,13 @@ function EngineStatusCard() {
   const regimeEnabled = regime?.regime_allocator_enabled ?? false;
 
   return (
-    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Cpu className="h-5 w-5 text-[var(--color-accent)]" />
         <Tooltip text="Current state of the trading engine and whether it's actively processing signals.">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
             Engine Status
-          </h3>
+          </h2>
         </Tooltip>
       </div>
 
@@ -436,7 +441,7 @@ function EngineStatusCard() {
 
       {engine?.layers && engine.layers.length > 0 && (
         <div>
-          <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold">
+          <span className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold">
             Active Layers
           </span>
           <div className="flex flex-wrap gap-1.5 mt-2">
@@ -508,13 +513,13 @@ function SimulationStatusCard() {
   if (isLoading) return <SkeletonCard title="Paper Simulation" />;
   if (!sim) {
     return (
-      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5">
+      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-2">
           <FlaskConical className="h-5 w-5 text-[var(--color-accent)]" />
           <Tooltip text="Buy & Hold vs SignalForgeAI comparison running on your real portfolio data.">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
               Paper Simulation
-            </h3>
+            </h2>
           </Tooltip>
         </div>
         <p className="text-sm text-[var(--color-text-secondary)]">
@@ -530,13 +535,13 @@ function SimulationStatusCard() {
   const diff = sfReturn - bhReturn;
 
   return (
-    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center gap-2">
         <FlaskConical className="h-5 w-5 text-[var(--color-accent)]" />
         <Tooltip text="Buy & Hold vs SignalForgeAI comparison running on your real portfolio data.">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
             Paper Simulation
-          </h3>
+          </h2>
         </Tooltip>
         <span
           className="ml-auto flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
@@ -552,7 +557,7 @@ function SimulationStatusCard() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatBox label="Initial Value" value={`$${(sim.initial_value_usd ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
         <StatBox label="Buy & Hold" value={`${bhReturn >= 0 ? "+" : ""}${bhReturn.toFixed(2)}%`} color={bhReturn >= 0 ? "var(--color-positive)" : "var(--color-negative)"} />
         <StatBox label="SignalForgeAI" value={`${sfReturn >= 0 ? "+" : ""}${sfReturn.toFixed(2)}%`} color={sfReturn >= 0 ? "var(--color-positive)" : "var(--color-negative)"} />
@@ -588,13 +593,13 @@ function PipelineSummaryCard() {
   const maxCount = Math.max(...Object.values(reasons), 1);
 
   return (
-    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Activity className="h-5 w-5 text-[var(--color-accent)]" />
         <Tooltip text="Overview of today's signal pipeline runs — how many symbols were evaluated and passed.">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
             Pipeline Summary (Today)
-          </h3>
+          </h2>
         </Tooltip>
         {data?.last_run_at && (
           <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
@@ -614,7 +619,7 @@ function PipelineSummaryCard() {
       {/* Block reason bars */}
       {Object.keys(reasons).length > 0 && (
         <div>
-          <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold">
+          <span className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold">
             Block Reasons
           </span>
           <div className="mt-2 space-y-2">
@@ -668,13 +673,13 @@ function PipelineRunList() {
   return (
     <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-[var(--color-border)]">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-[var(--color-accent)]" />
           <Tooltip text="Log of recent pipeline executions with timestamps and results.">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">
               Pipeline Run History
-            </h3>
+            </h2>
           </Tooltip>
           <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
             {totalRuns} runs
@@ -689,7 +694,7 @@ function PipelineRunList() {
       <div className="divide-y divide-[var(--color-border)]">
         {isLoading &&
           Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="px-5 py-3 flex items-center gap-3">
+            <div key={i} className="px-4 sm:px-5 py-3 flex items-center gap-3">
               <div className="h-4 w-4 rounded-full bg-[var(--color-bg-elevated)] animate-pulse" />
               <div className="h-3 w-12 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
               <div className="h-3 w-32 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
@@ -698,7 +703,7 @@ function PipelineRunList() {
           ))}
 
         {!isLoading && runs.length === 0 && (
-          <div className="px-5 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+          <div className="px-4 sm:px-5 py-8 text-center text-sm text-[var(--color-text-secondary)]">
             No pipeline runs found. The pipeline runs every 5 minutes.
           </div>
         )}
@@ -717,7 +722,7 @@ function PipelineRunList() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-t border-[var(--color-border)]">
           <span className="text-xs text-[var(--color-text-secondary)]">
             Page {page} of {totalPages}
           </span>
@@ -725,7 +730,7 @@ function PipelineRunList() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
               aria-label="Previous page"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -733,7 +738,7 @@ function PipelineRunList() {
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-1.5 rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-30 transition-colors"
               aria-label="Next page"
             >
               <ChevronRight className="h-4 w-4" />
@@ -768,7 +773,7 @@ function PipelineRunCard({
       {/* Summary row — always visible */}
       <button
         onClick={onToggle}
-        className="w-full px-5 py-3 flex items-center gap-3 hover:bg-[var(--color-bg-elevated)] transition-colors text-left"
+        className="w-full px-4 sm:px-5 py-3 min-h-[44px] flex items-center gap-3 hover:bg-[var(--color-bg-elevated)] transition-colors text-left"
       >
         {/* Status icon */}
         <StatusIcon className="h-4 w-4 shrink-0" style={{ color: statusColor }} />
@@ -796,7 +801,7 @@ function PipelineRunCard({
           {run.top_block_reasons.slice(0, 2).map((r) => (
             <Tooltip key={r.reason} text={reasonDescription(r.reason)}>
               <span
-                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap cursor-help"
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap cursor-help"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${reasonColor(r.reason)} 12%, transparent)`,
                   color: reasonColor(r.reason),
@@ -879,7 +884,7 @@ function SignalStatusBadge({ entry }: { entry: PipelineLogEntry }) {
       onMouseLeave={hasTooltip ? handleLeave : undefined}
     >
       <span
-        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize"
+        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize"
         style={{
           backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
           color,
@@ -898,7 +903,7 @@ function SignalStatusBadge({ entry }: { entry: PipelineLogEntry }) {
             AI Assessment
             {entry.signal_ai_recommendation && (
               <span
-                className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase"
+                className="px-1.5 py-0.5 rounded text-xs font-bold uppercase"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${
                     entry.signal_ai_recommendation === "confirm" || entry.signal_ai_recommendation === "strong_confirm"
@@ -939,7 +944,7 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
   const [resultFilter, setResultFilter] = useState<string>("all");
 
   const { data, isLoading } = usePipelineLog({ since, until, per_page: 200 });
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   // Derive available result options from this run's data
   const resultOptions = useMemo(() => {
@@ -975,7 +980,7 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
 
   if (isLoading) {
     return (
-      <div className="px-5 py-4 bg-[var(--color-bg-elevated)]">
+      <div className="px-4 sm:px-5 py-4 bg-[var(--color-bg-elevated)]">
         <div className="space-y-2">
           {Array.from({ length: 3 }, (_, i) => (
             <div key={i} className="h-3 w-48 rounded bg-[var(--color-bg-surface)] animate-pulse" />
@@ -987,7 +992,7 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
 
   if (items.length === 0) {
     return (
-      <div className="px-5 py-4 bg-[var(--color-bg-elevated)] text-xs text-[var(--color-text-secondary)]">
+      <div className="px-4 sm:px-5 py-4 bg-[var(--color-bg-elevated)] text-xs text-[var(--color-text-secondary)]">
         No entries found for this run.
       </div>
     );
@@ -996,9 +1001,9 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
   return (
     <div className="bg-[var(--color-bg-elevated)] border-t border-[var(--color-border)]">
       {/* Filters */}
-      <div className="px-5 py-3 flex flex-wrap items-center gap-2 border-b border-[var(--color-border)]">
+      <div className="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2 border-b border-[var(--color-border)]">
         <Filter className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" />
-        <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold mr-1">
+        <span className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)] font-semibold mr-1">
           Filter
         </span>
 
@@ -1039,11 +1044,11 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
           <>
             <button
               onClick={() => { setActionFilter("all"); setResultFilter("all"); }}
-              className="text-[10px] text-[var(--color-accent)] hover:underline ml-1"
+              className="text-xs text-[var(--color-accent)] hover:underline ml-1 min-h-[44px] py-2"
             >
               Clear filters
             </button>
-            <span className="ml-auto text-[10px] text-[var(--color-text-secondary)]">
+            <span className="ml-auto text-xs text-[var(--color-text-secondary)]">
               {filtered.length} of {items.length}
             </span>
           </>
@@ -1051,32 +1056,33 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative">
+        <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-[var(--color-bg-elevated)] to-transparent z-10 sm:hidden" />
         <table className="w-full text-left">
           <thead>
             <tr>
-              <th className="px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-3 sm:px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Symbol
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hidden sm:table-cell">
                 TF
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Action
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Result
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-right">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-right hidden sm:table-cell">
                 Confluence
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hidden md:table-cell">
                 Regime
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hidden md:table-cell">
                 Signal Status
               </th>
-              <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-center">
+              <th className="px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] text-center hidden sm:table-cell">
                 Detail
               </th>
             </tr>
@@ -1099,15 +1105,15 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
                     : undefined,
                 }}
               >
-                <td className="px-5 py-2 text-xs font-medium text-[var(--color-text-primary)]">
+                <td className="px-3 sm:px-5 py-3 text-xs font-medium text-[var(--color-text-primary)]">
                   {entry.symbol}
                 </td>
-                <td className="px-4 py-2 text-xs text-[var(--color-text-secondary)]">
+                <td className="px-3 sm:px-4 py-3 text-xs text-[var(--color-text-secondary)] hidden sm:table-cell">
                   {entry.timeframe}
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-3 sm:px-4 py-3">
                   <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
                     style={{
                       backgroundColor: `color-mix(in srgb, ${actionColor(entry.action)} 15%, transparent)`,
                       color: actionColor(entry.action),
@@ -1116,10 +1122,10 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
                     {entry.action}
                   </span>
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-3 sm:px-4 py-3">
                   <Tooltip text={entryDescription(entry)}>
                     <span
-                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold cursor-help"
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold cursor-help"
                       style={{
                         backgroundColor: `color-mix(in srgb, ${reasonColor(entry.block_reason)} 15%, transparent)`,
                         color: reasonColor(entry.block_reason),
@@ -1129,24 +1135,24 @@ function PipelineRunDetail({ runTime }: { runTime: string }) {
                     </span>
                   </Tooltip>
                 </td>
-                <td className="px-4 py-2 text-xs font-mono text-right text-[var(--color-text-primary)]">
+                <td className="px-3 sm:px-4 py-3 text-xs font-mono text-right text-[var(--color-text-primary)] hidden sm:table-cell">
                   {entry.confluence_score ?? "—"}
                 </td>
-                <td className="px-4 py-2 text-xs text-[var(--color-text-secondary)] capitalize">
+                <td className="px-3 sm:px-4 py-3 text-xs text-[var(--color-text-secondary)] capitalize hidden md:table-cell">
                   {entry.regime?.replace("_", " ") ?? "—"}
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-3 sm:px-4 py-3 hidden md:table-cell">
                   {!entry.block_reason && entry.signal_status ? (
                     <SignalStatusBadge entry={entry} />
                   ) : (
                     <span className="text-[var(--color-text-secondary)]/40">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2 text-center">
+                <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
                   {!entry.block_reason && entry.strategy_id ? (
                     <button
                       onClick={() => navigate(`/strategies/${entry.strategy_id}`)}
-                      className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--color-accent)] hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline"
                       title="View signal lifecycle on Strategy page"
                     >
                       View <ExternalLink className="w-3 h-3" />
@@ -1234,7 +1240,7 @@ function FilterDropdown({
       <button
         ref={btnRef}
         onClick={handleToggle}
-        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+        className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 min-h-[44px] text-xs font-medium transition-colors"
         style={{
           backgroundColor: isActive
             ? `color-mix(in srgb, ${activeColor || "var(--color-accent)"} 15%, transparent)`
@@ -1255,14 +1261,15 @@ function FilterDropdown({
           style={{
             top: pos.openUp ? undefined : pos.top,
             bottom: pos.openUp ? window.innerHeight - pos.top + 4 : undefined,
-            left: pos.left,
+            left: Math.min(pos.left, window.innerWidth - 168),
+            maxWidth: 'calc(100vw - 16px)',
           }}
         >
           {options.map((opt) => (
             <button
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors hover:bg-[var(--color-bg-elevated)] ${
+              className={`w-full text-left px-3 py-2.5 text-xs transition-colors hover:bg-[var(--color-bg-elevated)] ${
                 opt.value === value
                   ? "font-semibold text-[var(--color-accent)]"
                   : "text-[var(--color-text-secondary)]"
@@ -1284,11 +1291,11 @@ function FilterDropdown({
 function StatBox({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="bg-[var(--color-bg-elevated)] rounded-lg p-3 space-y-0.5">
-      <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)]">
+      <p className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
         {label}
       </p>
       <p
-        className="text-sm font-mono font-semibold"
+        className="text-sm font-mono font-semibold truncate"
         style={{ color: color ?? "var(--color-text-primary)" }}
       >
         {value}
@@ -1299,8 +1306,8 @@ function StatBox({ label, value, color }: { label: string; value: string; color?
 
 function SkeletonCard({ title }: { title: string }) {
   return (
-    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
-      <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h3>
+    <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-4">
+      <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h2>
       <div className="space-y-2">
         <div className="h-4 w-40 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
         <div className="h-4 w-32 rounded bg-[var(--color-bg-elevated)] animate-pulse" />

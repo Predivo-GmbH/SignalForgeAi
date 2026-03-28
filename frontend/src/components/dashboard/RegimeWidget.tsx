@@ -18,7 +18,7 @@ export function RegimeWidget() {
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-4">
+      <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-3 sm:p-4">
         <div className="flex items-center gap-2 mb-3">
           <div className="h-4 w-4 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
           <div className="h-4 w-24 rounded bg-[var(--color-bg-elevated)] animate-pulse" />
@@ -42,11 +42,11 @@ export function RegimeWidget() {
   const regimeEnabled = regimeData?.regime_allocator_enabled ?? false;
 
   return (
-    <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-4">
+    <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-3 sm:p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Cpu className="h-4 w-4 text-[var(--color-accent)]" />
+        <Cpu className="h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />
         <Tooltip text="Current state of the trading engine and market regime detected by the HMM model.">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Engine Status</h3>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Engine Status</h2>
         </Tooltip>
       </div>
 
@@ -102,7 +102,7 @@ function RegimeSection({ data }: { data: RegimeStatus }) {
 
       {/* Regime badge */}
       <div className="flex items-center gap-2 mt-2 mb-3">
-        <Icon className="h-4 w-4" style={{ color: config.color }} />
+        <Icon className="h-4 w-4" style={{ color: config.color }} aria-hidden="true" />
         <span className="text-sm font-semibold" style={{ color: config.color }}>
           {config.label}
         </span>

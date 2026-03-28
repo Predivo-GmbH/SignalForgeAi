@@ -19,9 +19,16 @@ export async function authenticateRequest(req: Request): Promise<AuthResult> {
     throw new AuthError('Missing authorization header', 401)
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+    throw new Error('Missing SUPABASE_URL, SUPABASE_ANON_KEY, or SUPABASE_SERVICE_ROLE_KEY')
+  }
+
   const userClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
+    supabaseUrl,
+    anonKey,
     { global: { headers: { Authorization: authHeader } } }
   )
 
@@ -30,10 +37,7 @@ export async function authenticateRequest(req: Request): Promise<AuthResult> {
     throw new AuthError('Invalid or expired session', 401)
   }
 
-  const adminClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
+  const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
   return { user: { id: user.id, email: user.email }, userClient, adminClient }
 }
@@ -41,7 +45,11 @@ export async function authenticateRequest(req: Request): Promise<AuthResult> {
 /** Verify this is a service-role call (for cron jobs) */
 export function verifyServiceRole(req: Request): SupabaseClient {
   const authHeader = req.headers.get('Authorization') ?? ''
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  if (!serviceKey || !supabaseUrl) {
+    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  }
 
   // Accept service role key via Authorization header OR verify it's a service_role JWT
   const token = authHeader.replace('Bearer ', '')
@@ -59,10 +67,7 @@ export function verifyServiceRole(req: Request): SupabaseClient {
     throw new AuthError('Unauthorized: service role required', 403)
   }
 
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    serviceKey
-  )
+  return createClient(supabaseUrl, serviceKey)
 }
 
 export class AuthError extends Error {

@@ -9,10 +9,10 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-(--color-bg-base)">
-      <div className="flex h-14 shrink-0 items-center px-6">
+      <div className="flex h-14 shrink-0 items-center px-4 sm:px-6">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-lg font-bold tracking-tight text-(--color-accent)"
+          className="min-h-[44px] flex items-center gap-2 text-lg font-bold tracking-tight text-(--color-accent)"
         >
           <div className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-(--color-accent) text-white font-bold text-xs">
             SF

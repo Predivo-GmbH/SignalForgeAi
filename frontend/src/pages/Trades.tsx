@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import { Tooltip } from "@/components/ui/Tooltip";
 import {
   ArrowUpRight,
@@ -40,7 +42,7 @@ function StatCard({
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 flex items-center gap-3">
       <div className="w-10 h-10 rounded-lg bg-(--color-accent-soft) flex items-center justify-center shrink-0">
-        <Icon className="w-5 h-5 text-(--color-accent)" />
+        <Icon className="w-5 h-5 text-(--color-accent)" aria-hidden="true" />
       </div>
       <div className="min-w-0">
         {tooltip ? (
@@ -86,7 +88,7 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
 
   const hasReasoning = trade.ai_reasoning || trade.triggers?.length || trade.regime;
   if (!hasReasoning) {
-    return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" /></span>;
+    return <span className="text-(--color-text-secondary)/40"><Info className="w-3.5 h-3.5" aria-hidden="true" /></span>;
   }
 
   let tooltipStyle: React.CSSProperties = {};
@@ -101,10 +103,13 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
     };
   }
 
+  const handleClick = () => { setShow((prev) => !prev); };
+
   return (
     <div className="relative inline-flex" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       <span
         ref={triggerRef}
+        onClick={handleClick}
         className={cn(
           "p-0.5 rounded transition-colors cursor-help",
           trade.ai_recommendation === "confirm"
@@ -115,7 +120,7 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
         )}
         aria-label="Trade reasoning"
       >
-        <Info className="w-3.5 h-3.5" />
+        <Info className="w-3.5 h-3.5" aria-hidden="true" />
       </span>
       {show && createPortal(
         <div
@@ -156,7 +161,7 @@ function ReasoningTooltip({ trade }: { trade: Trade }) {
                 {trade.ai_recommendation && (
                   <span
                     className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                      "px-1.5 py-0.5 rounded text-xs font-bold uppercase",
                       trade.ai_recommendation === "confirm"
                         ? "bg-(--color-positive)/15 text-(--color-positive)"
                         : trade.ai_recommendation === "caution"
@@ -228,15 +233,15 @@ function TradeRow({ trade }: { trade: Trade }) {
   return (
     <tr className="border-b border-(--color-border)/50 hover:bg-(--color-bg-elevated)/50 transition-colors">
       {/* Time — always visible */}
-      <td className="px-2 sm:px-3 py-2.5 text-xs sm:text-sm text-(--color-text-secondary) whitespace-nowrap">
+      <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-(--color-text-secondary) whitespace-nowrap">
         {formatTime(trade.exit_time ?? trade.entry_time)}
       </td>
       {/* Symbol — always visible */}
-      <td className="px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-medium text-(--color-text-primary) whitespace-nowrap">
+      <td className="px-2 sm:px-3 py-3 text-xs sm:text-sm font-medium text-(--color-text-primary) whitespace-nowrap">
         {trade.symbol}
       </td>
       {/* Side — always visible */}
-      <td className="px-2 sm:px-3 py-2.5 whitespace-nowrap">
+      <td className="px-2 sm:px-3 py-3 whitespace-nowrap">
         <span
           className={cn(
             "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase",
@@ -246,15 +251,15 @@ function TradeRow({ trade }: { trade: Trade }) {
           )}
         >
           {isLong ? (
-            <ArrowUpRight className="w-3 h-3" />
+            <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
           ) : (
-            <ArrowDownRight className="w-3 h-3" />
+            <ArrowDownRight className="w-3 h-3" aria-hidden="true" />
           )}
           {isLong ? "BUY" : "SELL"}
         </span>
       </td>
       {/* Status — hidden on mobile */}
-      <td className="px-2 sm:px-3 py-2.5 whitespace-nowrap hidden sm:table-cell">
+      <td className="px-2 sm:px-3 py-3 whitespace-nowrap hidden sm:table-cell">
         {isOpen ? (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-(--color-positive)/10 text-(--color-positive)">
             <span className="relative flex h-2 w-2">
@@ -270,35 +275,35 @@ function TradeRow({ trade }: { trade: Trade }) {
         )}
       </td>
       {/* Entry — hidden below md */}
-      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
         {fmtUsd(trade.entry_price)}
       </td>
       {/* Exit — hidden below md */}
-      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
         {isOpen ? <span className="text-(--color-text-secondary)">--</span> : fmtUsd(trade.exit_price)}
       </td>
       {/* Size — hidden below lg */}
-      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap hidden lg:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap hidden lg:table-cell">
         {trade.position_size?.toFixed(4) ?? "--"}
       </td>
       {/* Total — hidden below md */}
-      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-(--color-text-primary) text-right whitespace-nowrap hidden md:table-cell">
         {fmtUsd(trade.entry_price * trade.position_size)}
       </td>
       {/* P&L — always visible */}
-      <td className={cn("px-2 sm:px-3 py-2.5 text-xs sm:text-sm font-mono tabular-nums text-right font-semibold whitespace-nowrap", pnlColor(trade.pnl))}>
+      <td className={cn("px-2 sm:px-3 py-3 text-xs sm:text-sm font-mono tabular-nums text-right font-semibold whitespace-nowrap", pnlColor(trade.pnl))}>
         {formatPnl(trade.pnl)}
       </td>
       {/* P&L % — hidden on mobile */}
-      <td className={cn("px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap hidden sm:table-cell", pnlColor(trade.pnl_pct))}>
+      <td className={cn("px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-right whitespace-nowrap hidden sm:table-cell", pnlColor(trade.pnl_pct))}>
         {formatPnlPercent(trade.pnl_pct)}
       </td>
       {/* R:R — hidden below lg */}
-      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap hidden lg:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-(--color-text-secondary) text-right whitespace-nowrap hidden lg:table-cell">
         {trade.risk_reward != null ? trade.risk_reward.toFixed(2) : "--"}
       </td>
       {/* Score — hidden below lg */}
-      <td className="px-2 sm:px-3 py-2.5 text-sm font-mono tabular-nums text-right whitespace-nowrap hidden lg:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-sm font-mono tabular-nums text-right whitespace-nowrap hidden lg:table-cell">
         {trade.confluence_score != null ? (
           <span
             className={cn(
@@ -316,11 +321,11 @@ function TradeRow({ trade }: { trade: Trade }) {
         )}
       </td>
       {/* Exit Reason — hidden below md */}
-      <td className="px-2 sm:px-3 py-2.5 text-xs text-(--color-text-secondary) whitespace-nowrap hidden md:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-xs text-(--color-text-secondary) whitespace-nowrap hidden md:table-cell">
         {trade.exit_reason ?? (isOpen ? "" : "--")}
       </td>
       {/* Info — hidden on mobile */}
-      <td className="px-2 sm:px-3 py-2.5 text-center hidden sm:table-cell">
+      <td className="px-2 sm:px-3 py-3 text-center hidden sm:table-cell">
         <ReasoningTooltip trade={trade} />
       </td>
     </tr>
@@ -329,6 +334,8 @@ function TradeRow({ trade }: { trade: Trade }) {
 
 /* ----- Main Page ----- */
 export function TradesPage() {
+  usePageTitle("Trades");
+  useNoIndex();
   const [page, setPage] = useState(0);
   const offset = page * PAGE_SIZE;
 
@@ -404,7 +411,8 @@ export function TradesPage() {
 
       {/* Trade table */}
       <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative">
+          <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-(--color-bg-surface) to-transparent z-10 sm:hidden" />
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-(--color-border) bg-(--color-bg-elevated)/50">
@@ -412,7 +420,7 @@ export function TradesPage() {
                   <th
                     key={i}
                     className={cn(
-                      "px-2 sm:px-3 py-2.5 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider whitespace-nowrap",
+                      "px-2 sm:px-3 py-3 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider whitespace-nowrap",
                       col.align,
                       col.hide,
                     )}
@@ -456,10 +464,10 @@ export function TradesPage() {
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="p-1.5 rounded-lg hover:bg-(--color-bg-elevated) disabled:opacity-30 transition-colors"
+                className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-(--color-bg-elevated) disabled:opacity-30 transition-colors"
                 aria-label="Previous page"
               >
-                <ChevronLeft className="w-4 h-4 text-(--color-text-secondary)" />
+                <ChevronLeft className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
               </button>
               <span className="flex items-center px-3 text-sm font-mono text-(--color-text-secondary)">
                 {page + 1} / {totalPages}
@@ -467,10 +475,10 @@ export function TradesPage() {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="p-1.5 rounded-lg hover:bg-(--color-bg-elevated) disabled:opacity-30 transition-colors"
+                className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-(--color-bg-elevated) disabled:opacity-30 transition-colors"
                 aria-label="Next page"
               >
-                <ChevronRight className="w-4 h-4 text-(--color-text-secondary)" />
+                <ChevronRight className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
               </button>
             </div>
           </div>

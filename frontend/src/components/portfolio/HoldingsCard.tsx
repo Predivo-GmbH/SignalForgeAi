@@ -33,7 +33,8 @@ import { useBrokerConnections } from "@/hooks/useBrokerConnections";
 import { AssetDetailModal } from "./AssetDetailModal";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { CoinIcon } from "./CoinIcon";
-import { DONUT_COLORS } from "./CoinIcon";
+import { getDonutColors } from "./CoinIcon";
+import { cssVar } from "@/lib/colors";
 import { DonutChart } from "./DonutChart";
 import type { DonutSlice } from "./DonutChart";
 import { HoldingForm } from "./HoldingFormModal";
@@ -64,7 +65,7 @@ function SourceBadge({ source, onClick, active }: { source: string; onClick?: ()
     <span
       onClick={onClick}
       className={cn(
-        "text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap transition-all duration-150",
+        "text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap transition-all duration-150",
         style.cls,
         onClick && "cursor-pointer hover:opacity-80",
         active && "ring-2 ring-current/30 scale-110",
@@ -78,10 +79,10 @@ function SourceBadge({ source, onClick, active }: { source: string; onClick?: ()
 /* ---- Exchange Logo ---- */
 
 function ExchangeLogo({ source, size = 18 }: { source: string; size?: number }) {
-  const color = SOURCE_STYLE[source]?.color ?? "#6b7280";
+  const color = cssVar(SOURCE_STYLE[source]?.colorVar ?? "--color-muted");
 
-  if (source === "manual") return <Wallet size={size} className="shrink-0 text-(--color-text-secondary)" />;
-  if (source === "all") return <LayoutGrid size={size} className="shrink-0 text-(--color-accent)" />;
+  if (source === "manual") return <Wallet size={size} className="shrink-0 text-(--color-text-secondary)" aria-hidden="true" />;
+  if (source === "all") return <LayoutGrid size={size} className="shrink-0 text-(--color-accent)" aria-hidden="true" />;
 
   // Inline SVG logos for each exchange
   return (
@@ -194,22 +195,22 @@ function PortfolioOverviewHeader({
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {/* Current Balance */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <Tooltip text="The total USD value of all your crypto holdings right now."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help">Balance</p></Tooltip>
+        <Tooltip text="The total USD value of all your crypto holdings right now."><p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help">Balance</p></Tooltip>
         <p className="text-base sm:text-lg font-bold font-mono text-(--color-text-primary)">{fmtUsd(totalValue)}</p>
         <p className="text-xs text-(--color-text-secondary)">{combined.length} asset{combined.length !== 1 ? "s" : ""}</p>
       </div>
 
       {/* 24h Change */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <Tooltip text="How much your total portfolio value changed in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">24h Change</span><span className="hidden sm:inline">24h Portfolio Change</span></p></Tooltip>
+        <Tooltip text="How much your total portfolio value changed in the last 24 hours."><p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">24h Change</span><span className="hidden sm:inline">24h Portfolio Change</span></p></Tooltip>
         <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(change24hUsd))}>
           {change24hUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))}
         </p>
         <div className="flex items-center gap-1">
           {change24hPct >= 0 ? (
-            <TrendingUp className={cn("w-3 h-3", pnlColor(change24hUsd))} />
+            <TrendingUp className={cn("w-3 h-3", pnlColor(change24hUsd))} aria-hidden="true" />
           ) : (
-            <TrendingDown className={cn("w-3 h-3", pnlColor(change24hUsd))} />
+            <TrendingDown className={cn("w-3 h-3", pnlColor(change24hUsd))} aria-hidden="true" />
           )}
           <span className={cn("text-xs font-mono", pnlColor(change24hUsd))}>
             {change24hPct >= 0 ? "+" : ""}{change24hPct.toFixed(2)}%
@@ -219,7 +220,7 @@ function PortfolioOverviewHeader({
 
       {/* Total P/L */}
       <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 space-y-1">
-        <Tooltip text="Cumulative profit or loss based on your cost basis vs current market value."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">Total P/L</span><span className="hidden sm:inline">Total Profit / Loss</span></p></Tooltip>
+        <Tooltip text="Cumulative profit or loss based on your cost basis vs current market value."><p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">Total P/L</span><span className="hidden sm:inline">Total Profit / Loss</span></p></Tooltip>
         {hasCostBasis ? (
           <>
             <p className={cn("text-base sm:text-lg font-bold font-mono", pnlColor(totalPnlUsd))}>
@@ -227,9 +228,9 @@ function PortfolioOverviewHeader({
             </p>
             <div className="flex items-center gap-1">
               {totalPnlUsd >= 0 ? (
-                <TrendingUp className={cn("w-3 h-3", pnlColor(totalPnlUsd))} />
+                <TrendingUp className={cn("w-3 h-3", pnlColor(totalPnlUsd))} aria-hidden="true" />
               ) : (
-                <TrendingDown className={cn("w-3 h-3", pnlColor(totalPnlUsd))} />
+                <TrendingDown className={cn("w-3 h-3", pnlColor(totalPnlUsd))} aria-hidden="true" />
               )}
               <span className={cn("text-xs font-mono", pnlColor(totalPnlUsd))}>
                 {totalPnlPct != null ? `${totalPnlPct >= 0 ? "+" : ""}${totalPnlPct.toFixed(2)}%` : ""}
@@ -252,7 +253,7 @@ function PortfolioOverviewHeader({
           topPerformer && "cursor-pointer hover:bg-(--color-bg-elevated)/80 hover:-translate-y-0.5",
         )}
       >
-        <Tooltip text="The asset with the highest dollar gain in the last 24 hours."><p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">Top 24h</span><span className="hidden sm:inline">Top Performer 24h</span></p></Tooltip>
+        <Tooltip text="The asset with the highest dollar gain in the last 24 hours."><p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider cursor-help"><span className="sm:hidden">Top 24h</span><span className="hidden sm:inline">Top Performer 24h</span></p></Tooltip>
         {topPerformer ? (
           <>
             <div className="flex items-center gap-2">
@@ -303,6 +304,7 @@ function SourceBreakdown({
   const isAllActive = activeSource === null;
 
   return (
+    <div className="relative">
     <div className="grid grid-cols-2 gap-2 sm:flex sm:overflow-x-auto sm:p-1 sm:-m-1 sm:scrollbar-thin">
       {/* "All" card — always first, selected by default */}
       <button
@@ -322,7 +324,7 @@ function SourceBreakdown({
         <p className="text-sm font-bold font-mono text-(--color-text-primary)">
           {fmtCompact(totalValue)}
         </p>
-        <p className="text-[10px] font-mono text-(--color-text-secondary)">
+        <p className="text-xs font-mono text-(--color-text-secondary)">
           {totalCount} asset{totalCount !== 1 ? "s" : ""} · 100%
         </p>
       </button>
@@ -330,7 +332,7 @@ function SourceBreakdown({
       {bySource.map((s) => {
         const style = SOURCE_STYLE[s.source];
         const isActive = activeSource === s.source;
-        const color = style?.color ?? "#6b7280";
+        const color = cssVar(style?.colorVar ?? "--color-muted");
         return (
           <button
             key={s.source}
@@ -354,12 +356,14 @@ function SourceBreakdown({
             <p className="text-sm font-bold font-mono text-(--color-text-primary)">
               {fmtCompact(s.value)}
             </p>
-            <p className="text-[10px] font-mono text-(--color-text-secondary)">
+            <p className="text-xs font-mono text-(--color-text-secondary)">
               {s.count} asset{s.count !== 1 ? "s" : ""} · {s.pct.toFixed(1)}%
             </p>
           </button>
         );
       })}
+    </div>
+    <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-(--color-bg-surface) to-transparent pointer-events-none hidden sm:block" />
     </div>
   );
 }
@@ -440,39 +444,43 @@ function PortfolioValueChart({
   );
 
   const isPositive = change24hUsd >= 0;
-  const lineColor = isPositive ? "#10b981" : "#ef4444";
-  const topColor = isPositive ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)";
-  const bottomColor = isPositive ? "rgba(16, 185, 129, 0)" : "rgba(239, 68, 68, 0)";
+  const posColor = cssVar("--color-positive");
+  const negColor = cssVar("--color-negative");
+  const lineColor = isPositive ? posColor : negColor;
+  const topColor = isPositive ? `${posColor}26` : `${negColor}26`;
+  const bottomColor = isPositive ? `${posColor}00` : `${negColor}00`;
 
   // Create chart on mount
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const isDark = document.documentElement.classList.contains("dark");
+    const textSec = cssVar("--color-text-secondary");
+    const borderCol = cssVar("--color-border");
+    const elevated = cssVar("--color-bg-elevated");
 
     const chart = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: isDark ? "#8B8BA0" : "#6B6B80",
-        fontSize: 11,
+        textColor: textSec,
+        fontSize: 12,
         attributionLogo: false,
       },
       grid: {
         vertLines: { visible: false },
-        horzLines: { color: isDark ? "rgba(42, 42, 60, 0.4)" : "rgba(229, 226, 220, 0.6)", style: 1 },
+        horzLines: { color: `${borderCol}66`, style: 1 },
       },
       width: containerRef.current.clientWidth,
       height: containerRef.current.clientHeight,
       crosshair: {
         vertLine: {
-          color: isDark ? "rgba(139, 139, 160, 0.3)" : "rgba(107, 107, 128, 0.3)",
+          color: `${textSec}4D`,
           width: 1,
-          labelBackgroundColor: isDark ? "#1C1C2E" : "#F0EDE8",
+          labelBackgroundColor: elevated,
         },
         horzLine: {
-          color: isDark ? "rgba(139, 139, 160, 0.3)" : "rgba(107, 107, 128, 0.3)",
+          color: `${textSec}4D`,
           width: 1,
-          labelBackgroundColor: isDark ? "#1C1C2E" : "#F0EDE8",
+          labelBackgroundColor: elevated,
         },
       },
       timeScale: {
@@ -539,7 +547,7 @@ function PortfolioValueChart({
         crosshairMarkerBackgroundColor: lineColor,
         crosshairMarkerRadius: 4,
         crosshairMarkerBorderWidth: 2,
-        crosshairMarkerBorderColor: "#FFFFFF",
+        crosshairMarkerBorderColor: cssVar("--color-bg-surface"),
         lastValueVisible: false,
         priceLineVisible: false,
       });
@@ -569,7 +577,7 @@ function PortfolioValueChart({
               key={p}
               onClick={() => setPeriod(p)}
               className={cn(
-                "text-[10px] font-medium px-1.5 sm:px-2 py-0.5 rounded transition-colors",
+                "text-xs font-medium px-2 sm:px-3 py-1.5 sm:py-0.5 min-h-[44px] rounded transition-colors",
                 period === p
                   ? "bg-(--color-text-primary) text-(--color-bg-surface)"
                   : "text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated)/60",
@@ -587,11 +595,11 @@ function PortfolioValueChart({
           <span className="text-base sm:text-lg font-bold font-mono text-(--color-text-primary)">
             {hoverValue ? fmtUsd(hoverValue.value) : fmtUsd(totalValue)}
           </span>
-          <span className={cn("text-[11px] sm:text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
+          <span className={cn("text-xs sm:text-xs font-mono font-medium", isPositive ? "text-(--color-positive)" : "text-(--color-negative)")}>
             {isPositive ? "+" : ""}{fmtUsd(Math.abs(change24hUsd))} ({isPositive ? "+" : ""}{change24hPct.toFixed(2)}%)
           </span>
         </div>
-        <p className={cn("text-[11px] font-mono text-(--color-text-secondary) h-4", !hoverValue && "invisible")}>
+        <p className={cn("text-xs font-mono text-(--color-text-secondary) h-4", !hoverValue && "invisible")}>
           {hoverValue ? `${hoverValue.date}, ${hoverValue.time}` : "\u00A0"}
         </p>
       </div>
@@ -612,7 +620,7 @@ function PortfolioValueChart({
               top: Math.max(0, hoverValue.y - 60),
             }}
           >
-            <p className="text-[10px] text-(--color-text-secondary) font-mono">
+            <p className="text-xs text-(--color-text-secondary) font-mono">
               {hoverValue.date}, {hoverValue.time}
             </p>
             <p className="text-sm font-bold font-mono text-(--color-text-primary)">
@@ -622,7 +630,7 @@ function PortfolioValueChart({
         )}
         {!(canRender && chartData.length >= 2) && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-[11px] text-(--color-text-secondary)/50 text-center">
+            <p className="text-xs text-(--color-text-secondary)/50 text-center">
               {period !== "24H"
                 ? "Historical tracking coming soon"
                 : "Waiting for price data..."}
@@ -701,21 +709,21 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
   const progressPct = Math.min(stepsProgress + Math.max(extraProgress, 0), 95);
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="relative">
-          <Wallet className="w-5 h-5 text-(--color-accent)" />
+          <Wallet className="w-5 h-5 text-(--color-accent)" aria-hidden="true" />
           <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-(--color-accent) animate-ping" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-(--color-text-primary)">Loading Portfolio</h3>
-            <span className="text-[10px] font-mono text-(--color-text-secondary) tabular-nums">
+            <span className="text-xs font-mono text-(--color-text-secondary) tabular-nums">
               {elapsed}s
             </span>
           </div>
-          <p className="text-[11px] text-(--color-text-secondary)">
+          <p className="text-xs text-(--color-text-secondary)">
             {activeIdx >= lastIdx
               ? _WAIT_MESSAGES[waitMsgIdx]
               : `Fetching balances from ${steps.length - 2} source${steps.length - 2 !== 1 ? "s" : ""}...`}
@@ -759,7 +767,7 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
                     <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 ) : isActive ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-(--color-accent)" />
+                  <Loader2 className="w-4 h-4 animate-spin text-(--color-accent)" aria-hidden="true" />
                 ) : (
                   <div className="w-3 h-3 rounded-full border border-(--color-border)" />
                 )}
@@ -768,7 +776,7 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
               {/* Source badge + label */}
               <div className="flex items-center gap-2 min-w-0">
                 {style && step.source !== "prices" && step.source !== "finalize" ? (
-                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}>
+                  <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}>
                     {step.label}
                   </span>
                 ) : (
@@ -779,7 +787,7 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
               </div>
 
               {/* Status text */}
-              <span className="ml-auto text-[10px] font-medium whitespace-nowrap">
+              <span className="ml-auto text-xs font-medium whitespace-nowrap">
                 {isDone ? (
                   <span className="text-(--color-positive)">Done</span>
                 ) : isActive ? (
@@ -797,7 +805,7 @@ function PortfolioLoader({ brokers }: { brokers: string[] }) {
 
       {/* Elapsed hint for long loads */}
       {elapsed >= 10 && (
-        <p className="text-[10px] text-(--color-text-secondary)/60 text-center animate-pulse">
+        <p className="text-xs text-(--color-text-secondary)/60 text-center animate-pulse">
           Fetching prices from multiple exchanges can take a moment
         </p>
       )}
@@ -917,14 +925,14 @@ function SortHeader({
   return (
     <th
       className={cn(
-        "text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3 cursor-pointer select-none hover:text-(--color-text-primary) transition-colors",
+        "text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-3 cursor-pointer select-none hover:text-(--color-text-primary) transition-colors min-h-[44px]",
         className,
       )}
       onClick={() => onSort(sortKey)}
     >
       <span className="inline-flex items-center gap-0.5">
         {label}
-        {isActive && (activeDir === "desc" ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />)}
+        {isActive && (activeDir === "desc" ? <ChevronDown className="w-3 h-3" aria-hidden="true" /> : <ChevronUp className="w-3 h-3" aria-hidden="true" />)}
       </span>
     </th>
   );
@@ -977,7 +985,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
     wasLoadingRef.current = isLoading;
   }, [isLoading]);
 
-  const allHoldings = data?.holdings ?? [];
+  const allHoldings = useMemo(() => data?.holdings ?? [], [data?.holdings]);
   const totalValue = overrideTotal ?? data?.total_value_usd ?? null;
 
   function handleSort(key: SortKey) {
@@ -1078,7 +1086,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
       label: c.symbol,
       value: c.totalValue,
       pct: (Math.max(c.totalValue, 0.01) / effectiveTotal) * 100,
-      color: DONUT_COLORS[i % DONUT_COLORS.length],
+      color: getDonutColors()[i % getDonutColors().length],
     }));
 
     if (restValue > 0 || rest.length > 0) {
@@ -1087,7 +1095,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
         label: `Other (${rest.length})`,
         value: restValue,
         pct: (rv / effectiveTotal) * 100,
-        color: "#4b5563", // gray
+        color: cssVar("--color-muted"),
       });
     }
 
@@ -1125,28 +1133,28 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
       <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-(--color-accent)" />
+            <Wallet className="w-4 h-4 text-(--color-accent)" aria-hidden="true" />
             <Tooltip text="Your complete crypto portfolio aggregated from all connected exchanges and manual entries."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Crypto Holdings</h3></Tooltip>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+            className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors min-h-[44px]"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             Add holding
           </button>
         </div>
         {showForm && <HoldingForm onClose={() => setShowForm(false)} />}
         {!showForm && (
           <div className="flex flex-col items-center justify-center py-6 gap-2">
-            <Wallet className="w-8 h-8 text-(--color-text-secondary)/30" />
+            <Wallet className="w-8 h-8 text-(--color-text-secondary)/30" aria-hidden="true" />
             <p className="text-sm text-(--color-text-secondary)">No holdings found</p>
             <p className="text-xs text-(--color-text-secondary)/60">
               Connect an exchange or add holdings manually
             </p>
             <button
               onClick={() => setShowForm(true)}
-              className="text-xs font-medium text-(--color-accent) hover:underline mt-1"
+              className="text-xs font-medium text-(--color-accent) hover:underline mt-1 min-h-[44px]"
             >
               Add your first holding
             </button>
@@ -1168,7 +1176,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-(--color-accent)" />
+            <Wallet className="w-4 h-4 text-(--color-accent)" aria-hidden="true" />
             <Tooltip text="Allocation breakdown showing how your portfolio is distributed across assets."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Portfolio Overview</h3></Tooltip>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
@@ -1215,7 +1223,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
               />
             ) : (
               <div className="flex flex-col items-center justify-center py-8 gap-2">
-                <Wallet className="w-8 h-8 text-(--color-text-secondary)/20" />
+                <Wallet className="w-8 h-8 text-(--color-text-secondary)/20" aria-hidden="true" />
                 <p className="text-xs text-(--color-text-secondary)/60">
                   {sourceFilter
                     ? `No holdings from ${SOURCE_STYLE[sourceFilter]?.label ?? sourceFilter}`
@@ -1286,7 +1294,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
                 Stablecoins
               </span>
             )}
-            <span className="text-[11px] text-(--color-text-secondary) font-mono">
+            <span className="text-xs text-(--color-text-secondary) font-mono">
               {filteredCombined.length} of {allCombined.length} assets
             </span>
           </div>
@@ -1294,7 +1302,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
             onClick={clearAllFilters}
             className="flex items-center gap-1 text-xs font-medium text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3 h-3" aria-hidden="true" />
             Clear
           </button>
         </div>
@@ -1315,9 +1323,9 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
             {!showForm && !editItem && (
               <button
                 onClick={() => setShowForm(true)}
-                className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors min-h-[44px]"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                 Add
               </button>
             )}
@@ -1326,13 +1334,14 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Search */}
             <div className="relative flex-1 min-w-[120px] max-w-[200px]">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary)" />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary)" aria-hidden="true" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search assets..."
-                className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-8 pr-3 py-1.5 text-xs text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 placeholder:text-(--color-text-secondary)/50"
+                aria-label="Search assets"
+                className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-8 pr-3 py-1.5 min-h-[44px] text-base sm:text-xs text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50 placeholder:text-(--color-text-secondary)/50"
               />
             </div>
 
@@ -1340,7 +1349,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
             <button
               onClick={() => applyFilter("category", "stablecoins")}
               className={cn(
-                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap",
+                "flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 min-h-[44px] rounded-lg text-xs sm:text-xs font-medium transition-colors border whitespace-nowrap",
                 categoryFilter === "stablecoins"
                   ? "bg-(--color-accent)/10 border-(--color-accent)/30 text-(--color-accent)"
                   : "bg-(--color-bg-elevated) border-(--color-border) text-(--color-text-secondary) hover:text-(--color-text-primary)",
@@ -1354,13 +1363,13 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
               <button
                 onClick={() => setHideSmall(!hideSmall)}
                 className={cn(
-                  "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-colors border whitespace-nowrap",
+                  "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 min-h-[44px] rounded-lg text-xs sm:text-xs font-medium transition-colors border whitespace-nowrap",
                   hideSmall
                     ? "bg-(--color-accent)/10 border-(--color-accent)/30 text-(--color-accent)"
                     : "bg-(--color-bg-elevated) border-(--color-border) text-(--color-text-secondary) hover:text-(--color-text-primary)",
                 )}
               >
-                {hideSmall ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {hideSmall ? <EyeOff className="w-3 h-3" aria-hidden="true" /> : <Eye className="w-3 h-3" aria-hidden="true" />}
                 {hideSmall ? `${smallCount} hidden` : `Hide <$1`}
               </button>
             )}
@@ -1381,8 +1390,9 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
             {searchQuery ? "No assets match your search" : hasActiveFilter ? "No assets match this filter" : "No assets to display"}
           </p>
         ) : (
+          <div className="relative">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed sm:table-auto">
+            <table className="w-full text-sm table-auto">
               <thead>
                 <tr className="border-b border-(--color-border)">
                   <SortHeader label="#" sortKey="rank" activeKey={sortKey} activeDir={sortDir} onSort={handleSort} className="text-left w-10 hidden sm:table-cell" />
@@ -1461,7 +1471,7 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
                               {footerPnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(footerPnlUsd))}
                             </span>
                             {footerPnlPct != null && (
-                              <span className={cn("text-[10px]", pnlColor(footerPnlPct))}>
+                              <span className={cn("text-xs", pnlColor(footerPnlPct))}>
                                 {footerPnlPct >= 0 ? "+" : ""}{footerPnlPct.toFixed(1)}%
                               </span>
                             )}
@@ -1477,6 +1487,8 @@ export function HoldingsCard({ overrideTotal }: { overrideTotal?: number }) {
                 );
               })()}
             </table>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-(--color-bg-surface) to-transparent pointer-events-none sm:hidden" />
           </div>
         )}
       </div>

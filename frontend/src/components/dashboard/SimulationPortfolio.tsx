@@ -103,21 +103,23 @@ export function SimulationPortfolio({
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" aria-hidden="true" />
         <input
           type="text"
           placeholder="Search assets..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+          aria-label="Search assets"
+          className="w-full pl-9 pr-3 py-2 min-h-[44px] rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-base sm:text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         />
       </div>
 
       {/* Holdings table */}
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--color-bg-surface)] to-transparent z-10" />
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-wider border-b border-[var(--color-border)]">
+            <tr className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider border-b border-[var(--color-border)]">
               <th
                 className="text-left py-2 px-2 cursor-pointer hover:text-[var(--color-text-primary)]"
                 onClick={() => toggleSort("symbol")}
@@ -125,11 +127,11 @@ export function SimulationPortfolio({
                 Asset
                 <SortIcon k="symbol" />
               </th>
-              <th className="text-right py-2 px-2">Quantity</th>
+              <th className="text-right py-2 px-2 hidden sm:table-cell">Quantity</th>
               {type === "paper_trading" && (
-                <th className="text-right py-2 px-2">Change</th>
+                <th className="text-right py-2 px-2 hidden sm:table-cell">Change</th>
               )}
-              <th className="text-right py-2 px-2">Price</th>
+              <th className="text-right py-2 px-2 hidden sm:table-cell">Price</th>
               <th
                 className="text-right py-2 px-2 cursor-pointer hover:text-[var(--color-text-primary)]"
                 onClick={() => toggleSort("value")}
@@ -145,7 +147,7 @@ export function SimulationPortfolio({
                 <SortIcon k="pnl" />
               </th>
               <th
-                className="text-right py-2 px-2 cursor-pointer hover:text-[var(--color-text-primary)]"
+                className="text-right py-2 px-2 cursor-pointer hover:text-[var(--color-text-primary)] hidden sm:table-cell"
                 onClick={() => toggleSort("change")}
               >
                 24h
@@ -185,7 +187,7 @@ function SummaryCard({
 }) {
   return (
     <div className="bg-[var(--color-bg-elevated)]/50 rounded-lg p-3">
-      <span className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-wider">
+      <span className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">
         {label}
       </span>
       <p
@@ -220,7 +222,7 @@ function HoldingRow({
             <span className="font-medium text-[var(--color-text-primary)]">
               {h.symbol}
             </span>
-            <span className="text-[11px] text-[var(--color-text-secondary)] ml-1.5 hidden sm:inline">
+            <span className="text-xs text-[var(--color-text-secondary)] ml-1.5 hidden sm:inline">
               {name}
             </span>
           </div>
@@ -228,13 +230,13 @@ function HoldingRow({
       </td>
 
       {/* Quantity */}
-      <td className="text-right py-2.5 px-2 text-[var(--color-text-primary)] tabular-nums">
+      <td className="text-right py-2.5 px-2 text-[var(--color-text-primary)] tabular-nums hidden sm:table-cell">
         {h.quantity < 1 ? h.quantity.toFixed(6) : h.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}
       </td>
 
       {/* Quantity change (paper only) */}
       {showQuantityChange && (
-        <td className="text-right py-2.5 px-2 tabular-nums">
+        <td className="text-right py-2.5 px-2 tabular-nums hidden sm:table-cell">
           {h.quantity_change != null && h.quantity_change !== 0 ? (
             <span
               className="text-xs"
@@ -252,7 +254,7 @@ function HoldingRow({
       )}
 
       {/* Price */}
-      <td className="text-right py-2.5 px-2 text-[var(--color-text-primary)] tabular-nums">
+      <td className="text-right py-2.5 px-2 text-[var(--color-text-primary)] tabular-nums hidden sm:table-cell">
         {fmtUsd(h.current_price)}
       </td>
 
@@ -261,7 +263,7 @@ function HoldingRow({
         <div className="text-[var(--color-text-primary)] tabular-nums">
           {fmtUsd(h.value_usd)}
         </div>
-        <div className="text-[10px] text-[var(--color-text-secondary)]">
+        <div className="text-xs text-[var(--color-text-secondary)]">
           {alloc.toFixed(1)}%
         </div>
       </td>
@@ -273,7 +275,7 @@ function HoldingRow({
           {fmtUsd(h.pnl_usd)}
         </div>
         <div
-          className="text-[11px]"
+          className="text-xs"
           style={{ color: pnlColor(h.pnl_pct) }}
         >
           {h.pnl_pct >= 0 ? "+" : ""}
@@ -282,16 +284,16 @@ function HoldingRow({
       </td>
 
       {/* 24h change */}
-      <td className="text-right py-2.5 px-2 tabular-nums">
+      <td className="text-right py-2.5 px-2 tabular-nums hidden sm:table-cell">
         {h.change_24h_pct != null ? (
           <span
             className="flex items-center justify-end gap-0.5"
             style={{ color: pnlColor(h.change_24h_pct) }}
           >
             {h.change_24h_pct >= 0 ? (
-              <TrendingUp className="w-3 h-3" />
+              <TrendingUp className="w-3 h-3" aria-hidden="true" />
             ) : (
-              <TrendingDown className="w-3 h-3" />
+              <TrendingDown className="w-3 h-3" aria-hidden="true" />
             )}
             {h.change_24h_pct >= 0 ? "+" : ""}
             {h.change_24h_pct.toFixed(2)}%

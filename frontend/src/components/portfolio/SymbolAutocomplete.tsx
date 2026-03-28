@@ -12,6 +12,7 @@ export function SymbolAutocomplete({
 }) {
   const [open, setOpen] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(-1);
+  const [flipUp, setFlipUp] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +37,12 @@ export function SymbolAutocomplete({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    if (!open || !wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setFlipUp(rect.bottom > window.innerHeight / 2);
+  }, [open]);
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -87,12 +94,17 @@ export function SymbolAutocomplete({
         onKeyDown={handleKeyDown}
         placeholder="BTC"
         autoComplete="off"
-        className="w-full bg-(--color-bg-surface) border border-(--color-border) rounded-lg px-2.5 py-1.5 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+        aria-label="Crypto symbol"
+        aria-expanded={showDropdown && !exactMatch}
+        aria-autocomplete="list"
+        role="combobox"
+        className="w-full bg-(--color-bg-surface) border border-(--color-border) rounded-lg px-2.5 py-1.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
       />
       {showDropdown && !exactMatch && (
         <div
           ref={listRef}
-          className="absolute z-50 left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg py-1"
+          role="listbox"
+          className={cn("absolute z-50 left-0 right-0 max-h-48 overflow-y-auto bg-(--color-bg-surface) border border-(--color-border) rounded-lg shadow-lg py-1", flipUp ? "bottom-full mb-1" : "top-full mt-1")}
         >
           {suggestions.map((entry, i) => (
             <button
@@ -102,7 +114,7 @@ export function SymbolAutocomplete({
               onClick={() => selectItem(entry)}
               onMouseEnter={() => setHighlightIdx(i)}
               className={cn(
-                "w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-colors",
+                "w-full flex items-center gap-2 px-2.5 py-1.5 min-h-[44px] text-left transition-colors",
                 i === highlightIdx
                   ? "bg-(--color-accent)/10"
                   : "hover:bg-(--color-bg-elevated)",

@@ -10,14 +10,14 @@ import { CoinIcon } from "./CoinIcon";
 
 /* ---- Shared constants ---- */
 
-export const SOURCE_STYLE: Record<string, { label: string; cls: string; color: string }> = {
-  binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500", color: "#f59e0b" },
-  kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500", color: "#10b981" },
-  mexc: { label: "MEXC", cls: "bg-blue-500/10 text-blue-500", color: "#3b82f6" },
-  bitstamp: { label: "Bitstamp", cls: "bg-green-500/10 text-green-500", color: "#22c55e" },
-  cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500", color: "#6366f1" },
-  kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500", color: "#8b5cf6" },
-  manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)", color: "#6b7280" },
+export const SOURCE_STYLE: Record<string, { label: string; cls: string; colorVar: string }> = {
+  binance: { label: "Binance", cls: "bg-(--color-palette-amber)/10 text-(--color-palette-amber)", colorVar: "--color-palette-amber" },
+  kucoin: { label: "KuCoin", cls: "bg-(--color-palette-emerald)/10 text-(--color-palette-emerald)", colorVar: "--color-palette-emerald" },
+  mexc: { label: "MEXC", cls: "bg-(--color-palette-blue)/10 text-(--color-palette-blue)", colorVar: "--color-palette-blue" },
+  bitstamp: { label: "Bitstamp", cls: "bg-(--color-palette-green)/10 text-(--color-palette-green)", colorVar: "--color-palette-green" },
+  cryptocom: { label: "Crypto.com", cls: "bg-(--color-palette-indigo)/10 text-(--color-palette-indigo)", colorVar: "--color-palette-indigo" },
+  kraken: { label: "Kraken", cls: "bg-(--color-palette-violet)/10 text-(--color-palette-violet)", colorVar: "--color-palette-violet" },
+  manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)", colorVar: "--color-muted" },
 };
 
 /* ---- Shared types ---- */
@@ -74,7 +74,7 @@ export function HoldingRow({
   return (
     <tr
       className={cn(
-        "border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 cursor-pointer",
+        "border-b border-(--color-border)/50 last:border-0 hover:bg-(--color-bg-elevated)/30 cursor-pointer min-h-[44px]",
         "transition-all duration-500 ease-out",
         reveal ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
       )}
@@ -94,7 +94,7 @@ export function HoldingRow({
             <span className="font-semibold text-(--color-text-primary) text-sm truncate">
               {c.name}
             </span>
-            <span className="text-[11px] text-(--color-text-secondary) font-mono shrink-0">
+            <span className="text-xs text-(--color-text-secondary) font-mono shrink-0">
               {c.symbol}
             </span>
           </div>
@@ -144,7 +144,7 @@ export function HoldingRow({
           <span className="text-xs font-semibold text-(--color-text-primary) block">
             {fmtUsd(c.totalValue)}
           </span>
-          <span className="text-[10px] text-(--color-text-secondary) hidden sm:inline">
+          <span className="text-xs text-(--color-text-secondary) hidden sm:inline">
             {c.totalQty.toLocaleString("en-US", { maximumFractionDigits: 6 })} {c.symbol}
           </span>
         </div>
@@ -157,7 +157,7 @@ export function HoldingRow({
             <span className={cn("text-xs font-semibold block", pnlColor(c.pnlUsd))}>
               {c.pnlUsd >= 0 ? "+" : ""}{fmtUsd(Math.abs(c.pnlUsd))}
             </span>
-            <span className={cn("text-[10px]", pnlColor(c.pnlPct ?? 0))}>
+            <span className={cn("text-xs", pnlColor(c.pnlPct ?? 0))}>
               {(c.pnlPct ?? 0) >= 0 ? "+" : ""}{(c.pnlPct ?? 0).toFixed(1)}%
             </span>
           </div>
@@ -175,7 +175,7 @@ export function HoldingRow({
             return (
               <span
                 key={`${s.source}-${si}`}
-                className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}
+                className={cn("text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap", style.cls)}
               >
                 {label}
               </span>
@@ -192,16 +192,16 @@ export function HoldingRow({
               onClick={() => {
                 if (manualSources[0].id) onEdit(manualSources[0].id);
               }}
-              className="p-1 rounded hover:bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+              className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
             >
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => manualSources[0].id && onDelete(manualSources[0].id)}
               disabled={isDeletePending}
-              className="p-1 rounded hover:bg-(--color-negative)/10 text-(--color-text-secondary) hover:text-(--color-negative) transition-colors"
+              className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-(--color-negative)/10 text-(--color-text-secondary) hover:text-(--color-negative) transition-colors"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         )}

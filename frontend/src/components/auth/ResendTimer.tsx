@@ -38,7 +38,7 @@ export default function ResendTimer({ onResend, cooldownSeconds = 60 }: ResendTi
     <button
       onClick={handleResend}
       disabled={sending}
-      className="mx-auto block text-sm font-medium text-(--color-accent) transition-colors hover:opacity-80 disabled:opacity-50"
+      className="mx-auto block min-h-[44px] py-2.5 px-4 text-sm font-medium text-(--color-accent) transition-colors hover:opacity-80 disabled:opacity-50"
     >
       {sending ? 'Sending...' : 'Resend code'}
     </button>

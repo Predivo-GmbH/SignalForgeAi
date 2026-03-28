@@ -36,7 +36,7 @@ export function Tooltip({ text, content, wide, children }: TooltipProps) {
     } else {
       setCoords({ left, top: rect.top - gap, pos: "top" });
     }
-  }, []);
+  }, [tooltipWidth]);
 
   const handleEnter = useCallback(() => {
     computePosition();

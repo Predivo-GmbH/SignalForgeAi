@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -90,12 +92,13 @@ function StepIndicator({ current }: { current: number }) {
     { num: 3, label: "Deploy" },
   ];
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       {steps.map((step, i) => (
-        <div key={step.num} className="flex items-center gap-2">
+        <div key={step.num} className="flex items-center gap-1 sm:gap-2">
           <div
+            aria-label={step.label}
             className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors",
+              "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-colors shrink-0",
               current >= step.num
                 ? "bg-(--color-accent) text-white"
                 : "bg-(--color-bg-elevated) text-(--color-text-secondary)"
@@ -109,7 +112,7 @@ function StepIndicator({ current }: { current: number }) {
           </div>
           <span
             className={cn(
-              "text-sm font-medium",
+              "text-xs sm:text-sm font-medium hidden sm:inline",
               current >= step.num
                 ? "text-(--color-text-primary)"
                 : "text-(--color-text-secondary)"
@@ -118,7 +121,7 @@ function StepIndicator({ current }: { current: number }) {
             {step.label}
           </span>
           {i < steps.length - 1 && (
-            <ChevronRight className="w-4 h-4 text-(--color-text-secondary)/40 mx-1" />
+            <ChevronRight className="w-4 h-4 text-(--color-text-secondary)/40 shrink-0" />
           )}
         </div>
       ))}
@@ -157,7 +160,7 @@ function ScanSidebar({
         <button
           onClick={isScanning ? onCancel : onNewScan}
           className={cn(
-            "flex items-center justify-center gap-2 w-full font-semibold py-2.5 rounded-lg text-sm transition-colors",
+            "flex items-center justify-center gap-2 w-full font-semibold py-2.5 min-h-[44px] rounded-lg text-sm transition-colors",
             isScanning
               ? "bg-(--color-negative) hover:bg-(--color-negative)/90 text-white"
               : "bg-(--color-accent) hover:bg-(--color-accent)/90 text-white"
@@ -175,11 +178,11 @@ function ScanSidebar({
       {history.length > 0 && (
         <div className="px-4 pt-3 pb-1">
           <Tooltip text="History of previous market scans. Click any entry to reload its results and investment plan.">
-            <h3 className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider cursor-help">Recent Scans</h3>
+            <h2 className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider cursor-help">Recent Scans</h2>
           </Tooltip>
         </div>
       )}
-      <div className="max-h-48 lg:max-h-[calc(100vh-220px)] overflow-y-auto">
+      <div className="max-h-64 sm:max-h-72 lg:max-h-[calc(100vh-220px)] overflow-y-auto">
         {/* Active scan entry */}
         {activeEntry && (
           <div className="flex flex-col gap-1 px-4 py-3 border-b border-(--color-border)/50 bg-(--color-warning)/5">
@@ -223,7 +226,7 @@ function ScanSidebar({
                 {statusBadge(entry.status)}
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-                  className="text-(--color-text-secondary) hover:text-(--color-negative) transition-colors opacity-0 group-hover:opacity-100"
+                  className="text-(--color-text-secondary) hover:text-(--color-negative) transition-colors sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
@@ -234,17 +237,17 @@ function ScanSidebar({
                 <span className="text-xs text-(--color-text-secondary)">{entry.pairs_scored} pairs</span>
               )}
               {entry.plan && !entry.deployedStrategyId && (
-                <Badge variant="info" className="gap-1 text-[10px]">
+                <Badge variant="info" className="gap-1 text-xs">
                   <Brain className="w-2.5 h-2.5" /> Plan
                 </Badge>
               )}
               {entry.deployedStrategyId && (
-                <Badge variant="success" className="gap-1 text-[10px]">
+                <Badge variant="success" className="gap-1 text-xs">
                   <Rocket className="w-2.5 h-2.5" /> Deployed
                 </Badge>
               )}
               {entry.status === "failed" && entry.error && (
-                <span className="text-[10px] text-(--color-negative) truncate">{entry.error}</span>
+                <span className="text-xs text-(--color-negative) truncate">{entry.error}</span>
               )}
             </div>
           </div>
@@ -264,7 +267,7 @@ function ScanSidebar({
         <div className="px-4 py-2 border-t border-(--color-border)">
           <button
             onClick={onClear}
-            className="text-xs text-(--color-text-secondary) hover:text-(--color-negative) transition-colors"
+            className="text-xs text-(--color-text-secondary) hover:text-(--color-negative) transition-colors min-h-[44px]"
           >
             Clear All
           </button>
@@ -299,7 +302,7 @@ function MarketRecommendationPanel({
   const tradeable = scanResults.filter((c) => c.score >= 30 && c.recommendation !== "avoid");
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-5">
       {/* AI Market Profile */}
       <div className="bg-(--color-accent)/5 border border-(--color-accent)/20 rounded-xl p-4 space-y-4">
         <div className="flex items-start gap-2">
@@ -382,7 +385,7 @@ function MarketRecommendationPanel({
                     )}
                   >
                     {c.symbol.replace("/USDT", "")}
-                    <span className="ml-1 text-[10px] opacity-70">{c.score}</span>
+                    <span className="ml-1 text-xs opacity-70">{c.score}</span>
                   </span>
                 ))}
                 {tradeable.length > 15 && (
@@ -410,7 +413,7 @@ function MarketRecommendationPanel({
               onChange={(e) => onAmountChange(Number(e.target.value))}
               min={100}
               max={10000000}
-              className="w-48 bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-9 pr-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+              className="w-full sm:w-48 bg-(--color-bg-elevated) border border-(--color-border) rounded-lg pl-9 pr-3 py-2 min-h-[44px] text-base md:text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
             />
           </div>
         </div>
@@ -418,7 +421,7 @@ function MarketRecommendationPanel({
         <button
           onClick={onGeneratePlan}
           disabled={isPlanPending}
-          className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-5 rounded-lg text-sm transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-5 min-h-[44px] rounded-lg text-sm transition-colors disabled:opacity-50"
         >
           {isPlanPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -435,20 +438,21 @@ function MarketRecommendationPanel({
 /* ---------- Scan Results Table ---------- */
 function ScanResultsTable({ results }: { results: ScoredCrypto[] }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto relative">
+      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-(--color-bg-surface) pointer-events-none z-10" />
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-(--color-border)">
-            <th className="text-left py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">#</th>
+            <th className="text-left py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden sm:table-cell">#</th>
             <th className="text-left py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Symbol</th>
-            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Price</th>
+            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden sm:table-cell">Price</th>
             <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">24h</th>
-            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Volume</th>
+            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden md:table-cell">Volume</th>
             <th className="text-center py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Score</th>
-            <th className="text-center py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Regime</th>
-            <th className="text-center py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Trend</th>
-            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">RSI</th>
-            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">ADX</th>
+            <th className="text-center py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden sm:table-cell">Regime</th>
+            <th className="text-center py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden md:table-cell">Trend</th>
+            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden lg:table-cell">RSI</th>
+            <th className="text-right py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase hidden lg:table-cell">ADX</th>
             <th className="text-center py-2 px-3 text-xs font-medium text-(--color-text-secondary) uppercase">Signal</th>
           </tr>
         </thead>
@@ -461,16 +465,16 @@ function ScanResultsTable({ results }: { results: ScoredCrypto[] }) {
                 crypto.recommendation === "strong_buy" && "bg-(--color-positive)/5"
               )}
             >
-              <td className="py-2.5 px-3 text-(--color-text-secondary)">{i + 1}</td>
+              <td className="py-2.5 px-3 text-(--color-text-secondary) hidden sm:table-cell">{i + 1}</td>
               <td className="py-2.5 px-3 font-semibold text-(--color-text-primary)">{crypto.symbol}</td>
-              <td className="py-2.5 px-3 text-right font-mono">{formatPrice(crypto.price)}</td>
+              <td className="py-2.5 px-3 text-right font-mono hidden sm:table-cell">{formatPrice(crypto.price)}</td>
               <td className={cn(
                 "py-2.5 px-3 text-right font-mono",
                 crypto.change_pct_24h >= 0 ? "text-(--color-positive)" : "text-(--color-negative)"
               )}>
                 {crypto.change_pct_24h >= 0 ? "+" : ""}{crypto.change_pct_24h?.toFixed(2) ?? "0.00"}%
               </td>
-              <td className="py-2.5 px-3 text-right text-(--color-text-secondary)">{formatVolume(crypto.volume_24h || 0)}</td>
+              <td className="py-2.5 px-3 text-right text-(--color-text-secondary) hidden md:table-cell">{formatVolume(crypto.volume_24h || 0)}</td>
               <td className="py-2.5 px-3 text-center">
                 <span className={cn(
                   "inline-block w-10 text-center font-bold rounded px-1.5 py-0.5 text-xs",
@@ -482,14 +486,14 @@ function ScanResultsTable({ results }: { results: ScoredCrypto[] }) {
                   {crypto.score}
                 </span>
               </td>
-              <td className="py-2.5 px-3 text-center">
+              <td className="py-2.5 px-3 text-center hidden sm:table-cell">
                 <Badge variant={crypto.regime === "trending" ? "success" : crypto.regime === "chaotic" ? "danger" : "neutral"}>
                   {crypto.regime}
                 </Badge>
               </td>
-              <td className="py-2.5 px-3 text-center">{trendIcon(crypto.trend_direction)}</td>
-              <td className="py-2.5 px-3 text-right font-mono text-(--color-text-secondary)">{crypto.rsi?.toFixed(0) ?? "--"}</td>
-              <td className="py-2.5 px-3 text-right font-mono text-(--color-text-secondary)">{crypto.adx?.toFixed(0) ?? "--"}</td>
+              <td className="py-2.5 px-3 text-center hidden md:table-cell">{trendIcon(crypto.trend_direction)}</td>
+              <td className="py-2.5 px-3 text-right font-mono text-(--color-text-secondary) hidden lg:table-cell">{crypto.rsi?.toFixed(0) ?? "--"}</td>
+              <td className="py-2.5 px-3 text-right font-mono text-(--color-text-secondary) hidden lg:table-cell">{crypto.adx?.toFixed(0) ?? "--"}</td>
               <td className="py-2.5 px-3 text-center">{recommendationBadge(crypto.recommendation)}</td>
             </tr>
           ))}
@@ -574,6 +578,8 @@ function PlanDisplay({ plan }: { plan: InvestmentPlan }) {
 
 /* ---------- Main Advisor Page ---------- */
 export function AdvisorPage() {
+  usePageTitle("AI Advisor");
+  useNoIndex();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -709,7 +715,7 @@ export function AdvisorPage() {
           {!selectedScan && !isScanning && (
             <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl flex flex-col items-center justify-center py-20 px-8">
               <Search className="w-10 h-10 text-(--color-text-secondary)/30 mb-4" />
-              <h3 className="text-sm font-semibold text-(--color-text-primary) mb-1">Scan the market to get started</h3>
+              <h2 className="text-sm font-semibold text-(--color-text-primary) mb-1">Scan the market to get started</h2>
               <p className="text-xs text-(--color-text-secondary) text-center max-w-sm">
                 Click "New Scan" to analyze all liquid crypto pairs on Binance using 11 technical indicators and get AI-powered trading recommendations.
               </p>
@@ -725,7 +731,7 @@ export function AdvisorPage() {
                   <Loader2 className="w-4 h-4 text-(--color-accent) animate-spin absolute -right-1 -bottom-1" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-(--color-text-primary)">Scanning Market...</h3>
+                  <h2 className="text-sm font-semibold text-(--color-text-primary)">Scanning Market...</h2>
                   <p className="text-xs text-(--color-text-secondary) mt-0.5">
                     Analyzing all liquid crypto pairs on Binance and running technical analysis. This may take 1-2 minutes.
                   </p>
@@ -775,7 +781,7 @@ export function AdvisorPage() {
                       <Loader2 className="w-4 h-4 text-(--color-accent) animate-spin absolute -right-1 -bottom-1" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-(--color-text-primary)">Generating Investment Plan...</h3>
+                      <h2 className="text-sm font-semibold text-(--color-text-primary)">Generating Investment Plan...</h2>
                       <p className="text-xs text-(--color-text-secondary) mt-0.5">
                         AI is analyzing {scanResults.length} pairs and creating a personalized trading strategy. This may take a few seconds.
                       </p>
@@ -799,7 +805,7 @@ export function AdvisorPage() {
                   </p>
                   <button
                     onClick={handleGeneratePlan}
-                    className="flex items-center gap-2 text-xs font-semibold text-(--color-accent) hover:text-(--color-accent)/80 transition-colors mt-1"
+                    className="flex items-center gap-2 text-xs font-semibold text-(--color-accent) hover:text-(--color-accent)/80 transition-colors mt-1 min-h-[44px]"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Retry
@@ -826,7 +832,7 @@ export function AdvisorPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className={cn("w-5 h-5", isStrategyActive ? "text-(--color-positive)" : "text-(--color-text-secondary)")} />
-                      <h3 className="text-sm font-semibold text-(--color-text-primary)">Strategy Deployed</h3>
+                      <h2 className="text-sm font-semibold text-(--color-text-primary)">Strategy Deployed</h2>
                     </div>
                     <span className={cn(
                       "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold",
@@ -847,7 +853,7 @@ export function AdvisorPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <button
                       onClick={() => {
                         if (selectedScan?.deployedStrategyId) {
@@ -856,7 +862,7 @@ export function AdvisorPage() {
                       }}
                       disabled={toggleMutation.isPending}
                       className={cn(
-                        "flex items-center gap-2 font-semibold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50",
+                        "flex items-center gap-2 font-semibold py-2 px-4 min-h-[44px] rounded-lg text-sm transition-colors disabled:opacity-50",
                         isStrategyActive
                           ? "bg-(--color-negative)/10 text-(--color-negative) hover:bg-(--color-negative)/20 border border-(--color-negative)/30"
                           : "bg-(--color-positive)/10 text-(--color-positive) hover:bg-(--color-positive)/20 border border-(--color-positive)/30"
@@ -870,20 +876,20 @@ export function AdvisorPage() {
                     </button>
                     <button
                       onClick={() => navigate("/")}
-                      className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+                      className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2 px-4 min-h-[44px] rounded-lg text-sm transition-colors"
                     >
                       Go to Dashboard
                     </button>
                     <button
                       onClick={() => navigate("/strategies")}
-                      className="flex items-center gap-2 text-sm font-medium text-(--color-text-secondary) hover:text-(--color-accent) transition-colors"
+                      className="flex items-center gap-2 text-sm font-medium text-(--color-text-secondary) hover:text-(--color-accent) transition-colors min-h-[44px]"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       Manage Strategies
                     </button>
                     <button
                       onClick={handleDeployAnother}
-                      className="flex items-center gap-2 text-sm font-medium text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                      className="flex items-center gap-2 text-sm font-medium text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors min-h-[44px]"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       Deploy Another
@@ -895,17 +901,17 @@ export function AdvisorPage() {
               {/* Plan display (persisted from store) */}
               {plan && (
                 <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-(--color-border)">
+                  <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b border-(--color-border)">
                     <Tooltip text="AI-generated plan with optimized parameters for your portfolio. Review before deploying, or validate against historical data first.">
                       <h2 className="text-sm font-semibold text-(--color-text-primary) cursor-help">
                         Investment Plan — AI Optimal Strategy
                       </h2>
                     </Tooltip>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                       {!deployed && (
                         <button
                           onClick={handleRegeneratePlan}
-                          className="flex items-center gap-1.5 text-xs text-(--color-text-secondary) hover:text-(--color-accent) transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-(--color-text-secondary) hover:text-(--color-accent) transition-colors min-h-[44px]"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           Regenerate
@@ -914,7 +920,7 @@ export function AdvisorPage() {
                       {!deployed && (
                         <button
                           onClick={() => navigate("/backtest?validate=plan")}
-                          className="flex items-center gap-1.5 text-xs text-(--color-text-secondary) hover:text-(--color-accent) transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-(--color-text-secondary) hover:text-(--color-accent) transition-colors min-h-[44px]"
                         >
                           <FlaskConical className="w-3.5 h-3.5" />
                           Validate Historically
@@ -924,7 +930,7 @@ export function AdvisorPage() {
                         <button
                           onClick={handleDeploy}
                           disabled={deployMutation.isPending}
-                          className="flex items-center gap-2 bg-(--color-positive) hover:bg-(--color-positive)/90 text-white font-semibold py-1.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2 bg-(--color-positive) hover:bg-(--color-positive)/90 text-white font-semibold py-2.5 min-h-[44px] px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
                         >
                           {deployMutation.isPending ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -936,7 +942,7 @@ export function AdvisorPage() {
                       )}
                     </div>
                   </div>
-                  <div className="p-5">
+                  <div className="p-3 sm:p-5">
                     <PlanDisplay plan={plan} />
                   </div>
                 </div>
@@ -944,7 +950,7 @@ export function AdvisorPage() {
 
               {/* Scan Results Table */}
               <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
-                <div className="flex items-center gap-3 px-5 py-3 border-b border-(--color-border)">
+                <div className="flex items-center gap-3 px-3 sm:px-5 py-3 border-b border-(--color-border)">
                   <Tooltip text="All trading pairs analyzed in this scan, ranked by the AI's composite score. Higher scores indicate stronger trading opportunities based on volume, trend, and volatility.">
                     <h2 className="text-sm font-semibold text-(--color-text-primary) cursor-help">
                       Market Scan Results ({scanResults.length} pairs analyzed)

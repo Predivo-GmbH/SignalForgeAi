@@ -2,12 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import AuthLayout from '@/components/auth/AuthLayout'
 import { Mail } from 'lucide-react'
 
 type Step = 'form' | 'sent'
 
 export default function ForgotPasswordPage() {
+  usePageTitle('Forgot Password')
   const [step, setStep] = useState<Step>('form')
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -70,14 +72,14 @@ export default function ForgotPasswordPage() {
                   autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+                  className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
                   placeholder="you@example.com"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 min-h-[44px] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </button>
@@ -112,7 +114,7 @@ export default function ForgotPasswordPage() {
               Didn't receive the email? Check your spam folder or{' '}
               <button
                 onClick={() => setStep('form')}
-                className="font-medium text-(--color-accent) hover:underline"
+                className="min-h-[44px] inline-flex items-center font-medium text-(--color-accent) hover:underline"
               >
                 try again
               </button>
@@ -120,7 +122,7 @@ export default function ForgotPasswordPage() {
             </p>
             <Link
               to="/login"
-              className="mt-8 inline-block text-sm font-medium text-(--color-accent) hover:underline"
+              className="mt-8 min-h-[44px] inline-flex items-center text-sm font-medium text-(--color-accent) hover:underline"
             >
               &larr; Back to sign in
             </Link>

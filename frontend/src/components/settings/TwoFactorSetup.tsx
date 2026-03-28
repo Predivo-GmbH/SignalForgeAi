@@ -8,7 +8,7 @@ export function TwoFactorSetup() {
   return (
     <div className="flex items-center justify-between p-4 bg-(--color-bg-elevated) rounded-xl border border-(--color-border)">
       <div className="flex items-center gap-3">
-        <ShieldCheck className="w-5 h-5 text-emerald-500" />
+        <ShieldCheck className="w-5 h-5 text-(--color-positive)" />
         <div>
           <p className="text-sm font-medium text-(--color-text-primary)">
             Email OTP Verification
@@ -18,7 +18,7 @@ export function TwoFactorSetup() {
           </p>
         </div>
       </div>
-      <span className="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/10 text-emerald-400">
+      <span className="px-3 py-1.5 text-xs font-medium rounded-lg bg-(--color-positive)/10 text-(--color-positive)">
         Always Active
       </span>
     </div>

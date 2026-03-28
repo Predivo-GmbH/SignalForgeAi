@@ -2,12 +2,16 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { useNoIndex } from '@/hooks/useNoIndex'
 import AuthLayout from '@/components/auth/AuthLayout'
 import PasswordStrength from '@/components/auth/PasswordStrength'
 import { getPasswordScore } from '@/components/auth/password-utils'
 import { CheckCircle } from 'lucide-react'
 
 export default function ResetPasswordPage() {
+  usePageTitle('Reset Password')
+  useNoIndex()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -68,7 +72,7 @@ export default function ResetPasswordPage() {
           </p>
           <Link
             to="/login"
-            className="mt-6 inline-block rounded-lg bg-(--color-accent) px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="mt-6 min-h-[44px] inline-flex items-center rounded-lg bg-(--color-accent) px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
           >
             Sign in
           </Link>
@@ -111,7 +115,7 @@ export default function ResetPasswordPage() {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+            className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
             placeholder="Min. 8 characters"
           />
           <PasswordStrength password={password} />
@@ -128,14 +132,14 @@ export default function ResetPasswordPage() {
             minLength={8}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+            className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
             placeholder="Confirm your password"
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 min-h-[44px] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {loading ? 'Updating...' : 'Update Password'}
         </button>

@@ -72,7 +72,7 @@ export function StrategyBacktestForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5"
+      className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 space-y-5"
     >
       <Tooltip text="Test your strategy against historical data to see how it would have performed before risking real capital.">
         <h2 className="text-lg font-semibold text-(--color-text-primary) cursor-help">
@@ -89,25 +89,25 @@ export function StrategyBacktestForm({
           <button
             type="button"
             onClick={() => setSource("strategy")}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
               source === "strategy"
                 ? "bg-(--color-accent) text-white"
                 : "bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary)"
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
+            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
             Deployed Strategy
           </button>
           <button
             type="button"
             onClick={() => setSource("plan")}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
               source === "plan"
                 ? "bg-(--color-accent) text-white"
                 : "bg-(--color-bg-elevated) text-(--color-text-secondary) hover:text-(--color-text-primary)"
             }`}
           >
-            <BrainCircuit className="w-3.5 h-3.5" />
+            <BrainCircuit className="w-3.5 h-3.5" aria-hidden="true" />
             AI Advisor Plan
           </button>
         </div>
@@ -127,7 +127,8 @@ export function StrategyBacktestForm({
             <select
               value={effectiveStrategyId}
               onChange={(e) => setStrategyId(e.target.value)}
-              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+              aria-label="Select strategy"
+              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
             >
               {strategies.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -183,7 +184,7 @@ export function StrategyBacktestForm({
               )}
             </div>
             {/* Params */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <div className="grid grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1 text-xs">
               <span className="text-(--color-text-secondary)">Confluence</span>
               <span className="text-(--color-text-primary) font-mono">
                 {String((activeConfig as Record<string, unknown>).min_confluence ?? "—")}
@@ -216,6 +217,7 @@ export function StrategyBacktestForm({
           max={365}
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
+          aria-label={`Historical period: ${days} days`}
           className="w-full accent-(--color-accent)"
         />
         <div className="flex items-center justify-between">
@@ -236,22 +238,27 @@ export function StrategyBacktestForm({
           </Tooltip>
           <button
             type="button"
+            role="switch"
+            aria-checked={aiEnhanced}
+            aria-label="AI-Enhanced validation"
             onClick={() => setAiEnhanced((v) => !v)}
-            className={`relative w-10 h-5 rounded-full transition-colors ${
+            className="relative min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            <span className={`block w-12 h-7 rounded-full transition-colors ${
               aiEnhanced
                 ? "bg-(--color-accent)"
                 : "bg-(--color-bg-elevated) border border-(--color-border)"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                aiEnhanced ? "translate-x-5" : ""
-              }`}
-            />
+            }`}>
+              <span
+                className={`block mt-0.5 ml-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                  aiEnhanced ? "translate-x-5" : ""
+                }`}
+              />
+            </span>
           </button>
         </div>
         {aiEnhanced && (
-          <p className="text-[11px] text-(--color-text-secondary)/60">
+          <p className="text-xs text-(--color-text-secondary)/60">
             Each signal is evaluated by Claude AI for quality and trap detection
           </p>
         )}
@@ -261,16 +268,16 @@ export function StrategyBacktestForm({
       <button
         type="submit"
         disabled={!canSubmit}
-        className="w-full flex items-center justify-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white font-semibold py-2.5 px-4 min-h-[44px] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             {aiEnhanced ? "Validating with AI..." : "Validating..."}
           </>
         ) : (
           <>
-            {aiEnhanced ? <BrainCircuit className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {aiEnhanced ? <BrainCircuit className="w-4 h-4" aria-hidden="true" /> : <Play className="w-4 h-4" aria-hidden="true" />}
             Validate Strategy
           </>
         )}

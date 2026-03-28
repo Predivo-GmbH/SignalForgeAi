@@ -1,10 +1,14 @@
 import { useSearchParams } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import { useRunStrategyBacktest } from "@/hooks/useStrategyBacktest";
 import { StrategyBacktestForm } from "@/components/backtest/StrategyBacktestForm";
 import { StrategyBacktestResults } from "@/components/backtest/StrategyBacktestResults";
 import type { StrategyBacktestResult } from "@/hooks/useStrategyBacktest";
 
 export function BacktestPage() {
+  usePageTitle("Backtest");
+  useNoIndex();
   const [searchParams] = useSearchParams();
   const validatePlan = searchParams.get("validate") === "plan";
 
@@ -22,7 +26,7 @@ export function BacktestPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,35%)_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(min(280px,100%),35%)_1fr] gap-6">
         <StrategyBacktestForm
           onSubmit={(req) => strategyBtMutation.mutate(req)}
           isLoading={strategyBtMutation.isPending}

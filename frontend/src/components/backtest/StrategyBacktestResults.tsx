@@ -39,9 +39,9 @@ function MetricCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-(--color-bg-elevated)/50 rounded-lg p-4 space-y-1">
+    <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
       <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-(--color-text-secondary)" />
+        <Icon className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
         <Tooltip text={tooltip}>
           <span className="text-xs text-(--color-text-secondary) uppercase tracking-wider cursor-help">
             {label}
@@ -79,9 +79,9 @@ export function StrategyBacktestResults({
 
   if (isLoading) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 flex items-center justify-center min-h-[400px]">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 flex items-center justify-center min-h-[400px]" role="status" aria-live="polite">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-2 border-(--color-accent) border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-8 h-8 border-2 border-(--color-accent) border-t-transparent rounded-full animate-spin mx-auto" aria-hidden="true" />
           <p className="text-sm text-(--color-text-secondary)">
             Validating strategy across all symbols...
           </p>
@@ -95,7 +95,7 @@ export function StrategyBacktestResults({
 
   if (error) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-negative)/30 rounded-xl p-6 flex items-center justify-center min-h-[400px]">
+      <div className="bg-(--color-bg-surface) border border-(--color-negative)/30 rounded-xl p-4 sm:p-6 flex items-center justify-center min-h-[400px]" role="alert">
         <div className="text-center space-y-2">
           <p className="text-sm text-(--color-negative) font-medium">
             Strategy validation failed
@@ -110,9 +110,9 @@ export function StrategyBacktestResults({
 
   if (!result) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 flex items-center justify-center min-h-[400px]">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-2">
-          <ShieldCheck className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto" />
+          <ShieldCheck className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto" aria-hidden="true" />
           <p className="text-sm text-(--color-text-secondary)">
             Select a strategy and run validation
           </p>
@@ -151,7 +151,7 @@ export function StrategyBacktestResults({
   const SortIcon = sortDir === "asc" ? ChevronUp : ChevronDown;
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-6">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 space-y-6">
       {/* Strategy header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
@@ -162,8 +162,8 @@ export function StrategyBacktestResults({
             {PRESET_LABELS[result.preset] ?? result.preset}
           </span>
           {result.ai_enhanced && (
-            <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-500/10 text-purple-400">
-              <BrainCircuit className="w-3 h-3" />
+            <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-(--color-palette-violet)/10 text-(--color-palette-violet)">
+              <BrainCircuit className="w-3 h-3" aria-hidden="true" />
               AI Enhanced
             </span>
           )}
@@ -238,7 +238,7 @@ export function StrategyBacktestResults({
       {result.ai_enhanced && portfolio.ai_calls != null && portfolio.ai_calls > 0 && (
         <div className="flex items-center gap-4 px-1">
           <div className="flex items-center gap-1.5 text-xs">
-            <BrainCircuit className="w-3.5 h-3.5 text-purple-400" />
+            <BrainCircuit className="w-3.5 h-3.5 text-(--color-palette-violet)" aria-hidden="true" />
             <span className="text-(--color-text-secondary)">AI Quality Assessment</span>
           </div>
           <span className="text-xs font-mono text-(--color-text-primary)">
@@ -260,7 +260,8 @@ export function StrategyBacktestResults({
               Per-Symbol Breakdown
             </h3>
           </Tooltip>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative">
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-(--color-bg-surface) pointer-events-none z-10" />
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-(--color-border)">
@@ -278,7 +279,12 @@ export function StrategyBacktestResults({
                     <th
                       key={key}
                       onClick={() => toggleSort(key)}
-                      className="px-3 py-2 text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-pointer hover:text-(--color-text-primary) select-none"
+                      className={cn(
+                        "px-3 py-2 min-h-[44px] text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider cursor-pointer hover:text-(--color-text-primary) select-none",
+                        key === "profit_factor" && "hidden sm:table-cell",
+                        key === "max_drawdown" && "hidden sm:table-cell",
+                        key === "sharpe_ratio" && "hidden md:table-cell",
+                      )}
                     >
                       <span className="inline-flex items-center gap-1">
                         {label}
@@ -323,18 +329,18 @@ export function StrategyBacktestResults({
                     </td>
                     <td
                       className={cn(
-                        "px-3 py-2 font-mono",
+                        "px-3 py-2 font-mono hidden sm:table-cell",
                         pnlColor((sym.profit_factor ?? 0) - 1),
                       )}
                     >
                       {sym.profit_factor?.toFixed(2) ?? "—"}
                     </td>
-                    <td className="px-3 py-2 font-mono text-(--color-negative)">
+                    <td className="px-3 py-2 font-mono text-(--color-negative) hidden sm:table-cell">
                       {sym.max_drawdown.toFixed(2)}%
                     </td>
                     <td
                       className={cn(
-                        "px-3 py-2 font-mono",
+                        "px-3 py-2 font-mono hidden md:table-cell",
                         pnlColor(sym.sharpe_ratio),
                       )}
                     >

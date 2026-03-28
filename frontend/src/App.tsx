@@ -5,6 +5,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppLayout } from "./components/layout/AppLayout";
 import { PasswordGate } from "./components/shared/PasswordGate";
+import { RouteAnnouncer } from "./components/shared/RouteAnnouncer";
 import { queryClient } from "./lib/query";
 
 const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
@@ -56,9 +57,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-(--color-bg-base) p-6">
+        <div className="min-h-screen flex items-center justify-center bg-(--color-bg-base) p-6" role="alert">
           <div className="max-w-md w-full bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-8 text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-(--color-negative)/10 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-full bg-(--color-negative)/10 flex items-center justify-center mx-auto" aria-hidden="true">
               <svg
                 className="w-6 h-6 text-(--color-negative)"
                 fill="none"
@@ -107,7 +108,8 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+          <RouteAnnouncer />
+          <Suspense fallback={<div className="flex items-center justify-center h-screen" role="status" aria-live="polite">Loading...</div>}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignUpPage />} />

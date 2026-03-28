@@ -105,7 +105,10 @@ export function DonutChart({
             className="transition-opacity duration-150"
             onMouseEnter={() => setHoveredIdx(arc.idx)}
             onMouseLeave={() => setHoveredIdx(null)}
-            onClick={() => onSliceClick?.(arc.label)}
+            onClick={() => {
+              setHoveredIdx((prev) => (prev === arc.idx ? null : arc.idx));
+              onSliceClick?.(arc.label);
+            }}
             style={{ cursor: "pointer" }}
           />
         ))}

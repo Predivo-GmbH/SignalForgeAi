@@ -17,7 +17,7 @@ function StatCard({ label, shortLabel, value, icon: Icon, colorClass }: StatCard
     <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
       <div className="flex items-center gap-1.5 sm:gap-2">
         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" />
-        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider">
+        <span className="text-xs text-(--color-text-secondary) uppercase tracking-normal sm:tracking-wider">
           {shortLabel ? (<><span className="sm:hidden">{shortLabel}</span><span className="hidden sm:inline">{label}</span></>) : label}
         </span>
       </div>
@@ -76,8 +76,10 @@ export function PerformanceSummary() {
         </Link>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-        {cards.map((c) => (
-          <StatCard key={c.label} {...c} />
+        {cards.map((c, i) => (
+          <div key={c.label} className={i === cards.length - 1 ? "col-span-2 sm:col-span-1" : undefined}>
+            <StatCard {...c} />
+          </div>
         ))}
       </div>
     </div>

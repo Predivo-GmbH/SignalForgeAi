@@ -36,15 +36,16 @@ export function Topbar() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMobileOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary) lg:hidden"
+            className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary) lg:hidden"
             title="Open menu"
             aria-label="Open menu"
+            aria-expanded={false}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <h2 className="text-sm font-semibold text-(--color-text-primary)">
+          <span className="text-sm font-semibold text-(--color-text-primary)" aria-hidden="true">
             {pageTitle}
-          </h2>
+          </span>
         </div>
 
         {/* Actions */}
@@ -52,35 +53,35 @@ export function Topbar() {
           {/* Help */}
           <button
             onClick={() => setHelpOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
+            className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
             title="User Guide"
             aria-label="Open help"
           >
-            <HelpCircle className="h-4.5 w-4.5" />
+            <HelpCircle className="h-4.5 w-4.5" aria-hidden="true" />
           </button>
 
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
+            className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-text-primary)"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             aria-label={theme === "dark" ? "Toggle theme to light mode" : "Toggle theme to dark mode"}
           >
             {theme === "dark" ? (
-              <Sun className="h-4.5 w-4.5" />
+              <Sun className="h-4.5 w-4.5" aria-hidden="true" />
             ) : (
-              <Moon className="h-4.5 w-4.5" />
+              <Moon className="h-4.5 w-4.5" aria-hidden="true" />
             )}
           </button>
 
           {/* Logout */}
           <button
             onClick={() => signOut()}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-negative)"
+            className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-(--color-text-secondary) transition-colors hover:bg-(--color-bg-elevated) hover:text-(--color-negative)"
             title="Sign out"
             aria-label="Sign out"
           >
-            <LogOut className="h-4.5 w-4.5" />
+            <LogOut className="h-4.5 w-4.5" aria-hidden="true" />
           </button>
         </div>
       </header>

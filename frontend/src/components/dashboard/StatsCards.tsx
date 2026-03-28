@@ -21,7 +21,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
           <div
             key={i}
             data-testid="stat-skeleton"
-            className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-5"
+            className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-3 sm:p-5"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="h-10 w-10 rounded-lg bg-[var(--color-bg-elevated)] animate-pulse" />
@@ -70,11 +70,11 @@ export function StatsCards({ stats }: StatsCardsProps) {
         return (
           <div
             key={card.label}
-            className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-5"
+            className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] p-3 sm:p-5"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-accent-soft)]">
-                <Icon className="h-5 w-5 text-[var(--color-accent)]" />
+                <Icon className="h-5 w-5 text-[var(--color-accent)]" aria-hidden="true" />
               </div>
               <span className="text-sm text-[var(--color-text-secondary)]">
                 {card.label}

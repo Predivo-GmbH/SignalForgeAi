@@ -24,8 +24,8 @@ function MetricCard({
   return (
     <div className="bg-(--color-bg-elevated)/50 rounded-lg p-3 sm:p-4 space-y-1">
       <div className="flex items-center gap-1.5 sm:gap-2">
-        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" />
-        <span className="text-[10px] sm:text-xs text-(--color-text-secondary) uppercase tracking-wider">
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-(--color-text-secondary)" aria-hidden="true" />
+        <span className="text-xs sm:text-xs text-(--color-text-secondary) uppercase tracking-wider">
           {label}
         </span>
       </div>

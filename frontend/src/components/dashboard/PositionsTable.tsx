@@ -43,7 +43,7 @@ function CloseButton({ position }: { position: Position }) {
       {confirming && (
         <button
           onClick={() => setConfirming(false)}
-          className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors min-h-[44px] px-2 flex items-center"
         >
           Cancel
         </button>
@@ -51,19 +51,20 @@ function CloseButton({ position }: { position: Position }) {
       <button
         onClick={handleClose}
         disabled={closePosition.isPending}
-        className={`flex items-center justify-center h-6 rounded transition-colors ${
+        className={`flex items-center justify-center min-h-[44px] rounded transition-colors ${
           confirming
-            ? "bg-[var(--color-negative)] text-white px-2 text-xs font-medium hover:bg-[var(--color-negative)]/80"
-            : "w-6 text-[var(--color-text-secondary)] hover:text-[var(--color-negative)] hover:bg-[var(--color-negative)]/10"
+            ? "bg-[var(--color-negative)] text-white px-3 min-w-[44px] text-xs font-medium hover:bg-[var(--color-negative)]/80"
+            : "min-w-[44px] text-[var(--color-text-secondary)] hover:text-[var(--color-negative)] hover:bg-[var(--color-negative)]/10"
         }`}
         title={confirming ? "Confirm close" : "Close position"}
+        aria-label={confirming ? "Confirm close" : "Close position"}
       >
         {closePosition.isPending ? (
           <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
         ) : confirming ? (
           "Close"
         ) : (
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         )}
       </button>
     </div>
@@ -76,7 +77,7 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
   return (
     <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden">
       <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b border-[var(--color-border)]">
-        <Briefcase className="h-4 w-4 text-[var(--color-accent)]" />
+        <Briefcase className="h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />
         <Tooltip text="Currently active trading positions managed by the engine with live P&L.">
           <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Open Positions</h3>
         </Tooltip>
@@ -87,7 +88,8 @@ export function PositionsTable({ positions, loading }: PositionsTableProps) {
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--color-bg-surface)] to-transparent z-10" />
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--color-bg-elevated)]">

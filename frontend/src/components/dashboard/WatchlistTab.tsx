@@ -31,7 +31,7 @@ const SOURCE_CONFIG: Record<
   },
   universe_discovery: {
     label: "AI Curated",
-    dot: "bg-[var(--color-warning,#f59e0b)]",
+    dot: "bg-(--color-warning)",
     icon: Globe,
   },
 };
@@ -92,15 +92,16 @@ export function WatchlistTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 animate-spin text-[var(--color-accent)]" />
+      <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--color-accent)]" aria-hidden="true" />
+        <span className="sr-only">Loading watchlist</span>
       </div>
     );
   }
 
   if (isError || !data) {
     return (
-      <p className="text-center text-sm text-[var(--color-text-secondary)] py-12">
+      <p className="text-center text-sm text-[var(--color-text-secondary)] py-12" role="alert">
         Could not load watchlist.
       </p>
     );
@@ -115,7 +116,7 @@ export function WatchlistTab() {
       {/* Header + discover button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Eye className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+          <Eye className="w-3.5 h-3.5 text-[var(--color-accent)]" aria-hidden="true" />
           <Tooltip text="All symbols the pipeline actively monitors. Portfolio holdings are always included. AI-curated symbols join after building candle history.">
             <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider cursor-help">
               Active Watchlist
@@ -130,12 +131,12 @@ export function WatchlistTab() {
             <button
               onClick={handleDiscovery}
               disabled={discoveryQueued || triggerDiscovery.isPending}
-              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)]/40 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border)] px-3 py-2 min-h-[44px] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)]/40 transition-colors disabled:opacity-50"
             >
               {discoveryQueued ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
               ) : (
-                <Zap className="w-3 h-3" />
+                <Zap className="w-3 h-3" aria-hidden="true" />
               )}
               {discoveryQueued ? "Queued…" : "Discover now"}
             </button>
@@ -151,13 +152,14 @@ export function WatchlistTab() {
         <>
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-secondary)] pointer-events-none" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-secondary)] pointer-events-none" aria-hidden="true" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter symbols…"
-              className="w-full rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border)] pl-8 pr-3 py-1.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+              aria-label="Filter symbols"
+              className="w-full rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border)] pl-8 pr-3 py-1.5 min-h-[44px] text-base sm:text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
             />
           </div>
 
@@ -170,7 +172,7 @@ export function WatchlistTab() {
                 <button
                   key={key}
                   onClick={() => setSourceFilter(key)}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-2 min-h-[44px] text-xs font-medium transition-colors ${
                     active
                       ? "bg-[var(--color-accent)] text-white"
                       : "bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
@@ -209,11 +211,11 @@ export function WatchlistTab() {
       {hasCandidates && (
         <div className="border-t border-[var(--color-border)] pt-3">
           <button
-            className="flex items-center justify-between w-full mb-2 group"
+            className="flex items-center justify-between w-full mb-2 group min-h-[44px]"
             onClick={() => setCandidatesOpen((o) => !o)}
           >
             <div className="flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+              <Clock className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
               <Tooltip text="AI-approved symbols building candle history. Once they have 300+ candles on the primary timeframe, they're promoted to the active watchlist automatically — usually within minutes of discovery.">
                 <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider cursor-pointer group-hover:text-[var(--color-text-primary)] transition-colors">
                   Building History
@@ -224,9 +226,9 @@ export function WatchlistTab() {
               </span>
             </div>
             {candidatesOpen ? (
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
             ) : (
-              <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+              <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
             )}
           </button>
 
@@ -241,7 +243,7 @@ export function WatchlistTab() {
             </div>
           )}
           {!candidatesOpen && (
-            <p className="text-[11px] text-[var(--color-text-secondary)] opacity-60">
+            <p className="text-xs text-[var(--color-text-secondary)] opacity-60">
               AI-vetted — will be promoted automatically once candles are ready.
             </p>
           )}
@@ -252,11 +254,11 @@ export function WatchlistTab() {
       {hasBlocklist && (
         <div className="border-t border-[var(--color-border)] pt-3">
           <button
-            className="flex items-center justify-between w-full mb-2 group"
+            className="flex items-center justify-between w-full mb-2 group min-h-[44px]"
             onClick={() => setBlocklistOpen((o) => !o)}
           >
             <div className="flex items-center gap-2">
-              <Ban className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+              <Ban className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
               <Tooltip text="Symbols you removed from the candidate pool. Auto-discovery will not re-add these. Click the undo icon to unblock.">
                 <span className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider cursor-pointer group-hover:text-[var(--color-text-primary)] transition-colors">
                   Blocked
@@ -267,9 +269,9 @@ export function WatchlistTab() {
               </span>
             </div>
             {blocklistOpen ? (
-              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
             ) : (
-              <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+              <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" aria-hidden="true" />
             )}
           </button>
 
@@ -328,10 +330,10 @@ function SymbolTooltipContent({ item }: { item: WatchlistSymbol }) {
   const s = item.last_status;
 
   const statusColor =
-    !s ? "text-[var(--color-text-secondary)]"
-    : s.block_reason ? "text-[var(--color-warning,#f59e0b)]"
-    : s.action === "BUY" || s.action === "SELL" ? "text-[var(--color-positive)]"
-    : "text-[var(--color-text-secondary)]";
+    !s ? "text-(--color-text-secondary)"
+    : s.block_reason ? "text-(--color-warning)"
+    : s.action === "BUY" || s.action === "SELL" ? "text-(--color-positive)"
+    : "text-(--color-text-secondary)";
 
   const statusText =
     !s ? "No pipeline data yet"
@@ -344,7 +346,7 @@ function SymbolTooltipContent({ item }: { item: WatchlistSymbol }) {
       {/* Source header */}
       <div className="flex items-center gap-1.5 font-semibold">
         <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
-        <Icon className="w-3.5 h-3.5" />
+        <Icon className="w-3.5 h-3.5" aria-hidden="true" />
         <span>{cfg.label}</span>
       </div>
       {/* Why it's here */}
@@ -396,9 +398,10 @@ function SymbolChip({ item }: { item: WatchlistSymbol }) {
           <button
             onClick={() => remove.mutate(item.symbol)}
             disabled={remove.isPending}
-            className="rounded-full p-0.5 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-40"
+            aria-label={`Remove ${item.symbol}`}
+            className="rounded-full p-2 hover:bg-(--color-negative)/20 hover:text-(--color-negative) transition-colors disabled:opacity-40"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3 h-3" aria-hidden="true" />
           </button>
         </Tooltip>
       )}
@@ -416,9 +419,10 @@ function CandidateChip({ symbol }: { symbol: string }) {
         <button
           onClick={() => remove.mutate(symbol)}
           disabled={remove.isPending}
-          className="rounded-full p-0.5 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-40"
+          aria-label={`Remove ${symbol}`}
+          className="rounded-full p-2 hover:bg-(--color-negative)/20 hover:text-(--color-negative) transition-colors disabled:opacity-40"
         >
-          <X className="w-3 h-3" />
+          <X className="w-3 h-3" aria-hidden="true" />
         </button>
       </Tooltip>
     </span>
@@ -435,9 +439,10 @@ function BlockedChip({ symbol }: { symbol: string }) {
         <button
           onClick={() => unblock.mutate(symbol)}
           disabled={unblock.isPending}
-          className="rounded-full p-0.5 hover:bg-[var(--color-accent)]/20 hover:text-[var(--color-accent)] transition-colors disabled:opacity-40"
+          aria-label={`Unblock ${symbol}`}
+          className="rounded-full p-2 hover:bg-[var(--color-accent)]/20 hover:text-[var(--color-accent)] transition-colors disabled:opacity-40"
         >
-          <RotateCcw className="w-3 h-3" />
+          <RotateCcw className="w-3 h-3" aria-hidden="true" />
         </button>
       </Tooltip>
     </span>

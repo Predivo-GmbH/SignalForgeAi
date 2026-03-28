@@ -1,0 +1,13 @@
+User-agent: *
+Disallow: /advisor
+Disallow: /strategies
+Disallow: /backtest
+Disallow: /trades
+Disallow: /analytics
+Disallow: /risk
+Disallow: /engine
+Disallow: /settings
+Disallow: /auth/
+Disallow: /reset-password
+
+Sitemap: https://signalforgeai.predivo.ch/sitemap.xml

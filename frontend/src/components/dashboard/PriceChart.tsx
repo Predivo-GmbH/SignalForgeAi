@@ -9,6 +9,7 @@ import {
   ColorType,
 } from "lightweight-charts";
 import { cn } from "@/lib/cn";
+import { cssVar } from "@/lib/colors";
 import { invokeFunction } from "@/lib/api";
 
 const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"] as const;
@@ -46,39 +47,46 @@ export function PriceChart() {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const bgSurface = cssVar("--color-bg-surface");
+    const textSec = cssVar("--color-text-secondary");
+    const border = cssVar("--color-border");
+    const accent = cssVar("--color-accent");
+    const positive = cssVar("--color-positive");
+    const negative = cssVar("--color-negative");
+
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "#141420" },
-        textColor: "#8B8BA0",
+        background: { type: ColorType.Solid, color: bgSurface },
+        textColor: textSec,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "#2A2A3C" },
-        horzLines: { color: "#2A2A3C" },
+        vertLines: { color: border },
+        horzLines: { color: border },
       },
       width: containerRef.current.clientWidth,
       height: containerRef.current.clientHeight,
       crosshair: {
-        vertLine: { color: "#7B61FF", width: 1, labelBackgroundColor: "#7B61FF" },
-        horzLine: { color: "#7B61FF", width: 1, labelBackgroundColor: "#7B61FF" },
+        vertLine: { color: accent, width: 1, labelBackgroundColor: accent },
+        horzLine: { color: accent, width: 1, labelBackgroundColor: accent },
       },
       timeScale: {
-        borderColor: "#2A2A3C",
+        borderColor: border,
       },
       rightPriceScale: {
-        borderColor: "#2A2A3C",
+        borderColor: border,
       },
     });
 
     chartRef.current = chart;
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#00D68F",
-      downColor: "#FF4D6A",
-      borderUpColor: "#00D68F",
-      borderDownColor: "#FF4D6A",
-      wickUpColor: "#00D68F",
-      wickDownColor: "#FF4D6A",
+      upColor: positive,
+      downColor: negative,
+      borderUpColor: positive,
+      borderDownColor: negative,
+      wickUpColor: positive,
+      wickDownColor: negative,
     });
     seriesRef.current = series;
 
@@ -141,12 +149,13 @@ export function PriceChart() {
   return (
     <div className="bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-border)] flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+      <div className="flex flex-wrap items-center justify-between px-3 sm:px-4 py-3 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
           <select
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
-            className="bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] text-sm font-semibold rounded-lg border border-[var(--color-border)] px-3 py-1.5 outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+            aria-label="Select trading pair"
+            className="bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] text-base sm:text-sm font-semibold rounded-lg border border-[var(--color-border)] px-3 py-1.5 min-h-[44px] outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           >
             {SYMBOLS.map((s) => (
               <option key={s} value={s}>
@@ -161,7 +170,7 @@ export function PriceChart() {
               key={tf}
               onClick={() => setTimeframe(tf)}
               className={cn(
-                "px-2.5 py-1 text-xs font-medium rounded-md transition-colors",
+                "px-2.5 py-1 min-h-[44px] min-w-[44px] text-xs font-medium rounded-md transition-colors",
                 timeframe === tf
                   ? "bg-[var(--color-accent)] text-white"
                   : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]",
@@ -176,12 +185,12 @@ export function PriceChart() {
       <div className="relative flex-1 min-h-[300px]">
         <div ref={containerRef} className="absolute inset-0" />
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-(--color-bg-surface)/80 z-10">
             <span className="text-sm text-[var(--color-text-secondary)]">Loading candles...</span>
           </div>
         )}
         {error && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-(--color-bg-surface)/80 z-10">
             <span className="text-sm text-[var(--color-text-secondary)]">{error}</span>
           </div>
         )}

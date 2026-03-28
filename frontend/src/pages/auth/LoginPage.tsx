@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import AuthLayout from '@/components/auth/AuthLayout'
 import OtpInput from '@/components/auth/OtpInput'
 import ResendTimer from '@/components/auth/ResendTimer'
@@ -18,6 +19,7 @@ const fadeVariants = {
 }
 
 export default function LoginPage() {
+  usePageTitle('Log In')
   const [tab, setTab] = useState<Tab>('password')
   const [codeStep, setCodeStep] = useState<CodeStep>('email')
   const [email, setEmail] = useState('')
@@ -94,7 +96,7 @@ export default function LoginPage() {
       <div className="mt-6 flex rounded-lg border border-(--color-border) bg-(--color-bg-elevated) p-1">
         <button
           onClick={() => switchTab('password')}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${
+          className={`flex-1 rounded-md py-2 min-h-[44px] text-sm font-medium transition-all ${
             tab === 'password'
               ? 'bg-(--color-bg-surface) text-(--color-text-primary) shadow-sm'
               : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'
@@ -104,7 +106,7 @@ export default function LoginPage() {
         </button>
         <button
           onClick={() => switchTab('code')}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${
+          className={`flex-1 rounded-md py-2 min-h-[44px] text-sm font-medium transition-all ${
             tab === 'code'
               ? 'bg-(--color-bg-surface) text-(--color-text-primary) shadow-sm'
               : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'
@@ -143,7 +145,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+                className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
                 placeholder="you@example.com"
               />
             </div>
@@ -154,7 +156,7 @@ export default function LoginPage() {
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-medium text-(--color-accent) hover:underline"
+                  className="text-sm font-medium text-(--color-accent) hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -166,14 +168,14 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+                className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
                 placeholder="Enter your password"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 min-h-[44px] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -211,14 +213,14 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+                className="mt-1 block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
                 placeholder="you@example.com"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 min-h-[44px] text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? 'Sending code...' : 'Send Sign-In Code'}
             </button>
@@ -253,7 +255,7 @@ export default function LoginPage() {
             </p>
             <button
               onClick={() => { setCodeStep('email'); setError(null) }}
-              className="block w-full text-center text-sm font-medium text-(--color-text-secondary) hover:text-(--color-text-primary)"
+              className="block w-full min-h-[44px] text-center text-sm font-medium text-(--color-text-secondary) hover:text-(--color-text-primary)"
             >
               &larr; Use a different email
             </button>

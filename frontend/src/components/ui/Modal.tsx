@@ -80,19 +80,19 @@ export function Modal({ open, onClose, title, size = "md", children }: ModalProp
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative w-full ${size === "lg" ? "max-w-2xl" : "max-w-md"} mx-4 bg-(--color-bg-surface) border border-(--color-border) rounded-xl shadow-2xl`}
+        className={`relative w-full ${size === "lg" ? "max-w-2xl" : "max-w-md"} mx-4 max-h-[90vh] flex flex-col bg-(--color-bg-surface) border border-(--color-border) rounded-xl shadow-2xl`}
       >
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-(--color-border)">
           <h2 className="text-sm sm:text-base font-semibold text-(--color-text-primary) truncate mr-2">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated) transition-colors shrink-0"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated) transition-colors shrink-0"
             aria-label="Close dialog"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="px-4 sm:px-5 py-3 sm:py-4">{children}</div>
+        <div className="px-4 sm:px-5 py-3 sm:py-4 overflow-y-auto">{children}</div>
       </div>
     </div>,
     document.body,

@@ -39,12 +39,13 @@ export function SystemHealthBanner() {
     return (
       <div
         className="flex items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border"
+        role="alert"
         style={{
           backgroundColor: "color-mix(in srgb, var(--color-negative) 8%, transparent)",
           borderColor: "color-mix(in srgb, var(--color-negative) 30%, transparent)",
         }}
       >
-        <XCircle className="h-4 w-4 shrink-0" style={{ color: "var(--color-negative)" }} />
+        <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" style={{ color: "var(--color-negative)" }} />
         <span className="text-xs sm:text-sm font-medium" style={{ color: "var(--color-negative)" }}>
           Cannot reach API server
         </span>
@@ -63,12 +64,13 @@ export function SystemHealthBanner() {
   return (
     <div
       className="flex items-start gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border"
+      role="alert"
       style={{
         backgroundColor: `color-mix(in srgb, ${config.bg} 8%, transparent)`,
         borderColor: `color-mix(in srgb, ${config.border} 30%, transparent)`,
       }}
     >
-      <Icon className="h-4 w-4 shrink-0 mt-0.5" style={{ color: config.text }} />
+      <Icon className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" style={{ color: config.text }} />
       <div className="flex-1 min-w-0">
         <span className="text-sm font-semibold" style={{ color: config.text }}>
           {config.label}

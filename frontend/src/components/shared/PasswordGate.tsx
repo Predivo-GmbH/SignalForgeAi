@@ -32,7 +32,7 @@ export function PasswordGate({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-(--color-bg-base) p-4">
-      <div className="w-full max-w-sm rounded-xl border border-(--color-border) bg-(--color-bg-surface) p-8">
+      <div className="w-full max-w-sm rounded-xl border border-(--color-border) bg-(--color-bg-surface) p-5 sm:p-8">
         <div className="mb-6 text-center">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-(--color-accent) text-white font-bold text-lg">
             SF
@@ -48,17 +48,18 @@ export function PasswordGate({ children }: { children: ReactNode }) {
           <input
             type="password"
             placeholder="Enter access code"
+            aria-label="Access code"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setError(false) }}
             autoFocus
-            className="block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
+            className="block w-full rounded-lg border border-(--color-border) bg-(--color-bg-elevated) px-3 py-2.5 min-h-[44px] text-base sm:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/50 focus:border-(--color-accent) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/20"
           />
           {error && (
-            <p className="text-sm text-(--color-negative)">Incorrect access code.</p>
+            <p className="text-sm text-(--color-negative)" role="alert">Incorrect access code.</p>
           )}
           <button
             type="submit"
-            className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="w-full rounded-lg bg-(--color-accent) px-4 py-2.5 min-h-[44px] text-sm font-medium text-white transition-opacity hover:opacity-90"
           >
             Enter
           </button>

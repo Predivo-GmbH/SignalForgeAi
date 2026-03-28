@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import { Tooltip } from "@/components/ui/Tooltip";
 import {
   Shield,
@@ -126,16 +128,16 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
       className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-(--color-text-primary)">
+        <h2 className="text-base font-semibold text-(--color-text-primary)">
           Connect Broker
-        </h3>
+        </h2>
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded hover:bg-(--color-bg-elevated) transition-colors"
+          className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-(--color-bg-elevated) transition-colors"
           aria-label="Close form"
         >
-          <X className="w-4 h-4 text-(--color-text-secondary)" />
+          <X className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
         </button>
       </div>
 
@@ -146,7 +148,8 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
         <select
           value={broker}
           onChange={(e) => setBroker(e.target.value)}
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+          aria-label="Select broker"
+          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 min-h-[44px] text-base md:text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
         >
           {SUPPORTED_BROKERS.map((b) => (
             <option key={b.name} value={b.name}>
@@ -168,7 +171,8 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Enter API key"
               required
-              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+              aria-label="API Key"
+              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 min-h-[44px] text-base md:text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
             />
           </div>
 
@@ -182,7 +186,8 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
               onChange={(e) => setApiSecret(e.target.value)}
               placeholder="Enter API secret"
               required
-              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+              aria-label="API Secret"
+              className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 min-h-[44px] text-base md:text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
             />
           </div>
 
@@ -197,9 +202,10 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setApiPassphrase(e.target.value)}
                 placeholder="Enter API passphrase"
                 required
-                className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+                aria-label="API Passphrase"
+                className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 min-h-[44px] text-base md:text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
               />
-              <p className="text-[10px] text-(--color-text-secondary)">
+              <p className="text-xs text-(--color-text-secondary)">
                 KuCoin requires a passphrase set during API key creation
               </p>
             </div>
@@ -207,7 +213,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
         </>
       )}
 
-      <label className="flex items-center gap-2 cursor-pointer">
+      <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
         <input
           type="checkbox"
           checked={isPaper}
@@ -215,7 +221,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
             setIsPaper(e.target.checked);
             if (e.target.checked) setPurpose("read");
           }}
-          className="w-4 h-4 rounded border border-(--color-border) bg-(--color-bg-elevated) accent-(--color-accent)"
+          className="w-5 h-5 rounded border border-(--color-border) bg-(--color-bg-elevated) accent-(--color-accent)"
         />
         <span className="text-sm text-(--color-text-primary)">Paper trading mode</span>
       </label>
@@ -227,7 +233,7 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
           </label>
           <div className="flex gap-3">
             <label className={cn(
-              "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors",
+              "flex-1 flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg border cursor-pointer transition-colors",
               purpose === "read"
                 ? "border-(--color-accent) bg-(--color-accent)/10"
                 : "border-(--color-border) bg-(--color-bg-elevated) hover:border-(--color-text-secondary)/30",
@@ -242,13 +248,13 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
               />
               <div>
                 <p className="text-sm text-(--color-text-primary)">Read Only</p>
-                <p className="text-[10px] text-(--color-text-secondary)">Portfolio viewing</p>
+                <p className="text-xs text-(--color-text-secondary)">Portfolio viewing</p>
               </div>
             </label>
             <label className={cn(
-              "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors",
+              "flex-1 flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg border cursor-pointer transition-colors",
               purpose === "trade"
-                ? "border-amber-500 bg-amber-500/10"
+                ? "border-(--color-warning) bg-(--color-warning)/10"
                 : "border-(--color-border) bg-(--color-bg-elevated) hover:border-(--color-text-secondary)/30",
             )}>
               <input
@@ -257,21 +263,21 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
                 value="trade"
                 checked={purpose === "trade"}
                 onChange={() => setPurpose("trade")}
-                className="accent-amber-500"
+                className="accent-(--color-warning)"
               />
               <div>
                 <p className="text-sm text-(--color-text-primary)">Trading</p>
-                <p className="text-[10px] text-(--color-text-secondary)">Order execution</p>
+                <p className="text-xs text-(--color-text-secondary)">Order execution</p>
               </div>
             </label>
           </div>
           {purpose === "trade" && (
-            <p className="text-xs text-amber-400">
+            <p className="text-xs text-(--color-warning)">
               Trading keys may require IP whitelisting on your exchange.
             </p>
           )}
           {selectedMeta?.keyExpiryDays && (
-            <p className="text-xs text-amber-400">
+            <p className="text-xs text-(--color-warning)">
               {selectedMeta.name} keys without IP binding expire after {selectedMeta.keyExpiryDays} days. Link an IP address on {selectedMeta.name} for permanent validity.
             </p>
           )}
@@ -289,12 +295,12 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
       <button
         type="submit"
         disabled={connect.isPending}
-        className="w-full flex items-center justify-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 min-h-[44px] transition-colors disabled:opacity-50"
       >
         {connect.isPending ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
         ) : (
-          <Shield className="w-4 h-4" />
+          <Shield className="w-4 h-4" aria-hidden="true" />
         )}
         {connect.isPending ? "Connecting..." : "Connect"}
       </button>
@@ -312,9 +318,9 @@ function KeyExpiryBadge({ createdAt, expiryDays }: { createdAt: string; expiryDa
 
   if (daysLeft <= 0) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
-        <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-        <span className="text-xs font-medium text-red-400">Key expired — reconnect required</span>
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-(--color-negative)/10 border border-(--color-negative)/20">
+        <AlertTriangle className="w-3.5 h-3.5 text-(--color-negative)" aria-hidden="true" />
+        <span className="text-xs font-medium text-(--color-negative)">Key expired — reconnect required</span>
       </div>
     );
   }
@@ -326,22 +332,22 @@ function KeyExpiryBadge({ createdAt, expiryDays }: { createdAt: string; expiryDa
     <div className={cn(
       "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border",
       isCritical
-        ? "bg-red-500/10 border-red-500/20"
+        ? "bg-(--color-negative)/10 border-(--color-negative)/20"
         : isWarning
-          ? "bg-amber-500/10 border-amber-500/20"
+          ? "bg-(--color-warning)/10 border-(--color-warning)/20"
           : "bg-(--color-bg-elevated) border-(--color-border)",
     )}>
       <Clock className={cn(
         "w-3.5 h-3.5",
-        isCritical ? "text-red-400" : isWarning ? "text-amber-400" : "text-(--color-text-secondary)",
+        isCritical ? "text-(--color-negative)" : isWarning ? "text-(--color-warning)" : "text-(--color-text-secondary)",
       )} />
       <span className={cn(
         "text-xs font-medium",
-        isCritical ? "text-red-400" : isWarning ? "text-amber-400" : "text-(--color-text-secondary)",
+        isCritical ? "text-(--color-negative)" : isWarning ? "text-(--color-warning)" : "text-(--color-text-secondary)",
       )}>
         {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining
       </span>
-      <span className="text-[10px] text-(--color-text-secondary)">
+      <span className="text-xs text-(--color-text-secondary)">
         (no IP binding)
       </span>
     </div>
@@ -372,7 +378,7 @@ function ConnectionCard({
   const StatusIcon = isChecking ? Loader2 : isHealthy ? Wifi : WifiOff;
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-(--color-bg-elevated) rounded-lg flex items-center justify-center">
@@ -388,10 +394,10 @@ function ConnectionCard({
                 {meta?.name ?? broker}
               </h3>
               <span className={cn(
-                "px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full",
+                "px-2 py-0.5 text-xs font-semibold uppercase rounded-full",
                 purpose === "trade"
-                  ? "bg-amber-500/15 text-amber-400"
-                  : "bg-blue-500/15 text-blue-400",
+                  ? "bg-(--color-warning)/15 text-(--color-warning)"
+                  : "bg-(--color-palette-blue)/15 text-(--color-palette-blue)",
               )}>
                 {purpose === "trade" ? "Trading" : "Read Only"}
               </span>
@@ -409,10 +415,10 @@ function ConnectionCard({
               href={meta.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-(--color-accent) hover:underline"
+              className="flex items-center gap-1 text-xs text-(--color-accent) hover:underline min-h-[44px] px-1"
             >
               Docs
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3 h-3" aria-hidden="true" />
             </a>
           )}
         </div>
@@ -428,17 +434,17 @@ function ConnectionCard({
       </div>
 
       {!isChecking && !isHealthy && health.data?.error && (
-        <div className="flex items-start gap-2 bg-(--color-negative)/10 rounded-lg px-3 py-2">
-          <AlertTriangle className="w-4 h-4 text-(--color-negative) shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 bg-(--color-negative)/10 rounded-lg px-3 py-2" role="alert">
+          <AlertTriangle className="w-4 h-4 text-(--color-negative) shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-(--color-negative)">{health.data.error}</p>
         </div>
       )}
 
       {!isChecking && isHealthy && health.data?.sync_ok === false && (
-        <div className="flex items-start gap-2 bg-amber-500/10 rounded-lg px-3 py-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 bg-(--color-warning)/10 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-4 h-4 text-(--color-warning) shrink-0 mt-0.5" aria-hidden="true" />
           <div className="space-y-0.5">
-            <p className="text-xs font-medium text-amber-400">Portfolio sync failing from worker</p>
+            <p className="text-xs font-medium text-(--color-warning)">Portfolio sync failing from worker</p>
             <p className="text-xs text-(--color-text-secondary)">
               The API connection works, but the background sync task cannot reach this exchange — likely an IP whitelist issue. Add the worker's outgoing IP to your API key's allowed IPs.
             </p>
@@ -456,12 +462,12 @@ function ConnectionCard({
       <button
         onClick={() => disconnect.mutate(id)}
         disabled={disconnect.isPending}
-        className="flex items-center gap-2 text-xs font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 text-xs font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors disabled:opacity-50 min-h-[44px]"
       >
         {disconnect.isPending ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
         ) : (
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
         )}
         {disconnect.isPending ? "Disconnecting..." : "Disconnect"}
       </button>
@@ -491,24 +497,24 @@ function ConnectionsTab() {
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+            className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2 min-h-[44px] transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             Connect Broker
           </button>
         )}
       </div>
 
-      {showForm && <ConnectForm onClose={() => setShowForm(false)} />}
+      {showForm && <div className="border-t border-(--color-border) mt-4 pt-4"><ConnectForm onClose={() => setShowForm(false)} /></div>}
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
+          <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" aria-hidden="true" />
         </div>
       )}
 
       {isError && (
-        <div className="bg-(--color-negative)/10 border border-(--color-negative)/20 rounded-xl p-4 text-center">
+        <div className="bg-(--color-negative)/10 border border-(--color-negative)/20 rounded-xl p-4 text-center" role="alert">
           <p className="text-sm text-(--color-negative)">
             {error instanceof Error ? error.message : "Failed to load connections"}
           </p>
@@ -532,15 +538,15 @@ function ConnectionsTab() {
 
       {connections && connections.length === 0 && !showForm && (
         <div className="bg-(--color-bg-elevated)/50 border border-(--color-border) rounded-xl p-8 text-center space-y-3">
-          <WifiOff className="w-8 h-8 text-(--color-text-secondary) mx-auto" />
+          <WifiOff className="w-8 h-8 text-(--color-text-secondary) mx-auto" aria-hidden="true" />
           <p className="text-sm text-(--color-text-secondary)">
             No broker connections yet. Connect a broker to start trading.
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-(--color-accent) hover:underline"
+            className="inline-flex items-center gap-2 text-sm font-medium text-(--color-accent) hover:underline min-h-[44px]"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             Add your first connection
           </button>
         </div>
@@ -587,12 +593,13 @@ function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
           placeholder={currentEmail}
-          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+          aria-label="New email address"
+          className="w-full bg-(--color-bg-elevated) border border-(--color-border) rounded-lg px-3 py-2 min-h-[44px] text-base md:text-sm text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
         />
       </div>
 
       {error && (
-        <p className="text-xs text-(--color-negative)">{error}</p>
+        <p className="text-xs text-(--color-negative)" role="alert">{error}</p>
       )}
       {success && (
         <p className="text-xs text-(--color-positive)">Confirmation email sent. Check your inbox.</p>
@@ -601,12 +608,12 @@ function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg px-4 py-2.5 min-h-[44px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
         ) : (
-          <Mail className="w-4 h-4" />
+          <Mail className="w-4 h-4" aria-hidden="true" />
         )}
         {loading ? "Updating..." : "Update Email"}
       </button>
@@ -622,7 +629,7 @@ function ProfileTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
+        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" aria-hidden="true" />
       </div>
     );
   }
@@ -649,7 +656,7 @@ function ProfileTab() {
       </div>
 
       {/* Account Info */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-5">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-(--color-accent)/15 flex items-center justify-center">
             <span className="text-xl font-bold text-(--color-accent)">
@@ -661,7 +668,7 @@ function ProfileTab() {
               {profile?.email ?? "—"}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-(--color-positive)" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-(--color-positive)" aria-hidden="true" />
               <span className="text-xs text-(--color-positive)">Active account</span>
             </div>
           </div>
@@ -672,7 +679,7 @@ function ProfileTab() {
         <div className="grid gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center shrink-0">
-              <Calendar className="w-4 h-4 text-(--color-text-secondary)" />
+              <Calendar className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
             </div>
             <div>
               <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
@@ -684,7 +691,7 @@ function ProfileTab() {
 
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center shrink-0">
-              <Shield className="w-4 h-4 text-(--color-text-secondary)" />
+              <Shield className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
@@ -699,11 +706,11 @@ function ProfileTab() {
       </div>
 
       {/* Change Email */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-(--color-bg-elevated) flex items-center justify-center">
-              <Mail className="w-4 h-4 text-(--color-text-secondary)" />
+              <Mail className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
             </div>
             <div>
               <p className="text-sm font-semibold text-(--color-text-primary)">Email Address</p>
@@ -712,9 +719,9 @@ function ProfileTab() {
           </div>
           <button
             onClick={() => setShowEmailForm(!showEmailForm)}
-            className="flex items-center gap-1.5 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-medium text-(--color-accent) hover:text-(--color-accent)/80 transition-colors min-h-[44px] px-2"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
             {showEmailForm ? "Cancel" : "Change"}
           </button>
         </div>
@@ -730,12 +737,12 @@ function ProfileTab() {
       <TwoFactorSetup />
 
       {/* Logout */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5">
         <button
           onClick={() => signOut()}
-          className="flex items-center gap-2 text-sm font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-(--color-negative) hover:text-(--color-negative)/80 transition-colors min-h-[44px]"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4" aria-hidden="true" />
           Log out of your account
         </button>
       </div>
@@ -760,41 +767,46 @@ function ExchangeRoutingTab() {
   const { data: holdingsData, isLoading: holdingsLoading } = useHoldings();
   const { data: strategiesData } = useStrategies();
   const strategy = strategiesData?.strategies?.[0];
-  const savedMap = (strategy?.config?.exchange_map as Record<string, string>) ?? {};
+  const savedMap = useMemo(
+    () => (strategy?.config?.exchange_map as Record<string, string>) ?? {},
+    [strategy?.config?.exchange_map],
+  );
   const updateMutation = useUpdateStrategy();
   const { data: connections } = useBrokerConnections();
   const hasLiveTrading = connections?.some((c) => !c.is_paper && c.purpose === "trade") ?? false;
 
   // Derive trading pairs from portfolio holdings
-  const holdings = holdingsData?.holdings ?? [];
-  const tradingHoldings = holdings.filter((h) => !STABLECOINS.has(h.symbol.toUpperCase()));
-  const pairs = tradingHoldings.map((h) => ({
-    pair: `${h.symbol}/USDT`,
-    source: h.source,
-  }));
-  // Deduplicate (same coin on multiple exchanges) — keep first occurrence
-  const seen = new Set<string>();
-  const uniquePairs = pairs.filter((p) => {
-    if (seen.has(p.pair)) return false;
-    seen.add(p.pair);
-    return true;
-  });
-  const sortedPairs = [...uniquePairs].sort((a, b) => a.pair.localeCompare(b.pair));
-  const pairSymbols = sortedPairs.map((p) => p.pair);
+  const sortedPairs = useMemo(() => {
+    const holdings = holdingsData?.holdings ?? [];
+    const tradingHoldings = holdings.filter((h) => !STABLECOINS.has(h.symbol.toUpperCase()));
+    const pairs = tradingHoldings.map((h) => ({
+      pair: `${h.symbol}/USDT`,
+      source: h.source,
+    }));
+    // Deduplicate (same coin on multiple exchanges) — keep first occurrence
+    const seen = new Set<string>();
+    const uniquePairs = pairs.filter((p) => {
+      if (seen.has(p.pair)) return false;
+      seen.add(p.pair);
+      return true;
+    });
+    return [...uniquePairs].sort((a, b) => a.pair.localeCompare(b.pair));
+  }, [holdingsData?.holdings]);
+  const pairSymbols = useMemo(() => sortedPairs.map((p) => p.pair), [sortedPairs]);
 
   const { data: availabilityData, isLoading: availLoading } = useExchangeAvailability(pairSymbols);
 
   const [exchangeMap, setExchangeMap] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
 
-  const EXCHANGE_IDS = new Set(SUPPORTED_EXCHANGES.map((e) => e.id));
+  const EXCHANGE_IDS = useMemo(() => new Set(SUPPORTED_EXCHANGES.map((e) => e.id)), []);
 
   // Pick the best default exchange for a pair:
   // 1. Saved exchange_map entry
   // 2. Source exchange (if it's a real exchange, not "manual")
   // 3. First available exchange from availability data (prefer binance)
   // 4. Empty string for unavailable pairs
-  const pickDefault = (pair: string, source: string): string => {
+  const pickDefault = useCallback((pair: string, source: string): string => {
     if (savedMap[pair]) return savedMap[pair];
     if (EXCHANGE_IDS.has(source)) return source;
     if (availabilityData) {
@@ -804,15 +816,27 @@ function ExchangeRoutingTab() {
       return avail[0];
     }
     return "";
-  };
+  }, [savedMap, EXCHANGE_IDS, availabilityData]);
+
+  // Track deps via serialized key to avoid running on every render
+  const pairSymbolsKey = JSON.stringify(pairSymbols);
+  const savedMapKey = JSON.stringify(savedMap);
+  const prevKeysRef = useRef({ pairSymbolsKey: "", savedMapKey: "", availabilityData: availabilityData });
 
   useEffect(() => {
+    if (
+      prevKeysRef.current.pairSymbolsKey === pairSymbolsKey &&
+      prevKeysRef.current.savedMapKey === savedMapKey &&
+      prevKeysRef.current.availabilityData === availabilityData
+    ) return;
+    prevKeysRef.current = { pairSymbolsKey, savedMapKey, availabilityData };
+
     const initial: Record<string, string> = {};
     for (const p of sortedPairs) {
       initial[p.pair] = pickDefault(p.pair, p.source);
     }
     setExchangeMap(initial);
-  }, [JSON.stringify(pairSymbols), JSON.stringify(savedMap), availabilityData]);
+  }, [pairSymbolsKey, savedMapKey, availabilityData, sortedPairs, pickDefault]);
 
   const handleSave = () => {
     if (!strategy) return;
@@ -847,7 +871,7 @@ function ExchangeRoutingTab() {
   if (holdingsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
+        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" aria-hidden="true" />
       </div>
     );
   }
@@ -865,10 +889,10 @@ function ExchangeRoutingTab() {
         </p>
       </div>
 
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-5">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-5">
         {!hasLiveTrading && (
           <p className="text-xs text-(--color-warning) flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 shrink-0" />
+            <Info className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             Paper trading mode — exchange selection only affects market data source.
             Trades are still validated against your portfolio holdings (USDT to buy, crypto to sell).
           </p>
@@ -898,16 +922,16 @@ function ExchangeRoutingTab() {
 
         {sortedPairs.length === 0 ? (
           <div className="text-center py-6">
-            <ArrowLeftRight className="w-8 h-8 text-(--color-text-secondary) mx-auto mb-2" />
+            <ArrowLeftRight className="w-8 h-8 text-(--color-text-secondary) mx-auto mb-2" aria-hidden="true" />
             <p className="text-sm text-(--color-text-secondary)">
               No crypto holdings found. Connect an exchange or add manual holdings to see trading pairs.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-(--color-text-secondary) font-medium px-1">
-              <span className="min-w-[120px] text-center">Pair</span>
-              <span className="min-w-[90px] text-center">Held on</span>
+            <div className="hidden sm:flex items-center gap-4 text-xs uppercase tracking-wider text-(--color-text-secondary) font-medium px-1">
+              <span className="sm:min-w-[120px] text-center">Pair</span>
+              <span className="sm:min-w-[90px] text-center">Held on</span>
               <span className="w-3.5" />
               <span className="flex-1">Trade on</span>
             </div>
@@ -919,10 +943,10 @@ function ExchangeRoutingTab() {
 
               return (
                 <div key={pair}>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                     <span
                       className={cn(
-                        "text-sm font-semibold rounded-md px-3 py-1.5 min-w-[120px] text-center",
+                        "text-sm font-semibold rounded-md px-3 py-1.5 sm:min-w-[120px] text-center",
                         notOnAny
                           ? "text-(--color-negative) bg-(--color-negative)/10 line-through"
                           : "text-(--color-accent) bg-(--color-accent-soft)",
@@ -930,12 +954,12 @@ function ExchangeRoutingTab() {
                     >
                       {pair}
                     </span>
-                    <span className="text-xs text-(--color-text-secondary) min-w-[90px] text-center shrink-0">
+                    <span className="text-xs text-(--color-text-secondary) sm:min-w-[90px] text-center shrink-0">
                       {SUPPORTED_EXCHANGES.find((e) => e.id === source)?.name ?? source}
                     </span>
-                    <ArrowLeftRight size={14} className="text-(--color-text-secondary) shrink-0" />
+                    <ArrowLeftRight size={14} className="text-(--color-text-secondary) shrink-0" aria-hidden="true" />
                     {notOnAny ? (
-                      <span className="flex-1 h-9 rounded-lg border border-(--color-negative)/30 bg-(--color-negative)/5 px-3 text-sm text-(--color-negative) flex items-center opacity-60">
+                      <span className="flex-1 min-h-[44px] h-9 rounded-lg border border-(--color-negative)/30 bg-(--color-negative)/5 px-3 text-sm text-(--color-negative) flex items-center opacity-60">
                         Not available
                       </span>
                     ) : (
@@ -944,15 +968,16 @@ function ExchangeRoutingTab() {
                         onChange={(e) =>
                           setExchangeMap((prev) => ({ ...prev, [pair]: e.target.value }))
                         }
+                        aria-label={`Exchange for ${pair}`}
                         className={cn(
-                          "flex-1 h-9 rounded-lg border px-3 text-sm focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer",
+                          "flex-1 min-h-[44px] h-9 rounded-lg border px-3 text-base md:text-sm focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer",
                           notOnExchange
                             ? "border-(--color-warning) bg-(--color-warning)/5 text-(--color-text-primary)"
                             : "border-(--color-border) bg-(--color-bg-elevated) text-(--color-text-primary)",
                         )}
                       >
                         {SUPPORTED_EXCHANGES.map((ex) => (
-                          <option key={ex.id} value={ex.id} className="bg-[#1a1b2e] text-white">
+                          <option key={ex.id} value={ex.id} className="bg-(--color-bg-elevated) text-(--color-text-primary)">
                             {ex.name}
                           </option>
                         ))}
@@ -960,7 +985,7 @@ function ExchangeRoutingTab() {
                     )}
                   </div>
                   {notOnExchange && !notOnAny && (
-                    <p className="text-xs text-(--color-warning) mt-1 ml-[136px]">
+                    <p className="text-xs text-(--color-warning) mt-1 ml-0 sm:ml-[136px]">
                       {pair} is not listed on{" "}
                       {SUPPORTED_EXCHANGES.find((e) => e.id === selectedExchange)?.name ?? selectedExchange}.
                       {pairAvail.length > 0 && (
@@ -991,7 +1016,7 @@ function ExchangeRoutingTab() {
             onClick={handleSave}
             disabled={!hasChanges || updateMutation.isPending || !strategy}
             className={cn(
-              "inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              "inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium transition-colors",
               hasChanges && strategy
                 ? "bg-(--color-accent) text-white hover:bg-(--color-accent)/90"
                 : "bg-(--color-bg-elevated) text-(--color-text-secondary) cursor-not-allowed",
@@ -999,14 +1024,14 @@ function ExchangeRoutingTab() {
           >
             {saved ? (
               <>
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
                 Saved
               </>
             ) : updateMutation.isPending ? (
               "Saving..."
             ) : (
               <>
-                <Save className="w-3.5 h-3.5" />
+                <Save className="w-3.5 h-3.5" aria-hidden="true" />
                 Save Exchange Config
               </>
             )}
@@ -1017,7 +1042,7 @@ function ExchangeRoutingTab() {
             </span>
           )}
           {updateMutation.isError && (
-            <span className="text-xs text-(--color-negative)">
+            <span className="text-xs text-(--color-negative)" role="alert">
               Failed to save. Please try again.
             </span>
           )}
@@ -1030,6 +1055,8 @@ function ExchangeRoutingTab() {
 /* ---- Main Page ---- */
 
 export function SettingsPage() {
+  usePageTitle("Settings");
+  useNoIndex();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
 
   return (
@@ -1044,57 +1071,60 @@ export function SettingsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="border-b border-(--color-border)">
-        <div className="flex gap-6">
+      <div className="border-b border-(--color-border) relative">
+        <div className="overflow-x-auto snap-x snap-mandatory">
+        <div className="flex gap-1 sm:gap-6">
           <button
             onClick={() => setActiveTab("profile")}
             className={cn(
-              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              "pb-2.5 min-h-[44px] px-2 sm:px-0 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 whitespace-nowrap snap-start",
               activeTab === "profile"
                 ? "border-(--color-accent) text-(--color-accent)"
                 : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
             )}
           >
-            <User className="w-3.5 h-3.5" />
+            <User className="w-3.5 h-3.5" aria-hidden="true" />
             Profile
           </button>
           <button
             onClick={() => setActiveTab("connections")}
             className={cn(
-              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              "pb-2.5 min-h-[44px] px-2 sm:px-0 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 whitespace-nowrap snap-start",
               activeTab === "connections"
                 ? "border-(--color-accent) text-(--color-accent)"
                 : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
             )}
           >
-            <Wifi className="w-3.5 h-3.5" />
+            <Wifi className="w-3.5 h-3.5" aria-hidden="true" />
             Connections
           </button>
           <button
             onClick={() => setActiveTab("exchanges")}
             className={cn(
-              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              "pb-2.5 min-h-[44px] px-2 sm:px-0 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 whitespace-nowrap snap-start",
               activeTab === "exchanges"
                 ? "border-(--color-accent) text-(--color-accent)"
                 : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
             )}
           >
-            <ArrowLeftRight className="w-3.5 h-3.5" />
+            <ArrowLeftRight className="w-3.5 h-3.5" aria-hidden="true" />
             Exchanges
           </button>
           <button
             onClick={() => setActiveTab("ai-usage")}
             className={cn(
-              "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+              "pb-2.5 min-h-[44px] px-2 sm:px-0 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 whitespace-nowrap snap-start",
               activeTab === "ai-usage"
                 ? "border-(--color-accent) text-(--color-accent)"
                 : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
             )}
           >
-            <DollarSign className="w-3.5 h-3.5" />
+            <DollarSign className="w-3.5 h-3.5" aria-hidden="true" />
             AI Usage
           </button>
         </div>
+        </div>
+        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-(--color-bg-base) to-transparent pointer-events-none sm:hidden" />
       </div>
 
       {/* Tab content */}

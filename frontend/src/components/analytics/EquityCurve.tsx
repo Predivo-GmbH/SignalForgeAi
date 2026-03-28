@@ -7,6 +7,7 @@ import {
   type Time,
   ColorType,
 } from "lightweight-charts";
+import { cssVar } from "@/lib/colors";
 import type { EquityPoint } from "@/hooks/useAnalytics";
 
 interface EquityCurveProps {
@@ -22,47 +23,50 @@ export function EquityCurve({ points }: EquityCurveProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const isDark = document.documentElement.classList.contains("dark");
+    const bgSurface = cssVar("--color-bg-surface");
+    const textSec = cssVar("--color-text-secondary");
+    const border = cssVar("--color-border");
+    const accent = cssVar("--color-accent");
 
     const chart = createChart(containerRef.current, {
       layout: {
         background: {
           type: ColorType.Solid,
-          color: isDark ? "#141420" : "#FFFFFF",
+          color: bgSurface,
         },
-        textColor: isDark ? "#8B8BA0" : "#6B6B80",
+        textColor: textSec,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: isDark ? "#2A2A3C" : "#E5E2DC" },
-        horzLines: { color: isDark ? "#2A2A3C" : "#E5E2DC" },
+        vertLines: { color: border },
+        horzLines: { color: border },
       },
       width: containerRef.current.clientWidth,
       height: containerRef.current.clientHeight,
       crosshair: {
         vertLine: {
-          color: "#7B61FF",
+          color: accent,
           width: 1,
-          labelBackgroundColor: "#7B61FF",
+          labelBackgroundColor: accent,
         },
         horzLine: {
-          color: "#7B61FF",
+          color: accent,
           width: 1,
-          labelBackgroundColor: "#7B61FF",
+          labelBackgroundColor: accent,
         },
       },
       timeScale: {
-        borderColor: isDark ? "#2A2A3C" : "#E5E2DC",
+        borderColor: border,
       },
       rightPriceScale: {
-        borderColor: isDark ? "#2A2A3C" : "#E5E2DC",
+        borderColor: border,
       },
     });
 
     const series = chart.addSeries(LineSeries, {
-      color: "#7B61FF",
+      color: accent,
       lineWidth: 2,
-      crosshairMarkerBackgroundColor: "#7B61FF",
+      crosshairMarkerBackgroundColor: accent,
       lastValueVisible: true,
       priceLineVisible: false,
     });
@@ -107,7 +111,7 @@ export function EquityCurve({ points }: EquityCurveProps) {
 
   if (points.length === 0) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 flex items-center justify-center h-[350px]">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 flex items-center justify-center h-[250px] sm:h-[350px]">
         <p className="text-sm text-(--color-text-secondary)">
           No equity data available
         </p>
@@ -122,7 +126,7 @@ export function EquityCurve({ points }: EquityCurveProps) {
           Equity Curve
         </h3>
       </div>
-      <div ref={containerRef} className="h-[350px]" />
+      <div ref={containerRef} className="h-[250px] sm:h-[350px]" />
     </div>
   );
 }

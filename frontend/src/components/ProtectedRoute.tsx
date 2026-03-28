@@ -6,7 +6,7 @@ export function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-(--color-bg-base)">
+      <div className="flex items-center justify-center h-screen bg-(--color-bg-base)" role="status" aria-live="polite">
         <div className="text-(--color-text-secondary)">Loading...</div>
       </div>
     );

@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { useNoIndex } from '@/hooks/useNoIndex'
 
 /**
  * Handles Supabase auth redirects (magic links, password resets, email confirmations).
  * Tokens arrive as URL hash fragments (#access_token=...&type=...).
  */
 export default function AuthCallbackPage() {
+  usePageTitle('Redirecting')
+  useNoIndex()
   const navigate = useNavigate()
   const [status] = useState('Processing...')
 

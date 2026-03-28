@@ -24,8 +24,8 @@ export function SimulationCard() {
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-5 flex items-center justify-center min-h-[100px]">
-        <Loader2 className="w-5 h-5 animate-spin text-[var(--color-accent)]" />
+      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 flex items-center justify-center min-h-[100px]" role="status" aria-live="polite">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--color-accent)]" aria-hidden="true" />
       </div>
     );
   }
@@ -35,7 +35,7 @@ export function SimulationCard() {
     return (
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-xl p-4 sm:p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
+          <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" aria-hidden="true" />
           <Tooltip text="Compares Buy & Hold vs SignalForgeAI performance using your real portfolio with simulated trades.">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
           </Tooltip>
@@ -46,17 +46,17 @@ export function SimulationCard() {
         <button
           onClick={() => startMutation.mutate()}
           disabled={startMutation.isPending}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-white text-sm font-medium py-2 px-4 transition-colors disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-white text-sm font-medium py-2 px-4 min-h-[44px] transition-colors disabled:opacity-50"
         >
           {startMutation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           ) : (
-            <Play className="w-4 h-4" />
+            <Play className="w-4 h-4" aria-hidden="true" />
           )}
           Start Paper Test
         </button>
         {startMutation.isError && (
-          <p className="text-xs text-[var(--color-negative)]">
+          <p className="text-xs text-[var(--color-negative)]" role="alert">
             {(startMutation.error as Error).message}
           </p>
         )}
@@ -86,7 +86,7 @@ export function SimulationCard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" />
+          <FlaskConical className="w-4 h-4 text-[var(--color-accent)]" aria-hidden="true" />
           <Tooltip text="Compares Buy & Hold vs SignalForgeAI performance using your real portfolio with simulated trades.">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] cursor-help">Paper Test</h3>
           </Tooltip>
@@ -94,13 +94,13 @@ export function SimulationCard() {
         {running && (
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-[var(--color-positive)] animate-pulse" />
-            <span className="text-[11px] text-[var(--color-text-secondary)]">
+            <span className="text-xs text-[var(--color-text-secondary)]">
               Running
             </span>
           </div>
         )}
         {!running && (
-          <span className="text-[11px] text-[var(--color-text-secondary)] bg-[var(--color-bg-elevated)] px-2 py-0.5 rounded-full">
+          <span className="text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-elevated)] px-2 py-0.5 rounded-full">
             Stopped
           </span>
         )}
@@ -108,31 +108,31 @@ export function SimulationCard() {
 
       {/* Duration */}
       <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-        <Clock className="w-3 h-3" />
+        <Clock className="w-3 h-3" aria-hidden="true" />
         {running ? `Running for ${timeLabel}` : `Ran for ${timeLabel}`}
       </div>
 
       {/* B&H vs SF values */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[var(--color-bg-elevated)]/50 rounded-lg p-3">
-          <span className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-wider">
+          <span className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">
             Buy &amp; Hold
           </span>
           <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-1">
             ${sim.latest_bh_value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </p>
-          <p className={`text-[11px] font-medium mt-0.5 ${sim.bh_return_pct >= 0 ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
+          <p className={`text-xs font-medium mt-0.5 ${sim.bh_return_pct >= 0 ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
             {sim.bh_return_pct >= 0 ? "+" : ""}{sim.bh_return_pct.toFixed(2)}%
           </p>
         </div>
         <div className="bg-[var(--color-bg-elevated)]/50 rounded-lg p-3">
-          <span className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-wider">
+          <span className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">
             SignalForgeAI
           </span>
           <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-1">
             ${sim.latest_sf_value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </p>
-          <p className={`text-[11px] font-medium mt-0.5 ${sim.sf_return_pct >= 0 ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
+          <p className={`text-xs font-medium mt-0.5 ${sim.sf_return_pct >= 0 ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"}`}>
             {sim.sf_return_pct >= 0 ? "+" : ""}{sim.sf_return_pct.toFixed(2)}%
           </p>
         </div>
@@ -147,9 +147,9 @@ export function SimulationCard() {
         }`}
       >
         {sfAhead ? (
-          <TrendingUp className="w-4 h-4" />
+          <TrendingUp className="w-4 h-4" aria-hidden="true" />
         ) : (
-          <TrendingDown className="w-4 h-4" />
+          <TrendingDown className="w-4 h-4" aria-hidden="true" />
         )}
         SF {sfAhead ? "ahead" : "behind"} by ${Math.abs(diff).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ({diffPct >= 0 ? "+" : ""}{diffPct.toFixed(2)}%)
       </div>
@@ -157,7 +157,7 @@ export function SimulationCard() {
       {/* Trade stats */}
       <div className="flex items-center gap-2 sm:gap-4 flex-wrap text-xs text-[var(--color-text-secondary)]">
         <div className="flex items-center gap-1">
-          <BarChart3 className="w-3 h-3" />
+          <BarChart3 className="w-3 h-3" aria-hidden="true" />
           {sim.sf_trades} trades
         </div>
         {sim.sf_trades > 0 && (
@@ -181,9 +181,9 @@ export function SimulationCard() {
           {!confirming ? (
             <button
               onClick={() => setConfirming(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-negative)]/50 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-negative)] py-2 transition-colors"
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-negative)]/50 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-negative)] py-2 min-h-[44px] transition-colors"
             >
-              <Square className="w-3.5 h-3.5" />
+              <Square className="w-3.5 h-3.5" aria-hidden="true" />
               Stop Simulation
             </button>
           ) : (
@@ -194,17 +194,17 @@ export function SimulationCard() {
                   stopMutation.mutate(sim.id);
                 }}
                 disabled={stopMutation.isPending}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-negative)] hover:bg-[var(--color-negative)]/90 text-white text-sm font-medium py-2 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-negative)] hover:bg-[var(--color-negative)]/90 text-white text-sm font-medium py-2 min-h-[44px] transition-colors disabled:opacity-50"
               >
                 {stopMutation.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                 ) : (
                   "Confirm"
                 )}
               </button>
               <button
                 onClick={() => setConfirming(false)}
-                className="flex-1 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] py-2 hover:bg-[var(--color-bg-elevated)] transition-colors"
+                className="flex-1 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] py-2 min-h-[44px] hover:bg-[var(--color-bg-elevated)] transition-colors"
               >
                 Cancel
               </button>
@@ -217,12 +217,12 @@ export function SimulationCard() {
         <button
           onClick={() => startMutation.mutate()}
           disabled={startMutation.isPending}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-white text-sm font-medium py-2 px-4 transition-colors disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-white text-sm font-medium py-2 px-4 min-h-[44px] transition-colors disabled:opacity-50"
         >
           {startMutation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           ) : (
-            <Play className="w-4 h-4" />
+            <Play className="w-4 h-4" aria-hidden="true" />
           )}
           Start New Test
         </button>

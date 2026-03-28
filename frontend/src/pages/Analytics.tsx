@@ -1,4 +1,6 @@
 import { Activity, Trophy, TrendingUp, Target, Shield } from "lucide-react";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import { useEquityHistory, useStrategyComparison } from "@/hooks/useAnalytics";
 import type { StrategyMetrics } from "@/hooks/useAnalytics";
 import { MetricsGrid } from "@/components/analytics/MetricsGrid";
@@ -14,10 +16,10 @@ function StrategyComparisonSection() {
 
   if (isLoading) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6" role="status" aria-live="polite">
         <div className="flex items-center justify-center min-h-[200px]">
           <div className="text-center space-y-3">
-            <div className="w-8 h-8 border-2 border-(--color-accent) border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-8 h-8 border-2 border-(--color-accent) border-t-transparent rounded-full animate-spin mx-auto" aria-hidden="true" />
             <p className="text-sm text-(--color-text-secondary)">Loading strategy comparison...</p>
           </div>
         </div>
@@ -27,7 +29,7 @@ function StrategyComparisonSection() {
 
   if (error) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-negative)/30 rounded-xl p-6">
+      <div className="bg-(--color-bg-surface) border border-(--color-negative)/30 rounded-xl p-4 sm:p-6" role="alert">
         <div className="text-center space-y-2">
           <p className="text-sm text-(--color-negative) font-medium">Failed to load comparison</p>
           <p className="text-xs text-(--color-text-secondary)">{error.message}</p>
@@ -38,9 +40,9 @@ function StrategyComparisonSection() {
 
   if (!data || data.strategies.length === 0) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6">
         <div className="text-center space-y-2 py-8">
-          <Activity className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto" />
+          <Activity className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto" aria-hidden="true" />
           <p className="text-sm text-(--color-text-secondary)">No strategies to compare</p>
           <p className="text-xs text-(--color-text-secondary)/60">
             Create multiple strategies with different configs to compare their performance
@@ -51,7 +53,7 @@ function StrategyComparisonSection() {
   }
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 space-y-5">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <Tooltip text="All active strategies run in parallel on their configured symbols and timeframes. Compare metrics to find the best-performing configuration.">
@@ -79,7 +81,7 @@ function StrategyComparisonSection() {
             </div>
           )}
           {data.best_by_win_rate && (
-            <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-500 text-xs font-medium px-3 py-1.5 rounded-full">
+            <div className="flex items-center gap-1.5 bg-(--color-warning)/10 text-(--color-warning) text-xs font-medium px-3 py-1.5 rounded-full">
               <Target className="w-3.5 h-3.5" />
               Best Win Rate: {data.best_by_win_rate}
             </div>
@@ -88,33 +90,34 @@ function StrategyComparisonSection() {
       )}
 
       {/* Comparison table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative">
+        <div className="absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-(--color-bg-surface) to-transparent z-10 sm:hidden" />
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-(--color-border)">
-              <th className="text-left py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">Strategy</th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-left py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">Strategy</th>
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 <Tooltip text="Total number of completed trades (entry + exit).">Trades</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 <Tooltip text="Percentage of trades that were profitable.">Win Rate</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 <Tooltip text="Total profit/loss in dollar terms.">P&L</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden sm:table-cell">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden sm:table-cell">
                 <Tooltip text="Percentage return on initial equity ($10,000).">Return %</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
                 <Tooltip text="Largest peak-to-trough decline. Lower is better.">Max DD</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
                 <Tooltip text="Risk-adjusted return. Above 1.0 is good, above 2.0 is excellent.">Sharpe</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden md:table-cell">
                 <Tooltip text="Ratio of gross profits to gross losses. Above 1.0 = profitable.">PF</Tooltip>
               </th>
-              <th className="text-right py-2.5 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden sm:table-cell">
+              <th className="text-right py-3 px-2 sm:px-3 text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider hidden sm:table-cell">
                 <Tooltip text="Signals currently pending or active for this strategy.">Signals</Tooltip>
               </th>
             </tr>
@@ -130,7 +133,7 @@ function StrategyComparisonSection() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-(--color-text-primary) text-xs sm:text-sm">{s.strategy_name}</span>
                       {(isBestReturn || isBestSharpe || isBestWR) && (
-                        <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <Trophy className="w-3.5 h-3.5 text-(--color-warning) shrink-0" />
                       )}
                     </div>
                   </td>
@@ -172,6 +175,8 @@ function StrategyComparisonSection() {
 }
 
 export function AnalyticsPage() {
+  usePageTitle("Analytics");
+  useNoIndex();
   const { data, isLoading, error } = useEquityHistory();
 
   return (
@@ -191,9 +196,9 @@ export function AnalyticsPage() {
 
       {/* Metrics section */}
       {isLoading && (
-        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 flex items-center justify-center min-h-[200px]">
+        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 flex items-center justify-center min-h-[200px]" role="status" aria-live="polite">
           <div className="text-center space-y-3">
-            <div className="w-8 h-8 border-2 border-(--color-accent) border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-8 h-8 border-2 border-(--color-accent) border-t-transparent rounded-full animate-spin mx-auto" aria-hidden="true" />
             <p className="text-sm text-(--color-text-secondary)">
               Loading analytics...
             </p>
@@ -202,7 +207,7 @@ export function AnalyticsPage() {
       )}
 
       {error && (
-        <div className="bg-(--color-bg-surface) border border-(--color-negative)/30 rounded-xl p-6 flex items-center justify-center min-h-[200px]">
+        <div className="bg-(--color-bg-surface) border border-(--color-negative)/30 rounded-xl p-4 sm:p-6 flex items-center justify-center min-h-[200px]" role="alert">
           <div className="text-center space-y-2">
             <p className="text-sm text-(--color-negative) font-medium">
               Failed to load analytics
@@ -222,9 +227,9 @@ export function AnalyticsPage() {
       )}
 
       {!isLoading && !error && !data && (
-        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-6 flex items-center justify-center min-h-[200px]">
+        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 sm:p-6 flex items-center justify-center min-h-[200px]">
           <div className="text-center space-y-2">
-            <Activity className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto" />
+            <Activity className="w-10 h-10 text-(--color-text-secondary)/40 mx-auto" aria-hidden="true" />
             <p className="text-sm text-(--color-text-secondary)">
               No analytics data available yet
             </p>

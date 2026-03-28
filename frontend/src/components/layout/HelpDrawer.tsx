@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { X } from "lucide-react";
@@ -36,6 +36,8 @@ interface HelpDrawerProps {
 }
 
 export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -46,6 +48,34 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!open) return;
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const focusableElements = drawer.querySelectorAll(focusableSelector);
+    (focusableElements[0] as HTMLElement)?.focus();
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const currentFocusable = drawer.querySelectorAll(focusableSelector);
+      const first = currentFocusable[0] as HTMLElement;
+      const last = currentFocusable[currentFocusable.length - 1] as HTMLElement;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
+    };
+    drawer.addEventListener("keydown", handleTab);
+    return () => {
+      drawer.removeEventListener("keydown", handleTab);
+      previousFocusRef.current?.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -58,6 +88,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
       />
       {/* Drawer */}
       <div
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Help"
@@ -71,9 +102,9 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           <button
             onClick={onClose}
             aria-label="Close help"
-            className="p-1.5 rounded-lg hover:bg-(--color-bg-elevated) transition-colors"
+            className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-(--color-bg-elevated) transition-colors"
           >
-            <X className="w-4 h-4 text-(--color-text-secondary)" />
+            <X className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
           </button>
         </div>
 

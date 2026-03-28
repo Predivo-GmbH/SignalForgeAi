@@ -22,6 +22,7 @@ import type {
   RecentCall,
 } from "@/hooks/useAiUsage";
 import { createChart, HistogramSeries, type IChartApi } from "lightweight-charts";
+import { cssVar } from "@/lib/colors";
 
 /* ---- Period selector ---- */
 
@@ -64,7 +65,7 @@ function StatCard({
   return (
     <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-4 space-y-1">
       <div className="flex items-center gap-2 text-(--color-text-secondary)">
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4 h-4" aria-hidden="true" />
         <span className="text-xs font-medium uppercase tracking-wider">
           {label}
         </span>
@@ -86,17 +87,22 @@ function DailyCostChart({ data }: { data: DailyCost[] }) {
   useEffect(() => {
     if (!containerRef.current || data.length === 0) return;
 
+    const textSecondary = cssVar("--color-text-secondary");
+    const borderColor = cssVar("--color-border");
+    const barColor = cssVar("--color-palette-indigo");
+    const negativeColor = cssVar("--color-negative");
+
     const chart = createChart(containerRef.current, {
       height: 200,
       layout: {
         background: { color: "transparent" },
-        textColor: "rgba(255,255,255,0.5)",
-        fontSize: 11,
+        textColor: textSecondary,
+        fontSize: 12,
         attributionLogo: false,
       },
       grid: {
         vertLines: { visible: false },
-        horzLines: { color: "rgba(255,255,255,0.06)" },
+        horzLines: { color: borderColor + "18" },
       },
       timeScale: { borderVisible: false },
       rightPriceScale: { borderVisible: false },
@@ -104,7 +110,7 @@ function DailyCostChart({ data }: { data: DailyCost[] }) {
     chartRef.current = chart;
 
     const series = chart.addSeries(HistogramSeries, {
-      color: "rgba(99,102,241,0.7)",
+      color: barColor,
       priceFormat: { type: "price", precision: 4, minMove: 0.0001 },
     });
 
@@ -112,10 +118,7 @@ function DailyCostChart({ data }: { data: DailyCost[] }) {
       data.map((d) => ({
         time: d.date,
         value: d.cost_usd,
-        color:
-          d.cost_usd > 1
-            ? "rgba(239,68,68,0.7)"
-            : "rgba(99,102,241,0.7)",
+        color: d.cost_usd > 1 ? negativeColor : barColor,
       })),
     );
 
@@ -172,10 +175,10 @@ function CreditSection({
       : 0;
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-4">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-(--color-text-secondary)" />
+          <CreditCard className="w-4 h-4 text-(--color-text-secondary)" aria-hidden="true" />
           <h3 className="text-sm font-semibold text-(--color-text-primary)">
             Prepaid Credit
           </h3>
@@ -186,7 +189,7 @@ function CreditSection({
               setAmount(credit.prepaid_usd.toString());
               setEditing(true);
             }}
-            className="text-xs font-medium text-(--color-accent) hover:underline"
+            className="text-xs font-medium text-(--color-accent) hover:underline min-h-[44px] flex items-center"
           >
             Update
           </button>
@@ -240,19 +243,20 @@ function CreditSection({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full pl-7 pr-3 py-2 bg-(--color-bg-elevated) border border-(--color-border) rounded-lg text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
+              aria-label="Prepaid credit amount in USD"
+              className="w-full pl-7 pr-3 py-2 min-h-[44px] bg-(--color-bg-elevated) border border-(--color-border) rounded-lg text-base sm:text-sm font-mono text-(--color-text-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent)/50"
             />
           </div>
           <button
             onClick={handleSave}
             disabled={updateCredit.isPending}
-            className="px-4 py-2 bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 min-h-[44px] bg-(--color-accent) hover:bg-(--color-accent)/90 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {updateCredit.isPending ? "..." : "Save"}
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="px-3 py-2 text-sm text-(--color-text-secondary) hover:text-(--color-text-primary)"
+            className="px-3 py-2 min-h-[44px] text-sm text-(--color-text-secondary) hover:text-(--color-text-primary)"
           >
             Cancel
           </button>
@@ -289,15 +293,16 @@ export function AiUsageTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" />
+      <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="w-6 h-6 animate-spin text-(--color-accent)" aria-hidden="true" />
+        <span className="sr-only">Loading AI usage data</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="bg-(--color-negative)/10 border border-(--color-negative)/20 rounded-xl p-4 text-center">
+      <div className="bg-(--color-negative)/10 border border-(--color-negative)/20 rounded-xl p-4 text-center" role="alert">
         <p className="text-sm text-(--color-negative)">
           {error instanceof Error ? error.message : "Failed to load AI usage data"}
         </p>
@@ -310,7 +315,7 @@ export function AiUsageTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
         <div>
           <h2 className="text-lg font-semibold text-(--color-text-primary)">
             AI Usage & Costs
@@ -320,12 +325,12 @@ export function AiUsageTab() {
               Track Claude API usage, costs, and prepaid credit
             </p>
             {data.source === "anthropic_api" ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <Cloud className="w-3 h-3" /> Anthropic API
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-(--color-positive)/10 text-(--color-positive) border border-(--color-positive)/20">
+                <Cloud className="w-3 h-3" aria-hidden="true" /> Anthropic API
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                <Database className="w-3 h-3" /> Local
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-(--color-palette-blue)/10 text-(--color-palette-blue) border border-(--color-palette-blue)/20">
+                <Database className="w-3 h-3" aria-hidden="true" /> Local
               </span>
             )}
           </div>
@@ -338,7 +343,7 @@ export function AiUsageTab() {
                 key={p.days}
                 onClick={() => setDays(p.days)}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                  "px-3 py-2 min-h-[44px] text-xs font-medium rounded-md transition-colors",
                   days === p.days
                     ? "bg-(--color-accent) text-white"
                     : "text-(--color-text-secondary) hover:text-(--color-text-primary)",
@@ -352,19 +357,21 @@ export function AiUsageTab() {
             onClick={handleRefresh}
             disabled={refreshState === "loading"}
             className={cn(
-              "p-2 rounded-lg hover:bg-(--color-bg-elevated) transition-colors",
+              "p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-(--color-bg-elevated) transition-colors",
               refreshState === "loading" && "opacity-50 cursor-not-allowed",
             )}
             title="Refresh"
+            aria-label="Refresh AI usage data"
           >
             {refreshState === "done" ? (
-              <Check className="w-4 h-4 text-emerald-400" />
+              <Check className="w-4 h-4 text-(--color-positive)" aria-hidden="true" />
             ) : (
               <RefreshCw
                 className={cn(
                   "w-4 h-4 text-(--color-text-secondary)",
                   refreshState === "loading" && "animate-spin",
                 )}
+                aria-hidden="true"
               />
             )}
           </button>
@@ -401,7 +408,7 @@ export function AiUsageTab() {
       <CreditSection credit={data.credit} />
 
       {/* Daily cost chart */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3">
         <h3 className="text-sm font-semibold text-(--color-text-primary)">
           Daily Costs
         </h3>
@@ -411,13 +418,14 @@ export function AiUsageTab() {
       {/* Model breakdown + Type breakdown side by side */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* By model */}
-        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3">
+        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3">
           <h3 className="text-sm font-semibold text-(--color-text-primary)">
             By Model
           </h3>
           {data.by_model.length === 0 ? (
             <p className="text-sm text-(--color-text-secondary)">No data</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-(--color-text-secondary) uppercase tracking-wider">
@@ -449,17 +457,19 @@ export function AiUsageTab() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
         {/* By type */}
-        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3">
+        <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3">
           <h3 className="text-sm font-semibold text-(--color-text-primary)">
             By Feature
           </h3>
           {data.by_type.length === 0 ? (
             <p className="text-sm text-(--color-text-secondary)">No data</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-(--color-text-secondary) uppercase tracking-wider">
@@ -487,18 +497,20 @@ export function AiUsageTab() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
 
       {/* Recent calls */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3">
         <h3 className="text-sm font-semibold text-(--color-text-primary)">
           Recent API Calls
         </h3>
         {data.recent_calls.length === 0 ? (
           <p className="text-sm text-(--color-text-secondary)">No recent calls</p>
         ) : (
+          <div className="relative">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -544,6 +556,8 @@ export function AiUsageTab() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-(--color-bg-surface) to-transparent pointer-events-none sm:hidden" />
           </div>
         )}
       </div>

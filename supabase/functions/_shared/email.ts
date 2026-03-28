@@ -8,15 +8,20 @@ let _client: SMTPClient | null = null
 
 function getClient(): SMTPClient {
   if (_client) return _client
+
+  const hostname = Deno.env.get('SMTP_HOST')
+  const username = Deno.env.get('SMTP_USER')
+  const password = Deno.env.get('SMTP_PASS')
+  if (!hostname || !username || !password) {
+    throw new Error('Missing SMTP_HOST, SMTP_USER, or SMTP_PASS')
+  }
+
   _client = new SMTPClient({
     connection: {
-      hostname: Deno.env.get('SMTP_HOST')!,
+      hostname,
       port: Number(Deno.env.get('SMTP_PORT') || '587'),
       tls: true,
-      auth: {
-        username: Deno.env.get('SMTP_USER')!,
-        password: Deno.env.get('SMTP_PASS')!,
-      },
+      auth: { username, password },
     },
   })
   return _client

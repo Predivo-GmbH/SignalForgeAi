@@ -10,6 +10,7 @@ import {
 } from "lightweight-charts";
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { cssVar } from "@/lib/colors";
 import { pnlColor, formatPrice, fmtUsd } from "@/lib/format";
 import { CRYPTO_NAME_MAP } from "@/lib/cryptoSymbols";
 import { invokeFunction } from "@/lib/api";
@@ -19,19 +20,21 @@ import type { HoldingItem } from "@/hooks/useHoldings";
 /* ---- Source styling (mirrors HoldingsCard) ---- */
 
 const SOURCE_STYLE: Record<string, { label: string; cls: string }> = {
-  binance: { label: "Binance", cls: "bg-amber-500/10 text-amber-500" },
-  kucoin: { label: "KuCoin", cls: "bg-emerald-500/10 text-emerald-500" },
-  mexc: { label: "MEXC", cls: "bg-blue-500/10 text-blue-500" },
-  bitstamp: { label: "Bitstamp", cls: "bg-green-500/10 text-green-500" },
-  cryptocom: { label: "Crypto.com", cls: "bg-indigo-500/10 text-indigo-500" },
-  kraken: { label: "Kraken", cls: "bg-violet-500/10 text-violet-500" },
+  binance: { label: "Binance", cls: "bg-(--color-palette-amber)/10 text-(--color-palette-amber)" },
+  kucoin: { label: "KuCoin", cls: "bg-(--color-palette-emerald)/10 text-(--color-palette-emerald)" },
+  mexc: { label: "MEXC", cls: "bg-(--color-palette-blue)/10 text-(--color-palette-blue)" },
+  bitstamp: { label: "Bitstamp", cls: "bg-(--color-palette-green)/10 text-(--color-palette-green)" },
+  cryptocom: { label: "Crypto.com", cls: "bg-(--color-palette-indigo)/10 text-(--color-palette-indigo)" },
+  kraken: { label: "Kraken", cls: "bg-(--color-palette-violet)/10 text-(--color-palette-violet)" },
   manual: { label: "Manual", cls: "bg-(--color-bg-elevated) text-(--color-text-secondary)" },
 };
 
-const DONUT_COLORS = [
-  "#3b82f6", "#f59e0b", "#10b981", "#8b5cf6", "#f43f5e",
-  "#06b6d4", "#f97316", "#ec4899", "#14b8a6", "#6366f1",
-];
+const DONUT_COLOR_VARS = [
+  "--color-palette-blue", "--color-palette-amber", "--color-palette-emerald",
+  "--color-palette-violet", "--color-palette-rose", "--color-palette-cyan",
+  "--color-palette-orange", "--color-palette-pink", "--color-palette-teal",
+  "--color-palette-indigo",
+] as const;
 
 function CoinIcon({ symbol, imageUrl, size = 24 }: { symbol: string; imageUrl: string | null; size?: number }) {
   const [error, setError] = useState(false);
@@ -41,10 +44,10 @@ function CoinIcon({ symbol, imageUrl, size = 24 }: { symbol: string; imageUrl: s
         className="rounded-full shrink-0" onError={() => setError(true)} loading="lazy" />
     );
   }
-  const colorIndex = symbol.charCodeAt(0) % DONUT_COLORS.length;
+  const colorIndex = symbol.charCodeAt(0) % DONUT_COLOR_VARS.length;
   return (
     <div className="rounded-full shrink-0 flex items-center justify-center text-white font-bold"
-      style={{ width: size, height: size, backgroundColor: DONUT_COLORS[colorIndex], fontSize: size * 0.45 }}>
+      style={{ width: size, height: size, backgroundColor: cssVar(DONUT_COLOR_VARS[colorIndex]), fontSize: size * 0.45 }}>
       {symbol.charAt(0)}
     </div>
   );
@@ -82,35 +85,42 @@ function AssetPriceChart({ symbol }: { symbol: string }) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const bgSurface = cssVar("--color-bg-surface");
+    const textSec = cssVar("--color-text-secondary");
+    const border = cssVar("--color-border");
+    const accent = cssVar("--color-accent");
+    const positive = cssVar("--color-positive");
+    const negative = cssVar("--color-negative");
+
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "#141420" },
-        textColor: "#8B8BA0",
+        background: { type: ColorType.Solid, color: bgSurface },
+        textColor: textSec,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "#2A2A3C" },
-        horzLines: { color: "#2A2A3C" },
+        vertLines: { color: border },
+        horzLines: { color: border },
       },
       width: containerRef.current.clientWidth,
       height: 250,
       crosshair: {
-        vertLine: { color: "#7B61FF", width: 1, labelBackgroundColor: "#7B61FF" },
-        horzLine: { color: "#7B61FF", width: 1, labelBackgroundColor: "#7B61FF" },
+        vertLine: { color: accent, width: 1, labelBackgroundColor: accent },
+        horzLine: { color: accent, width: 1, labelBackgroundColor: accent },
       },
-      timeScale: { borderColor: "#2A2A3C" },
-      rightPriceScale: { borderColor: "#2A2A3C" },
+      timeScale: { borderColor: border },
+      rightPriceScale: { borderColor: border },
     });
 
     chartRef.current = chart;
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#00D68F",
-      downColor: "#FF4D6A",
-      borderUpColor: "#00D68F",
-      borderDownColor: "#FF4D6A",
-      wickUpColor: "#00D68F",
-      wickDownColor: "#FF4D6A",
+      upColor: positive,
+      downColor: negative,
+      borderUpColor: positive,
+      borderDownColor: negative,
+      wickUpColor: positive,
+      wickDownColor: negative,
     });
     seriesRef.current = series;
 
@@ -180,7 +190,7 @@ function AssetPriceChart({ symbol }: { symbol: string }) {
               key={tf}
               onClick={() => setTimeframe(tf)}
               className={cn(
-                "px-2 py-0.5 text-[10px] font-medium rounded-md transition-colors",
+                "px-3 py-2 min-h-[44px] min-w-[44px] text-xs font-medium rounded-md transition-colors",
                 timeframe === tf
                   ? "bg-(--color-accent) text-white"
                   : "text-(--color-text-secondary) hover:bg-(--color-bg-elevated)",
@@ -194,12 +204,12 @@ function AssetPriceChart({ symbol }: { symbol: string }) {
       <div className="relative rounded-lg overflow-hidden border border-(--color-border)">
         <div ref={containerRef} className="w-full h-[200px] sm:h-[250px]" />
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-(--color-bg-surface)/80 z-10">
             <Loader2 className="w-5 h-5 animate-spin text-(--color-accent)" />
           </div>
         )}
         {error && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#141420]/80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-(--color-bg-surface)/80 z-10">
             <span className="text-xs text-(--color-text-secondary)">{error}</span>
           </div>
         )}
@@ -249,7 +259,7 @@ export function AssetDetailModal({
 
   return (
     <Modal open={open} onClose={onClose} title={`${symbol} — ${name}`} size="lg">
-      <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+      <div className="space-y-5 pr-1">
         {/* Header: Icon + Price + 24h change */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <CoinIcon symbol={symbol} imageUrl={imageUrl} size={28} />
@@ -293,14 +303,14 @@ export function AssetDetailModal({
               key={s.label}
               className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2.5 space-y-0.5"
             >
-              <p className="text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider">
+              <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
                 {s.label}
               </p>
               <p className="text-sm font-bold text-(--color-text-primary) font-mono">
                 {s.value}
               </p>
               {s.sub && (
-                <p className={cn("text-[11px] font-mono", s.subColor ?? "text-(--color-text-secondary)")}>
+                <p className={cn("text-xs font-mono", s.subColor ?? "text-(--color-text-secondary)")}>
                   {s.sub}
                 </p>
               )}
@@ -313,20 +323,21 @@ export function AssetDetailModal({
           <p className="text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider">
             Stored On
           </p>
-          <div className="rounded-lg border border-(--color-border) overflow-hidden">
+          <div className="relative">
+          <div className="rounded-lg border border-(--color-border) overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-(--color-border) bg-(--color-bg-elevated)/30">
-                  <th className="text-left text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
+                  <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
                     Source
                   </th>
-                  <th className="text-left text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3 hidden sm:table-cell">
+                  <th className="text-left text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3 hidden sm:table-cell">
                     Label
                   </th>
-                  <th className="text-right text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
+                  <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
                     Quantity
                   </th>
-                  <th className="text-right text-[10px] font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
+                  <th className="text-right text-xs font-medium text-(--color-text-secondary) uppercase tracking-wider py-2 px-2 sm:px-3">
                     Value
                   </th>
                 </tr>
@@ -345,7 +356,7 @@ export function AssetDetailModal({
                       <td className="py-2 px-2 sm:px-3">
                         <span
                           className={cn(
-                            "text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap",
+                            "text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap",
                             style.cls,
                           )}
                         >
@@ -366,6 +377,8 @@ export function AssetDetailModal({
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-(--color-bg-surface) to-transparent pointer-events-none sm:hidden" />
           </div>
         </div>
 

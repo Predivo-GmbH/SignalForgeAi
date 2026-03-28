@@ -11,8 +11,9 @@ export function ActiveStrategyCard() {
 
   if (strategiesLoading || engineLoading) {
     return (
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 flex items-center justify-center min-h-[100px]">
-        <Loader2 className="w-5 h-5 animate-spin text-(--color-accent)" />
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 flex items-center justify-center min-h-[100px]" role="status" aria-live="polite">
+        <Loader2 className="w-5 h-5 animate-spin text-(--color-accent)" aria-hidden="true" />
+        <span className="sr-only">Loading strategy</span>
       </div>
     );
   }
@@ -24,9 +25,9 @@ export function ActiveStrategyCard() {
     return (
       <Link
         to="/advisor"
-        className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 flex flex-col items-center justify-center gap-2 hover:border-(--color-accent)/30 transition-colors min-h-[100px]"
+        className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 flex flex-col items-center justify-center gap-2 hover:border-(--color-accent)/30 transition-colors min-h-[100px]"
       >
-        <Target className="w-6 h-6 text-(--color-text-secondary)/40" />
+        <Target className="w-6 h-6 text-(--color-text-secondary)/40" aria-hidden="true" />
         <p className="text-xs text-(--color-text-secondary)">No active strategy</p>
         <span className="text-xs font-medium text-(--color-accent)">Set up with AI Advisor →</span>
       </Link>
@@ -34,7 +35,7 @@ export function ActiveStrategyCard() {
   }
 
   return (
-    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5 space-y-3">
+    <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5 space-y-3">
       <div className="flex items-center justify-between">
         <Tooltip text="The currently running trading strategy and its real-time performance."><h3 className="text-sm font-semibold text-(--color-text-primary) cursor-help">Active Strategy</h3></Tooltip>
         <Link
@@ -54,19 +55,19 @@ export function ActiveStrategyCard() {
             className="flex items-center gap-3 p-3 rounded-lg bg-(--color-bg-elevated)/50 hover:bg-(--color-bg-elevated) transition-colors"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--color-accent)/15">
-              <Target className="w-4 h-4 text-(--color-accent)" />
+              <Target className="w-4 h-4 text-(--color-accent)" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-(--color-text-primary) truncate">{s.name}</p>
               {symbols.length > 0 && (
-                <p className="text-[11px] text-(--color-text-secondary) truncate">
+                <p className="text-xs text-(--color-text-secondary) truncate">
                   {symbols.join(", ")}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <div className={cn("w-2 h-2 rounded-full", engineActive ? "bg-(--color-positive) animate-pulse" : "bg-(--color-text-secondary)/40")} />
-              <span className="text-[11px] text-(--color-text-secondary)">
+              <span className="text-xs text-(--color-text-secondary)">
                 {engineActive ? "Running" : "Idle"}
               </span>
             </div>
@@ -75,8 +76,8 @@ export function ActiveStrategyCard() {
       })}
 
       {engineActive && (
-        <div className="flex items-center gap-1.5 text-[11px] text-(--color-text-secondary)">
-          <Zap className="w-3 h-3 text-(--color-accent)" />
+        <div className="flex items-center gap-1.5 text-xs text-(--color-text-secondary)">
+          <Zap className="w-3 h-3 text-(--color-accent)" aria-hidden="true" />
           Engine active — {engine?.layers?.length ?? 0} analysis layers
         </div>
       )}

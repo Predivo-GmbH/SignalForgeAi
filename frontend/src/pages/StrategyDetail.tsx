@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
+import { usePageTitle } from "@/hooks/usePageTitle";
+import { useNoIndex } from "@/hooks/useNoIndex";
 import {
   ArrowLeft,
   Power,
@@ -78,7 +80,7 @@ function SignalStatusWithTooltip({
   }
 
   return (
-    <div className="relative inline-flex" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+    <div className="relative inline-flex" onMouseEnter={handleEnter} onMouseLeave={handleLeave} onClick={() => setShow((v) => !v)}>
       <span ref={triggerRef} className={hasInfo ? "cursor-help" : ""}>
         <Badge variant={variant}>{signal.status}</Badge>
       </span>
@@ -124,7 +126,7 @@ function SignalStatusWithTooltip({
                 {signal.ai_recommendation && (
                   <span
                     className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                      "px-1.5 py-0.5 rounded text-xs font-bold uppercase",
                       signal.ai_recommendation === "confirm"
                         ? "bg-(--color-positive)/15 text-(--color-positive)"
                         : signal.ai_recommendation === "caution"
@@ -180,7 +182,7 @@ function SortHeader({
     <th
       onClick={() => onSort(sortKey)}
       className={cn(
-        "px-3 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none transition-colors hover:text-(--color-text-primary)",
+        "px-3 py-2.5 min-h-[44px] text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none transition-colors hover:text-(--color-text-primary)",
         isActive ? "text-(--color-accent)" : "text-(--color-text-secondary)",
         align,
       )}
@@ -210,10 +212,12 @@ function SkeletonRow() {
 /* ----- Filter Select ----- */
 
 const selectClasses =
-  "h-8 rounded-lg border border-(--color-border) bg-(--color-bg-surface) px-2.5 text-xs text-(--color-text-primary) focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer";
+  "h-11 min-h-[44px] w-full sm:w-auto rounded-lg border border-(--color-border) bg-(--color-bg-surface) px-2.5 text-base md:text-sm text-(--color-text-primary) focus:outline-none focus:ring-1 focus:ring-(--color-accent) appearance-none cursor-pointer";
 
 /* ----- Main Page ----- */
 export function StrategyDetailPage() {
+  usePageTitle("Strategy Detail");
+  useNoIndex();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>("signals");
@@ -308,14 +312,14 @@ export function StrategyDetailPage() {
       {/* Back link */}
       <button
         onClick={() => navigate("/strategies")}
-        className="flex items-center gap-1.5 text-sm text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+        className="flex items-center gap-1.5 text-sm text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors min-h-[44px]"
       >
         <ArrowLeft className="w-4 h-4" /> Back to Strategies
       </button>
 
       {/* Strategy header */}
-      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-5">
-        <div className="flex items-start justify-between gap-4">
+      <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl p-3 sm:p-5">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold text-(--color-text-primary)">
@@ -323,7 +327,7 @@ export function StrategyDetailPage() {
               </h1>
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase",
+                  "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase",
                   strategy.is_active
                     ? "bg-(--color-positive)/10 text-(--color-positive)"
                     : "bg-(--color-bg-elevated) text-(--color-text-secondary)",
@@ -343,7 +347,7 @@ export function StrategyDetailPage() {
                 {symbols.map((s) => (
                   <span
                     key={s}
-                    className="text-[11px] bg-(--color-accent-soft) text-(--color-accent) rounded-md px-2 py-0.5 font-medium"
+                    className="text-xs bg-(--color-accent-soft) text-(--color-accent) rounded-md px-2 py-0.5 font-medium"
                   >
                     {s}
                   </span>
@@ -352,12 +356,12 @@ export function StrategyDetailPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={handleToggle}
               disabled={toggleMutation.isPending}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                "flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-lg text-xs font-medium transition-colors",
                 strategy.is_active
                   ? "bg-(--color-negative)/10 text-(--color-negative) hover:bg-(--color-negative)/20"
                   : "bg-(--color-positive)/10 text-(--color-positive) hover:bg-(--color-positive)/20",
@@ -372,13 +376,13 @@ export function StrategyDetailPage() {
                 <button
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-(--color-negative)/10 text-(--color-negative) hover:bg-(--color-negative)/20 transition-colors"
+                  className="px-3 py-2.5 min-h-[44px] rounded-lg text-xs font-medium bg-(--color-negative)/10 text-(--color-negative) hover:bg-(--color-negative)/20 transition-colors"
                 >
                   {deleteMutation.isPending ? "..." : "Confirm Delete"}
                 </button>
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs text-(--color-text-secondary) hover:bg-(--color-bg-elevated) transition-colors"
+                  className="px-3 py-2.5 min-h-[44px] rounded-lg text-xs text-(--color-text-secondary) hover:bg-(--color-bg-elevated) transition-colors"
                 >
                   Cancel
                 </button>
@@ -386,7 +390,7 @@ export function StrategyDetailPage() {
             ) : (
               <button
                 onClick={() => setShowConfirm(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-(--color-text-secondary) hover:bg-(--color-negative)/10 hover:text-(--color-negative) transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2.5 min-h-[44px] rounded-lg text-xs font-medium text-(--color-text-secondary) hover:bg-(--color-negative)/10 hover:text-(--color-negative) transition-colors"
                 aria-label="Delete strategy"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -400,7 +404,7 @@ export function StrategyDetailPage() {
         {stats && stats.total_trades > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-(--color-border)/50">
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-(--color-text-secondary)">Total P&L</p>
+              <p className="text-xs text-(--color-text-secondary)">Total P&L</p>
               <p className={cn(
                 "text-sm font-semibold font-mono",
                 stats.total_pnl >= 0 ? "text-(--color-positive)" : "text-(--color-negative)",
@@ -409,7 +413,7 @@ export function StrategyDetailPage() {
               </p>
             </div>
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-(--color-text-secondary)">Win Rate</p>
+              <p className="text-xs text-(--color-text-secondary)">Win Rate</p>
               <div className="flex items-center gap-1">
                 <Target className="w-3 h-3 text-(--color-accent)" />
                 <p className="text-sm font-semibold font-mono text-(--color-text-primary)">
@@ -418,13 +422,13 @@ export function StrategyDetailPage() {
               </div>
             </div>
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-(--color-text-secondary)">Trades</p>
+              <p className="text-xs text-(--color-text-secondary)">Trades</p>
               <p className="text-sm font-semibold font-mono text-(--color-text-primary)">
                 {stats.total_trades}
               </p>
             </div>
             <div className="bg-(--color-bg-elevated)/50 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-(--color-text-secondary)">Profit Factor</p>
+              <p className="text-xs text-(--color-text-secondary)">Profit Factor</p>
               <p className={cn(
                 "text-sm font-semibold font-mono",
                 stats.profit_factor >= 1 ? "text-(--color-positive)" : "text-(--color-negative)",
@@ -438,7 +442,7 @@ export function StrategyDetailPage() {
 
       {/* Tab bar */}
       <div className="border-b border-(--color-border)">
-        <div className="flex gap-6">
+        <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -446,7 +450,7 @@ export function StrategyDetailPage() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "pb-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5",
+                  "pb-2.5 min-h-[44px] text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 snap-start",
                   activeTab === tab.key
                     ? "border-(--color-accent) text-(--color-accent)"
                     : "border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)",
@@ -466,21 +470,23 @@ export function StrategyDetailPage() {
       {activeTab === "signals" && (
         <div className="space-y-3">
           {/* Filter toolbar */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-(--color-text-secondary) pointer-events-none" />
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-(--color-text-secondary) pointer-events-none" aria-hidden="true" />
               <input
                 type="text"
                 placeholder="Search symbol..."
+                aria-label="Search symbol"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="h-8 w-44 rounded-lg border border-(--color-border) bg-(--color-bg-surface) pl-8 pr-3 text-xs text-(--color-text-primary) placeholder:text-(--color-text-secondary)/60 focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
+                className="h-11 min-h-[44px] w-full sm:w-44 rounded-lg border border-(--color-border) bg-(--color-bg-surface) pl-8 pr-3 text-base md:text-sm text-(--color-text-primary) placeholder:text-(--color-text-secondary)/60 focus:outline-none focus:ring-1 focus:ring-(--color-accent)"
               />
             </div>
             <select
               value={dirFilter}
               onChange={(e) => { setDirFilter(e.target.value); setSignalOffset(0); }}
               className={selectClasses}
+              aria-label="Filter by direction"
             >
               <option value="">All Directions</option>
               <option value="BUY">BUY</option>
@@ -490,6 +496,7 @@ export function StrategyDetailPage() {
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setSignalOffset(0); }}
               className={selectClasses}
+              aria-label="Filter by status"
             >
               <option value="">All Statuses</option>
               <option value="active">Active</option>
@@ -501,7 +508,7 @@ export function StrategyDetailPage() {
             {(debouncedSearch || dirFilter || statusFilter) && (
               <button
                 onClick={() => { setSearchInput(""); setDirFilter(""); setStatusFilter(""); setSignalOffset(0); }}
-                className="h-8 px-2.5 rounded-lg text-xs text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated) transition-colors"
+                className="h-11 min-h-[44px] px-3 rounded-lg text-sm text-(--color-text-secondary) hover:text-(--color-text-primary) hover:bg-(--color-bg-elevated) transition-colors"
               >
                 Clear filters
               </button>
@@ -513,7 +520,8 @@ export function StrategyDetailPage() {
 
           {/* Signals table */}
           <div className="bg-(--color-bg-surface) border border-(--color-border) rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative">
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-(--color-bg-surface) pointer-events-none z-10" />
               <table className="w-full text-left text-sm min-w-[1000px]">
                 <thead>
                   <tr className="border-b border-(--color-border) bg-(--color-bg-elevated)/50">

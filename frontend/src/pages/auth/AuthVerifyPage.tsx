@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePageTitle } from '@/hooks/usePageTitle'
+import { useNoIndex } from '@/hooks/useNoIndex'
 
 /**
  * Handles OTP deep links from emails.
@@ -8,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
  * Automatically verifies the OTP and redirects.
  */
 export default function AuthVerifyPage() {
+  usePageTitle('Verifying')
+  useNoIndex()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { verifyOtp } = useAuth()
@@ -51,7 +55,7 @@ export default function AuthVerifyPage() {
           <p className="text-sm text-(--color-text-secondary)">{error}</p>
           <a
             href={type === 'signup' ? '/signup' : '/login'}
-            className="mt-4 inline-block text-sm font-medium text-(--color-accent) hover:underline"
+            className="mt-4 min-h-[44px] inline-flex items-center text-sm font-medium text-(--color-accent) hover:underline"
           >
             {type === 'signup' ? 'Try signing up again' : 'Go to login'}
           </a>

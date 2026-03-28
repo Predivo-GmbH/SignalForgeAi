@@ -7,7 +7,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 
 const LEVEL_CONFIG: Record<number, { label: string; color: string; bg: string }> = {
   0: { label: "Normal", color: "text-(--color-positive)", bg: "bg-(--color-positive)/10" },
-  1: { label: "Warning", color: "text-amber-500", bg: "bg-amber-500/10" },
+  1: { label: "Warning", color: "text-(--color-warning)", bg: "bg-(--color-warning)/10" },
   2: { label: "Halt", color: "text-(--color-negative)", bg: "bg-(--color-negative)/10" },
   3: { label: "Emergency", color: "text-(--color-negative)", bg: "bg-(--color-negative)/20" },
 };
@@ -87,7 +87,7 @@ export function AccountHero({ equity, dailyPnl, openPositions, maxPositions }: A
             <div
               className={cn(
                 "h-full rounded-full transition-all",
-                drawdownPct > 10 ? "bg-(--color-negative)" : drawdownPct > 5 ? "bg-amber-500" : "bg-(--color-positive)",
+                drawdownPct > 10 ? "bg-(--color-negative)" : drawdownPct > 5 ? "bg-(--color-warning)" : "bg-(--color-positive)",
               )}
               style={{ width: `${Math.min(drawdownPct * 5, 100)}%` }}
             />
