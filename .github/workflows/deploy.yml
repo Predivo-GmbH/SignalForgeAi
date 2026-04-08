@@ -35,25 +35,31 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      - name: Deploy via FTP (zero-downtime)
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Upload hashed assets (no delete)
+        run: |
+          lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
+          set ftp:ssl-allow no
+          mirror --reverse --verbose --no-perms \
+            ./frontend/dist/assets/ /signalforgeai.predivo.ch/assets/
+          bye
+          SCRIPT
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASS: ${{ secrets.FTP_PASS }}
+
+      - name: Deploy full site (clean-slate)
         run: |
-          sudo apt-get install -y lftp
-          LFTP_SETTINGS="set ftp:ssl-allow yes; set ssl:verify-certificate no; set ftp:passive-mode yes; set net:max-retries 3; set net:reconnect-interval-base 5;"
-
-          # Step 1: Upload new hashed assets alongside old ones (no deletion yet)
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" <<LFTP_EOF
-            $LFTP_SETTINGS
-            mirror --reverse --no-perms --verbose ./frontend/dist/assets/ /signalforgeai.predivo.ch/assets/
-            quit
-          LFTP_EOF
-
-          # Step 2: Full mirror of everything (HTML, .htaccess, images, etc.)
-          lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" <<LFTP_EOF
-            $LFTP_SETTINGS
-            mirror --reverse --delete --no-perms --verbose ./frontend/dist/ /signalforgeai.predivo.ch/
-            quit
-          LFTP_EOF
+          lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
+          set ftp:ssl-allow no
+          mirror --reverse --verbose --no-perms --delete \
+            ./frontend/dist/ /signalforgeai.predivo.ch/
+          bye
+          SCRIPT
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
