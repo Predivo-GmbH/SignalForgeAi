@@ -35,7 +35,8 @@ jobs:
           fi
 
           if [ "$gql_response" != "200" ]; then
-            echo "::warning::GraphQL ping returned $gql_response"
+            echo "::error::GraphQL ping returned $gql_response — database may be paused"
+            exit 1
           fi
 
           echo "Supabase project pinged successfully — real DB activity registered"
