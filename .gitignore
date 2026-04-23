@@ -50,3 +50,6 @@ test.db
 htmlcov/
 frontend/test-results/
 frontend/e2e/screenshots/
+
+# Credentials
+docs/Credentials.txt

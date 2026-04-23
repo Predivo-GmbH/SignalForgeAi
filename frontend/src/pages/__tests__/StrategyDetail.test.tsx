@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { vi } from "vitest";
 import { StrategyDetailPage } from "../StrategyDetail";
 
 vi.mock("@/hooks/useStrategies", () => ({
