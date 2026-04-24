@@ -25,6 +25,12 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
+
+    # Strip trailing slashes (prevents 500 errors on /path/ variants)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [R=301,L]
+
     RewriteRule ^index\.html$ - [L]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
