@@ -5,6 +5,7 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39'
 import { getSupabaseAdmin } from './supabase.ts'
+import { logAnthropicUsage } from './log-usage.ts'
 
 // Model tiers matching Python implementation
 export const MODELS = {
@@ -59,6 +60,11 @@ export async function callClaude(
   const outputTokens = response.usage.output_tokens
   const pricing = PRICING[model] ?? { input: 3.0, output: 15.0 }
   const costUsd = (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000
+
+  await logAnthropicUsage('SignalForgeAI', 'anthropic-shared', {
+    model,
+    usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+  })
 
   const content = response.content
     .filter((b) => b.type === 'text')
