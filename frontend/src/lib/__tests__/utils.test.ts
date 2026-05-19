@@ -9,7 +9,8 @@ describe("cn (class merge)", () => {
   });
 
   it("handles conditional classes", () => {
-    expect(cn("base", false && "hidden", "visible")).toBe("base visible");
+    const hide = false;
+    expect(cn("base", hide && "hidden", "visible")).toBe("base visible");
   });
 
   it("handles undefined values", () => {
