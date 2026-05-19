@@ -129,24 +129,20 @@ function getEmailContent(payload: AuthEmailPayload): { subject: string; html: st
   switch (email_action_type) {
     case 'signup':
       return {
-        subject: 'Verify your SignalForgeAI account',
+        subject: 'SignalForgeAI \u2013 Your verification code: ' + token,
         html: emailWrapper('Verify your email', `
-          <p style="color:#C0C0D0;">Enter this code on the verification page to confirm your account:</p>
+          <p style="color:#C0C0D0;">Enter this code on the signup page to verify your email and create your account:</p>
           ${otpBlock(token)}
-          <p style="color:#888;font-size:13px;">Or click the button below:</p>
-          ${buttonBlock('Verify Email', verifyUrl)}
           <p style="color:#666;font-size:13px;">If you didn't create an account, you can safely ignore this email.</p>
         `),
       }
 
     case 'magiclink':
       return {
-        subject: 'Your SignalForgeAI login code',
+        subject: 'Your SignalForgeAI login code: ' + token,
         html: emailWrapper('Sign in to SignalForgeAI', `
-          <p style="color:#C0C0D0;">Use the code below to sign in to your account:</p>
+          <p style="color:#C0C0D0;">Enter this code on the login page to sign in to your account:</p>
           ${otpBlock(token)}
-          <p style="color:#888;font-size:13px;">Or click the button below:</p>
-          ${buttonBlock('Sign In', verifyUrl)}
           <p style="color:#666;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
         `),
       }
