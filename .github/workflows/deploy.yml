@@ -3,6 +3,11 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
 
 concurrency:
   group: deploy-production
@@ -31,6 +36,15 @@ jobs:
       - name: Test
         run: npm test -- --run
         working-directory: frontend
+
+      - name: Coverage
+        run: npm run test:coverage
+        working-directory: frontend
+
+      - name: Feature Coverage Check
+        run: node scripts/check-feature-coverage.mjs
+        working-directory: frontend
+        continue-on-error: true
 
       - name: Build
         run: npm run build
