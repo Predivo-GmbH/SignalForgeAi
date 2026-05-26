@@ -1,5 +1,7 @@
 -- Migration 007: pg_cron Schedules
 -- Requires pg_cron and pg_net extensions enabled on the Supabase project
+-- NOTE: Supabase does not allow ALTER DATABASE SET app.settings.*, so URLs
+--       and service_role_key are hardcoded. Update these after any project migration.
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
@@ -10,9 +12,9 @@ select cron.schedule(
   '* * * * *',
   $$
   select net.http_post(
-    url := current_setting('app.settings.supabase_url') || '/functions/v1/engine-cron',
+    url := 'https://xioqgsybkhjijkciinmu.supabase.co/functions/v1/engine-cron',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpb3Fnc3lia2hqaWprY2lpbm11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc4Nzg4MywiZXhwIjoyMDk1MzYzODgzfQ.O4dBjpaOe0O1NTwX1jd4hjLgkeKyGDvDU2uZajwdvI8',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb
@@ -26,9 +28,9 @@ select cron.schedule(
   '0 2 * * *',
   $$
   select net.http_post(
-    url := current_setting('app.settings.supabase_url') || '/functions/v1/daily-maintenance',
+    url := 'https://xioqgsybkhjijkciinmu.supabase.co/functions/v1/daily-maintenance',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpb3Fnc3lia2hqaWprY2lpbm11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc4Nzg4MywiZXhwIjoyMDk1MzYzODgzfQ.O4dBjpaOe0O1NTwX1jd4hjLgkeKyGDvDU2uZajwdvI8',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb
@@ -42,9 +44,9 @@ select cron.schedule(
   '0 * * * *',
   $$
   select net.http_post(
-    url := current_setting('app.settings.supabase_url') || '/functions/v1/simulation-snapshot',
+    url := 'https://xioqgsybkhjijkciinmu.supabase.co/functions/v1/simulation-snapshot',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpb3Fnc3lia2hqaWprY2lpbm11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc4Nzg4MywiZXhwIjoyMDk1MzYzODgzfQ.O4dBjpaOe0O1NTwX1jd4hjLgkeKyGDvDU2uZajwdvI8',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb
@@ -58,9 +60,9 @@ select cron.schedule(
   '0 */6 * * *',
   $$
   select net.http_post(
-    url := current_setting('app.settings.supabase_url') || '/functions/v1/universe-expansion',
+    url := 'https://xioqgsybkhjijkciinmu.supabase.co/functions/v1/universe-expansion',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhpb3Fnc3lia2hqaWprY2lpbm11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc4Nzg4MywiZXhwIjoyMDk1MzYzODgzfQ.O4dBjpaOe0O1NTwX1jd4hjLgkeKyGDvDU2uZajwdvI8',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb

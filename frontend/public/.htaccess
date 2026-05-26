@@ -11,7 +11,7 @@
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; connect-src 'self' https://mtwhjvfptlhvztplgixr.supabase.co wss://mtwhjvfptlhvztplgixr.supabase.co; font-src 'self' data: https://fonts.gstatic.com; frame-ancestors 'none';"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; connect-src 'self' https://xioqgsybkhjijkciinmu.supabase.co wss://xioqgsybkhjijkciinmu.supabase.co; font-src 'self' data: https://fonts.gstatic.com; frame-ancestors 'none';"
 </IfModule>
 
 # --- Force HTTPS ---

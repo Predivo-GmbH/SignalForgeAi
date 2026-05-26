@@ -5,7 +5,7 @@
  * If these fail, the app is broken. CI MUST NOT use continue-on-error.
  *
  * Auth: password-gate (SHA-256 hash, sessionStorage) + Supabase auth (ProtectedRoute)
- * Supabase: https://mtwhjvfptlhvztplgixr.supabase.co
+ * Supabase: https://xioqgsybkhjijkciinmu.supabase.co
  *
  * Tests:
  * 1. Password gate: renders, rejects wrong code
@@ -24,7 +24,7 @@ const BASE_URL = process.env.BASE_URL || 'https://signalforgeai.predivo.ch'
 const CONFIG = {
   authPath: '/login',
   testEmail: 'roger@mueller.ro',
-  supabaseUrl: process.env.VITE_SUPABASE_URL || 'https://mtwhjvfptlhvztplgixr.supabase.co',
+  supabaseUrl: process.env.VITE_SUPABASE_URL || 'https://xioqgsybkhjijkciinmu.supabase.co',
   supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || '',
   gateStorageKey: 'signalforge-unlocked',
   edgeFunctions: [
