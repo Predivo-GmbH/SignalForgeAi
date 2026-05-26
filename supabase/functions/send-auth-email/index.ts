@@ -38,7 +38,7 @@ function getTransporter() {
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const from = Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER') ?? 'noreply@signalforgeai.predivo.ch'
+  const from = Deno.env.get('SMTP_FROM') ?? Deno.env.get('SMTP_USER') ?? 'SignalForgeAI <noreply@signalforgeai.predivo.ch>'
   const transporter = getTransporter()
   await transporter.sendMail({
     from,
@@ -83,8 +83,8 @@ function emailWrapper(title: string, body: string): string {
       ${body}
     </td></tr>
     <tr><td style="padding:20px 32px;border-top:1px solid #2A2A3E;color:#888;font-size:12px;text-align:center;">
-      &copy; ${new Date().getFullYear()} SignalForgeAI. All rights reserved.<br/>
-      <a href="${SITE_URL}" style="color:#7B61FF;text-decoration:none;">signalforgeai.predivo.ch</a>
+      &copy; ${new Date().getFullYear()} SignalForgeAI by Predivo GmbH. All rights reserved.<br/>
+      Swiss-made &middot; Software that Thinks Ahead
     </td></tr>
   </table>
 </td></tr>

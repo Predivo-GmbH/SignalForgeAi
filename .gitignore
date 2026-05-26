@@ -51,5 +51,8 @@ htmlcov/
 frontend/test-results/
 frontend/e2e/screenshots/
 
+# Supabase CLI temp
+supabase/.temp/
+
 # Credentials
 docs/Credentials.txt

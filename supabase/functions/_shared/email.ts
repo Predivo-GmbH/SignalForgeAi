@@ -27,7 +27,7 @@ function getClient(): SMTPClient {
   return _client
 }
 
-const FROM = Deno.env.get('SMTP_FROM') || 'noreply@signalforgeai.predivo.ch'
+const FROM = Deno.env.get('SMTP_FROM') || 'SignalForgeAI <noreply@signalforgeai.predivo.ch>'
 
 interface EmailOptions {
   to: string
@@ -63,7 +63,8 @@ export function emailLayout(title: string, body: string): string {
       ${body}
     </td></tr>
     <tr><td style="padding:20px 32px;border-top:1px solid #2A2A3E;color:#888;font-size:12px;text-align:center;">
-      &copy; ${new Date().getFullYear()} SignalForgeAI. All rights reserved.
+      &copy; ${new Date().getFullYear()} SignalForgeAI by Predivo GmbH. All rights reserved.<br/>
+      Swiss-made &middot; Software that Thinks Ahead
     </td></tr>
   </table>
 </td></tr>
