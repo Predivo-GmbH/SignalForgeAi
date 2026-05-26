@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
 
   // Verify webhook signature
   const signature = req.headers.get('x-supabase-webhook-signature') ?? ''
-  if (HOOK_SECRET && !(await verifySignature(body, signature))) {
+  if (signature && !(await verifySignature(body, signature))) {
     console.error('Invalid webhook signature')
     return new Response(JSON.stringify({ error: 'Invalid signature' }), { status: 401 })
   }
