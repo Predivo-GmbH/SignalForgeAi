@@ -116,8 +116,9 @@ function buildActionUrl(payload: AuthEmailPayload): string {
                email_action_type === 'magiclink' ? 'magiclink' :
                email_action_type === 'email_change' ? 'email_change' :
                email_action_type
-  const redirectTo = redirect_to || SITE_URL
-  return `${SITE_URL}/auth/confirm?token_hash=${token_hash}&type=${type}&redirect_to=${encodeURIComponent(redirectTo)}`
+  const redirectTo = redirect_to || `${SITE_URL}/auth/callback`
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? payload.email_data.site_url ?? ''
+  return `${supabaseUrl}/auth/v1/verify?token_hash=${token_hash}&type=${type}&redirect_to=${encodeURIComponent(redirectTo)}`
 }
 
 // ── Email content per type ────────────────────────────────
