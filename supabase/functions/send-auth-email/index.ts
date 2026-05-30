@@ -117,7 +117,8 @@ function buildActionUrl(payload: AuthEmailPayload): string {
                email_action_type === 'email_change' ? 'email_change' :
                email_action_type
   const redirectTo = redirect_to || `${SITE_URL}/auth/callback`
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? payload.email_data.site_url ?? ''
+  // Never use site_url — GoTrue's site_url includes '/auth/v1' causing doubled paths
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
   return `${supabaseUrl}/auth/v1/verify?token=${token_hash}&type=${type}&redirect_to=${encodeURIComponent(redirectTo)}`
 }
 
