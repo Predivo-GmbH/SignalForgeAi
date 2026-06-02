@@ -24,7 +24,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'https://signalforgeai.predivo.ch';
-const _SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xioqgsybkhjijkciinmu.supabase.co';
+// Supabase ref: xioqgsybkhjijkciinmu
 const GATE_STORAGE_KEY = 'signalforge-unlocked';
 
 // All auth routes (public, no session required to render)
