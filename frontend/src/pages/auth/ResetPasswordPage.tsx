@@ -17,7 +17,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
-  const { user, loading: authLoading, updatePassword } = useAuth()
+  const { user, loading: authLoading, updatePassword, signOut } = useAuth()
   const navigate = useNavigate()
 
   // If there's no session (e.g. user navigated here directly), redirect
@@ -44,6 +44,7 @@ export default function ResetPasswordPage() {
     setLoading(true)
     try {
       await updatePassword(password)
+      await signOut()
       setDone(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update password')
