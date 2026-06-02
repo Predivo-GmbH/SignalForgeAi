@@ -24,7 +24,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'https://signalforgeai.predivo.ch';
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xioqgsybkhjijkciinmu.supabase.co';
+const _SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xioqgsybkhjijkciinmu.supabase.co';
 const GATE_STORAGE_KEY = 'signalforge-unlocked';
 
 // All auth routes (public, no session required to render)
@@ -378,7 +378,6 @@ test.describe('Auth Verify Page — Behavior', () => {
   test('shows spinner during verification when params present', async ({ page }) => {
     await page.goto(`${BASE_URL}/auth/verify?token=000000&email=test@example.com`);
     // Should briefly show the spinner before error
-    const spinner = page.locator('.animate-spin');
     // Either spinner is visible or the error state appears
     const spinnerOrError = page.locator('.animate-spin, text=/expired|invalid/i');
     await expect(spinnerOrError.first()).toBeVisible({ timeout: 10000 });
