@@ -46,6 +46,13 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Test the local dev server (started by Playwright webServer), NOT production.
+          # Without this, auth-flows defaults to https://signalforgeai.predivo.ch and
+          # races the concurrent "Deploy to Production" FTP upload on the same push —
+          # hashed JS chunks get swapped mid-test, dynamic imports fail with
+          # "Failed to fetch dynamically imported module" and random tests go red.
+          # critical-path.spec.ts already navigates via baseURL (localhost:5173).
+          BASE_URL: http://localhost:5173
 
       - name: Upload test results
         if: failure()
