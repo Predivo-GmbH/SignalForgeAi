@@ -4,7 +4,10 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  // CI retries match the cross-project standard (BackOffice/ReplyFlow/ChannelMover):
+  // the auth screens mount via framer-motion at opacity:0, so a single transient
+  // slow-hydration on the runner can miss the 5s visibility window. Retry on CI only.
+  retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: "list",
   use: {
