@@ -201,7 +201,9 @@ test.describe('Login Page — Form & Elements', () => {
   });
 
   test('signup link navigates to /signup', async ({ page }) => {
-    const signupLink = page.locator('a[href="/signup"]').last();
+    // "Sign up" link below the form (only /signup link on the default Password tab)
+    const signupLink = page.getByRole('link', { name: /sign up/i });
+    await expect(signupLink).toBeVisible();
     await signupLink.click();
     await page.waitForLoadState('networkidle');
     expect(page.url()).toContain('/signup');
@@ -379,7 +381,10 @@ test.describe('Auth Verify Page — Behavior', () => {
     await page.goto(`${BASE_URL}/auth/verify?token=000000&email=test@example.com`);
     // Should briefly show the spinner before error
     // Either spinner is visible or the error state appears
-    const spinnerOrError = page.locator('.animate-spin, text=/expired|invalid/i');
+    // (CSS and text engines cannot be mixed in one selector string — use .or())
+    const spinnerOrError = page
+      .locator('.animate-spin')
+      .or(page.getByText(/expired|invalid/i));
     await expect(spinnerOrError.first()).toBeVisible({ timeout: 10000 });
   });
 });
