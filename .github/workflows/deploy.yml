@@ -61,7 +61,7 @@ jobs:
 
       - name: Verify deploy target (site-id guard)
         run: |
-          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set ftp:ssl-allow no; cat /signalforgeai.predivo.ch/.site-id; quit" 2>/dev/null || echo "")
+          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no; cat /signalforgeai.predivo.ch/.site-id; quit" 2>/dev/null || echo "")
           if [ -n "$REMOTE_ID" ] && [ "$REMOTE_ID" != "signalforgeai" ]; then
             echo "::error::DEPLOY ABORTED — remote .site-id is '$REMOTE_ID', expected 'signalforgeai'. Wrong FTP target!"
             exit 1
@@ -75,7 +75,7 @@ jobs:
       - name: Upload hashed assets (no delete)
         run: |
           lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
-          set ftp:ssl-allow no
+          set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no
           mirror --reverse --verbose --no-perms \
             ./frontend/dist/assets/ /signalforgeai.predivo.ch/assets/
           bye
@@ -88,7 +88,7 @@ jobs:
       - name: Deploy full site (clean-slate)
         run: |
           lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
-          set ftp:ssl-allow no
+          set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no
           mirror --reverse --verbose --no-perms --delete \
             ./frontend/dist/ /signalforgeai.predivo.ch/
           bye
